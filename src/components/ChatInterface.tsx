@@ -25,10 +25,10 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   return (
     <aside className="w-[400px] flex flex-col bg-[#141414] rounded-3xl border border-white/5 overflow-hidden shadow-2xl">
       <div className="p-6 border-b border-white/5 flex items-center gap-3">
-        <div className="w-6 h-6 rounded-lg overflow-hidden border border-white/10">
-          <img src={logoUrl} alt="Logo" className="w-full h-full object-cover" />
+        <div className="w-8 h-8 rounded-xl overflow-hidden border border-white/10 bg-white/5 p-1">
+          <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
         </div>
-        <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-white/60">AI Build Engine</h2>
+        <h2 className="text-sm font-black uppercase tracking-[0.3em] text-white">COOK IA</h2>
       </div>
 
       <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-hide">

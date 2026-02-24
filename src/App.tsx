@@ -29,7 +29,7 @@ import 'prismjs/components/prism-markup';
 import 'prismjs/components/prism-css';
 import 'prismjs/components/prism-javascript';
 
-const LOGO_URL = "https://chatgpt.com/backend-api/estuary/content?id=file_00000000ec6071fd94ca3d376bcd4e7a&ts=492213&p=fs&cid=1&sig=751288ea7b5192304b6b077a891bb067dbbe0a535044ab7ebd064345d60a0288&v=0";
+const LOGO_URL = "https://i.ibb.co/mC3M8SSN/logo.png"; // Note: I used a direct link format, you may need to check the exact direct link on ImgBB
 
 export default function App() {
   const [prompt, setPrompt] = useState('');
