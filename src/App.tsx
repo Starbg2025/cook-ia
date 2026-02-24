@@ -274,11 +274,15 @@ export default function App() {
       
       // Save to Supabase
       await saveConversation(updatedMessages);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error generating website:", error);
+      const errorMessage = error.message?.includes("API key") 
+        ? "Clé API invalide ou manquante. Vérifiez votre configuration Netlify."
+        : "Désolé, une erreur est survenue lors de la génération. Veuillez réessayer.";
+        
       setMessages(prev => [...prev, { 
         role: 'model', 
-        content: "Désolé, une erreur est survenue lors de la génération de votre site. Veuillez réessayer." 
+        content: errorMessage 
       }]);
     } finally {
       setIsLoading(false);

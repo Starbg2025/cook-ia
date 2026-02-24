@@ -3,7 +3,11 @@ import { GoogleGenAI, Type } from "@google/genai";
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
 export const generateWebsite = async (prompt: string, history: { role: "user" | "model", parts: { text: string }[] }[]) => {
-  const model = "gemini-3.1-pro-preview";
+  if (!process.env.GEMINI_API_KEY) {
+    throw new Error("La clé API Gemini est manquante. Vérifiez vos variables d'environnement.");
+  }
+
+  const model = "gemini-3-flash-preview";
   
   const systemInstruction = `You are COOK IA, a world-class senior web engineer. 
 Your task is to generate high-quality, ultra-modern, and functional websites based on user prompts.
