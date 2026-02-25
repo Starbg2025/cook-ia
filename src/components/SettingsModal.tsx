@@ -16,7 +16,11 @@ import {
   Trash2,
   ExternalLink,
   Plus,
-  Github
+  Github,
+  FileText,
+  Layout,
+  Loader2,
+  Activity
 } from 'lucide-react';
 import { supabase } from '../services/supabaseService';
 
@@ -27,7 +31,7 @@ interface SettingsModalProps {
   user: any;
 }
 
-type TabType = 'general' | 'notifications' | 'personalization' | 'applications' | 'data' | 'security' | 'parental' | 'account' | 'help';
+type TabType = 'general' | 'notifications' | 'personalization' | 'applications' | 'data' | 'security' | 'parental' | 'account' | 'help' | 'sites' | 'policy' | 'watchdog';
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialTab = 'general', user }) => {
   const [activeTab, setActiveTab] = useState<TabType>(initialTab);
@@ -45,13 +49,93 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
   const [helpMessage, setHelpMessage] = useState('');
   const [isSubmittingHelp, setIsSubmittingHelp] = useState(false);
 
+  // Sites management state
+  const [publishedSites, setPublishedSites] = useState<any[]>([]);
+  const [isLoadingSites, setIsLoadingSites] = useState(false);
+  const [editingSiteId, setEditingSiteId] = useState<string | null>(null);
+  const [editSiteSlug, setEditSiteSlug] = useState('');
+
+  // Watchdog state
+  const [watchdogData, setWatchdogData] = useState<any>(null);
+  const [isRefreshingWatchdog, setIsRefreshingWatchdog] = useState(false);
+
   React.useEffect(() => {
     if (isOpen) {
       setActiveTab(initialTab);
       setEditUsername(user?.profile?.username || '');
       setEditFullName(user?.profile?.full_name || user?.user_metadata?.full_name || '');
+      if (activeTab === 'sites') {
+        loadPublishedSites();
+      }
+      if (activeTab === 'watchdog') {
+        loadWatchdogStatus();
+      }
     }
-  }, [isOpen, initialTab, user]);
+  }, [isOpen, initialTab, user, activeTab]);
+
+  const loadWatchdogStatus = async () => {
+    setIsRefreshingWatchdog(true);
+    try {
+      const res = await fetch('/api/watchdog/status');
+      const data = await res.json();
+      setWatchdogData(data);
+    } catch (error) {
+      console.error("Error loading watchdog status:", error);
+    } finally {
+      setIsRefreshingWatchdog(false);
+    }
+  };
+
+  const loadPublishedSites = async () => {
+    if (!user) return;
+    setIsLoadingSites(true);
+    try {
+      const { data, error } = await supabase
+        .from('published_sites')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      setPublishedSites(data || []);
+    } catch (error: any) {
+      console.error("Error loading sites:", error);
+    } finally {
+      setIsLoadingSites(false);
+    }
+  };
+
+  const handleUpdateSite = async (id: string) => {
+    if (!editSiteSlug.trim()) return;
+    try {
+      const { error } = await supabase
+        .from('published_sites')
+        .update({ slug: editSiteSlug })
+        .eq('id', id);
+      
+      if (error) throw error;
+      alert('Site mis à jour !');
+      setEditingSiteId(null);
+      loadPublishedSites();
+    } catch (error: any) {
+      alert(`Erreur: ${error.message}`);
+    }
+  };
+
+  const handleDeleteSite = async (id: string) => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce site ?')) return;
+    try {
+      const { error } = await supabase
+        .from('published_sites')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      setPublishedSites(prev => prev.filter(s => s.id !== id));
+    } catch (error: any) {
+      alert(`Erreur: ${error.message}`);
+    }
+  };
 
   const handleUpdateProfile = async () => {
     if (!user) return;
@@ -110,6 +194,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
     { id: 'data', label: 'Gestion des données', icon: Database },
     { id: 'security', label: 'Sécurité', icon: Shield },
     { id: 'parental', label: 'Contrôles parentaux', icon: Users },
+    { id: 'sites', label: 'Mes Sites', icon: Layout },
+    { id: 'watchdog', label: 'Architecture Watchdog', icon: Activity },
+    { id: 'policy', label: 'Politique d\'utilisation', icon: FileText },
     { id: 'account', label: 'Compte', icon: User },
     { id: 'help', label: 'Aide', icon: HelpCircleIcon },
   ];
@@ -136,6 +223,28 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                 <button className="text-white/20 hover:text-white transition-colors">
                   <X size={16} />
                 </button>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <h4 className="text-xs font-bold uppercase tracking-widest text-white/20">Fonctionnalités Avancées</h4>
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <span className="text-sm font-medium">Accélération Matérielle (3D)</span>
+                  <p className="text-[11px] text-white/30">Optimise le rendu des éléments Three.js et des animations complexes.</p>
+                </div>
+                <div className="w-10 h-5 bg-white/10 rounded-full relative cursor-pointer">
+                  <div className="absolute right-1 top-1 w-3 h-3 bg-white rounded-full" />
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <span className="text-sm font-medium">Mode Développeur</span>
+                  <p className="text-[11px] text-white/30">Affiche des informations techniques détaillées lors de la génération.</p>
+                </div>
+                <div className="w-10 h-5 bg-white/10 rounded-full relative cursor-pointer">
+                  <div className="absolute left-1 top-1 w-3 h-3 bg-white/20 rounded-full" />
+                </div>
               </div>
             </div>
 
@@ -406,7 +515,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
                           <label className="text-sm font-medium">Adresse e-mail</label>
-                          <button className="text-xs text-white/40 hover:text-white underline transition-colors">Utiliser le numéro de téléphone</button>
                         </div>
                         <input 
                           type="email"
@@ -475,6 +583,208 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                 </div>
               )}
             </AnimatePresence>
+          </div>
+        );
+      case 'sites':
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-bold">Mes Sites Publiés</h3>
+              <button 
+                onClick={loadPublishedSites}
+                className="text-xs text-white/40 hover:text-white transition-colors"
+              >
+                Actualiser
+              </button>
+            </div>
+            
+            {isLoadingSites ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 size={24} className="animate-spin text-orange-primary" />
+              </div>
+            ) : publishedSites.length === 0 ? (
+              <div className="text-center py-12 bg-white/5 rounded-2xl border border-white/5">
+                <Layout size={40} className="mx-auto mb-4 opacity-20" />
+                <p className="text-sm text-white/40">Vous n'avez pas encore publié de site.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {publishedSites.map((site) => (
+                  <div key={site.id} className="bg-white/5 border border-white/5 rounded-2xl p-6 flex items-center justify-between group">
+                    <div className="flex-1 min-w-0 mr-4">
+                      {editingSiteId === site.id ? (
+                        <div className="flex items-center gap-2">
+                          <input 
+                            type="text"
+                            value={editSiteSlug}
+                            onChange={(e) => setEditSiteSlug(e.target.value)}
+                            className="bg-[#0A0A0A] border border-white/10 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-orange-primary"
+                            autoFocus
+                          />
+                          <button 
+                            onClick={() => handleUpdateSite(site.id)}
+                            className="text-xs font-bold text-orange-primary"
+                          >
+                            Sauver
+                          </button>
+                          <button 
+                            onClick={() => setEditingSiteId(null)}
+                            className="text-xs font-bold text-white/40"
+                          >
+                            Annuler
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <h4 className="font-bold truncate">{site.slug}.cook.ia</h4>
+                          <p className="text-[10px] text-white/20 uppercase tracking-widest mt-1">
+                            Publié le {new Date(site.created_at).toLocaleDateString()}
+                          </p>
+                        </>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button 
+                        onClick={() => {
+                          setEditingSiteId(site.id);
+                          setEditSiteSlug(site.slug);
+                        }}
+                        className="p-2 hover:bg-white/10 rounded-lg text-white/40 hover:text-white transition-all"
+                        title="Modifier le nom"
+                      >
+                        <Settings size={16} />
+                      </button>
+                      <a 
+                        href={`${window.location.origin}/?p=${site.slug}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-2 hover:bg-white/10 rounded-lg text-white/40 hover:text-white transition-all"
+                        title="Voir le site"
+                      >
+                        <ExternalLink size={16} />
+                      </a>
+                      <button 
+                        onClick={() => handleDeleteSite(site.id)}
+                        className="p-2 hover:bg-red-500/10 rounded-lg text-red-500/60 hover:text-red-500 transition-all"
+                        title="Supprimer"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      case 'policy':
+        return (
+          <div className="space-y-8 prose prose-invert prose-sm max-w-none">
+            <div className="space-y-4">
+              <h3 className="text-xl font-bold">Politique d'Utilisation de COOK IA</h3>
+              <p className="text-white/60">Dernière mise à jour : 25 Février 2026</p>
+            </div>
+
+            <div className="space-y-6">
+              <section className="space-y-2">
+                <h4 className="text-white font-bold">1. Acceptation des conditions</h4>
+                <p className="text-white/40">En utilisant COOK IA, vous acceptez d'être lié par les présentes conditions. Si vous n'acceptez pas ces conditions, veuillez ne pas utiliser le service.</p>
+              </section>
+
+              <section className="space-y-2">
+                <h4 className="text-white font-bold">2. Utilisation du service</h4>
+                <p className="text-white/40">COOK IA est un outil de génération de sites web assisté par IA. Vous êtes responsable du contenu généré et de son utilisation. Il est interdit d'utiliser le service pour créer du contenu illégal, haineux, ou portant atteinte aux droits d'autrui.</p>
+              </section>
+
+              <section className="space-y-2">
+                <h4 className="text-white font-bold">3. Propriété intellectuelle</h4>
+                <p className="text-white/40">Le code généré par COOK IA vous appartient pour une utilisation personnelle ou commerciale. Cependant, l'architecture et les algorithmes de COOK IA restent la propriété exclusive de Benit Madimba.</p>
+              </section>
+
+              <section className="space-y-2">
+                <h4 className="text-white font-bold">4. Publication et Hébergement</h4>
+                <p className="text-white/40">Les sites publiés via notre sous-domaine .cook.ia sont hébergés à titre gracieux. Nous nous réservons le droit de supprimer tout site ne respectant pas nos règles de sécurité ou d'éthique.</p>
+              </section>
+
+              <section className="space-y-2">
+                <h4 className="text-white font-bold">5. Limitation de responsabilité</h4>
+                <p className="text-white/40">COOK IA est fourni "en l'état". Nous ne garantissons pas que le service sera exempt d'erreurs ou d'interruptions. Benit Madimba ne pourra être tenu responsable des dommages directs ou indirects résultant de l'utilisation du service.</p>
+              </section>
+            </div>
+          </div>
+        );
+      case 'watchdog':
+        return (
+          <div className="space-y-8">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <h3 className="text-xl font-bold">Architecture Watchdog</h3>
+                <p className="text-sm text-white/40">Surveillance des processus d'arrière-plan et file d'attente asynchrone.</p>
+              </div>
+              <button 
+                onClick={loadWatchdogStatus}
+                disabled={isRefreshingWatchdog}
+                className="p-2 bg-white/5 rounded-xl hover:bg-white/10 transition-all"
+              >
+                <Loader2 size={16} className={isRefreshingWatchdog ? 'animate-spin' : ''} />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-white/5 border border-white/5 rounded-2xl p-6">
+                <p className="text-xs text-white/20 uppercase tracking-widest font-bold mb-2">État du Système</p>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-lg font-bold">Opérationnel</span>
+                </div>
+              </div>
+              <div className="bg-white/5 border border-white/5 rounded-2xl p-6">
+                <p className="text-xs text-white/20 uppercase tracking-widest font-bold mb-2">Tâches en File</p>
+                <span className="text-lg font-bold">{watchdogData?.queueSize || 0}</span>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h4 className="text-sm font-bold">Dernières Activités Invisibles</h4>
+              <div className="space-y-2">
+                {watchdogData?.tasks?.map((task: any) => (
+                  <div key={task.id} className="bg-white/5 border border-white/5 rounded-xl p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-2 h-2 rounded-full ${
+                        task.status === 'completed' ? 'bg-emerald-500' : 
+                        task.status === 'processing' ? 'bg-orange-primary animate-pulse' : 
+                        task.status === 'failed' ? 'bg-red-500' : 'bg-white/20'
+                      }`} />
+                      <div>
+                        <p className="text-sm font-medium capitalize">{task.type.replace(/_/g, ' ')}</p>
+                        <p className="text-[10px] text-white/20">{new Date(task.createdAt).toLocaleTimeString()}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className={`text-[10px] font-bold uppercase tracking-widest ${
+                        task.status === 'completed' ? 'text-emerald-500' : 
+                        task.status === 'processing' ? 'text-orange-primary' : 
+                        task.status === 'failed' ? 'text-red-500' : 'text-white/20'
+                      }`}>
+                        {task.status}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+                {(!watchdogData?.tasks || watchdogData.tasks.length === 0) && (
+                  <p className="text-center py-8 text-white/10 text-sm italic">Aucune activité récente.</p>
+                )}
+              </div>
+            </div>
+
+            <div className="p-6 bg-orange-primary/5 border border-orange-primary/10 rounded-2xl">
+              <p className="text-sm text-orange-primary font-medium mb-2 flex items-center gap-2">
+                <Sparkles size={16} /> Note Technique
+              </p>
+              <p className="text-xs text-white/40 leading-relaxed">
+                L'architecture Watchdog utilise une file d'attente asynchrone pour traiter les tâches lourdes (optimisation, scan de sécurité, synchronisation) sans bloquer l'interface utilisateur. C'est ce qui rend l'expérience COOK IA fluide et "invisible".
+              </p>
+            </div>
           </div>
         );
       default:

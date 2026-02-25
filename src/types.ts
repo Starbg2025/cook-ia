@@ -2,6 +2,7 @@ export interface Message {
   role: 'user' | 'model';
   content: string;
   code?: string;
+  image?: string;
 }
 
 export type ViewMode = 'preview' | 'code';

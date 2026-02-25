@@ -59,6 +59,8 @@ export default function App() {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<any>('general');
   const [user, setUser] = useState<any>(null);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [abortController, setAbortController] = useState<AbortController | null>(null);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -251,18 +253,49 @@ export default function App() {
     }
 
     const userMessage = prompt;
+    const currentImage = selectedImage;
     setPrompt('');
-    const newMessages: Message[] = [...messages, { role: 'user', content: userMessage }];
+    setSelectedImage(null);
+    
+    const newMessages: Message[] = [...messages, { 
+      role: 'user', 
+      content: userMessage,
+      image: currentImage || undefined
+    }];
     setMessages(newMessages);
+    const controller = new AbortController();
+    setAbortController(controller);
     setIsLoading(true);
 
     try {
-      const history = newMessages.map(m => ({
-        role: m.role,
-        parts: [{ text: m.content + (m.code ? `\n\nCode:\n${m.code}` : '') }]
-      }));
+      const history = newMessages.map(m => {
+        const parts: any[] = [{ text: m.content + (m.code ? `\n\nCode:\n${m.code}` : '') }];
+        if (m.image) {
+          const [mimeType, data] = m.image.split(';base64,');
+          parts.push({
+            inlineData: {
+              mimeType: mimeType.split(':')[1],
+              data: data
+            }
+          });
+        }
+        return {
+          role: m.role,
+          parts
+        };
+      });
 
-      const result = await generateWebsite(userMessage, history);
+      // Prepare current image for API if exists
+      let imagePart;
+      if (currentImage) {
+        const [mimeType, data] = currentImage.split(';base64,');
+        imagePart = {
+          mimeType: mimeType.split(':')[1],
+          data: data
+        };
+      }
+
+      const result = await generateWebsite(userMessage, history.slice(0, -1), imagePart);
       
       const updatedMessages: Message[] = [...newMessages, { 
         role: 'model', 
@@ -273,9 +306,26 @@ export default function App() {
       setGeneratedCode(result.code);
       setViewMode('preview');
       
+      // Enqueue invisible background task (Watchdog Architecture)
+      fetch('/api/watchdog/enqueue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          type: 'site_optimization', 
+          payload: { siteName: siteName || 'untitled', codeLength: result.code.length } 
+        })
+      }).catch(err => console.error("Watchdog enqueue failed:", err));
+
       // Save to Supabase
       await saveConversation(updatedMessages);
     } catch (error: any) {
+      if (error.name === 'AbortError') {
+        setMessages(prev => [...prev, { 
+          role: 'model', 
+          content: "Requête annulée par l'utilisateur." 
+        }]);
+        return;
+      }
       console.error("Error generating website:", error);
       const errorMessage = error.message?.includes("API key") 
         ? "Clé API invalide ou manquante. Vérifiez votre configuration Netlify."
@@ -286,6 +336,15 @@ export default function App() {
         content: errorMessage 
       }]);
     } finally {
+      setIsLoading(false);
+      setAbortController(null);
+    }
+  };
+
+  const handleAbort = () => {
+    if (abortController) {
+      abortController.abort();
+      setAbortController(null);
       setIsLoading(false);
     }
   };
@@ -411,105 +470,97 @@ export default function App() {
   return (
     <div className="flex flex-col h-screen bg-[#0A0A0A] text-white overflow-hidden font-sans">
       {/* Header */}
-      <header className="flex items-center justify-between px-6 py-4 border-b border-white/5 bg-[#0A0A0A]/80 backdrop-blur-md z-50">
-        <div className="flex items-center gap-4">
+      <header className="flex items-center justify-between px-10 py-6 border-b border-white/5 bg-[#0A0A0A]/90 backdrop-blur-xl z-50 sticky top-0">
+        <div className="flex items-center gap-6">
           <button 
             onClick={() => setIsHistoryOpen(!isHistoryOpen)}
-            className={`p-3 rounded-2xl transition-all ${isHistoryOpen ? 'bg-[#1A1A1A] text-white' : 'bg-[#141414] text-white/40 hover:bg-[#1A1A1A] hover:text-white'} border border-white/5 shadow-xl`}
+            className={`p-3.5 rounded-2xl transition-all duration-300 ${isHistoryOpen ? 'bg-white text-black' : 'bg-[#141414] text-white/40 hover:bg-[#1A1A1A] hover:text-white'} border border-white/5 shadow-2xl group`}
           >
-            <div className="flex flex-col gap-1 w-5">
-              <div className="h-[2px] w-full bg-current rounded-full" />
-              <div className="h-[2px] w-full bg-current rounded-full" />
-              <div className="h-[2px] w-full bg-current rounded-full" />
+            <div className="flex flex-col gap-1.5 w-5">
+              <div className={`h-[2px] transition-all duration-300 ${isHistoryOpen ? 'w-full bg-black' : 'w-full bg-current'}`} />
+              <div className={`h-[2px] transition-all duration-300 ${isHistoryOpen ? 'w-2/3 bg-black' : 'w-full bg-current'}`} />
+              <div className={`h-[2px] transition-all duration-300 ${isHistoryOpen ? 'w-full bg-black' : 'w-full bg-current'}`} />
             </div>
           </button>
           
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#141414] rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(255,107,0,0.2)] border border-white/5 overflow-hidden">
+          <div className="flex items-center gap-4 group cursor-pointer">
+            <div className="w-12 h-12 bg-[#141414] rounded-[1.25rem] flex items-center justify-center shadow-2xl border border-white/10 overflow-hidden transition-transform group-hover:scale-105">
               <img src={LOGO_URL} alt="COOK IA Logo" className="w-full h-full object-cover" />
             </div>
             <div>
-              <h1 className="text-xl font-bold tracking-tighter flex items-center gap-1">
+              <h1 className="text-2xl font-black tracking-tighter flex items-center gap-1.5 leading-none mb-1">
                 COOK <span className="text-orange-primary">IA</span>
               </h1>
-              <p className="text-[10px] text-white/40 uppercase tracking-[0.2em] font-medium">By Benit Madimba</p>
+              <p className="text-[10px] text-white/20 uppercase tracking-[0.3em] font-bold">Full-Stack Web Development</p>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-6">
-          <div className="flex bg-[#141414] p-1 rounded-xl border border-white/5">
+        <div className="flex items-center gap-8">
+          <div className="flex bg-[#0D0D0D] p-1.5 rounded-[1.25rem] border border-white/5 shadow-inner">
             <button 
               onClick={() => setViewMode('preview')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${viewMode === 'preview' ? 'bg-[#262626] text-white shadow-lg' : 'text-white/40 hover:text-white'}`}
+              className={`flex items-center gap-2.5 px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all duration-300 ${viewMode === 'preview' ? 'bg-white text-black shadow-2xl scale-105' : 'text-white/30 hover:text-white'}`}
             >
-              <Eye size={16} />
+              <Eye size={14} />
               Preview
             </button>
             <button 
               onClick={() => setViewMode('code')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${viewMode === 'code' ? 'bg-[#262626] text-white shadow-lg' : 'text-white/40 hover:text-white'}`}
+              className={`flex items-center gap-2.5 px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all duration-300 ${viewMode === 'code' ? 'bg-white text-black shadow-2xl scale-105' : 'text-white/30 hover:text-white'}`}
             >
-              <Code2 size={16} />
+              <Code2 size={14} />
               Code
             </button>
           </div>
 
-          <div className="h-8 w-[1px] bg-white/10" />
+          <div className="h-10 w-[1px] bg-white/5" />
           
-          {user ? (
-            <div className="flex items-center gap-4">
-              <div className="w-8 h-8 rounded-full bg-white/10 border border-white/10 flex items-center justify-center overflow-hidden">
-                {user.user_metadata?.avatar_url ? (
-                  <img src={user.user_metadata.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-[10px] font-bold">{user.email?.charAt(0).toUpperCase()}</span>
-                )}
+          <div className="flex items-center gap-6">
+            {user ? (
+              <div className="flex items-center gap-4 bg-white/5 pl-2 pr-4 py-1.5 rounded-2xl border border-white/5">
+                <div className="w-8 h-8 rounded-xl bg-orange-primary/20 border border-orange-primary/20 flex items-center justify-center overflow-hidden shadow-inner">
+                  {user.user_metadata?.avatar_url ? (
+                    <img src={user.user_metadata.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-[10px] font-black text-orange-primary">{user.email?.charAt(0).toUpperCase()}</span>
+                  )}
+                </div>
+                <button 
+                  onClick={() => supabase.auth.signOut()}
+                  className="text-white/30 hover:text-white text-[10px] font-black uppercase tracking-widest transition-colors"
+                >
+                  Logout
+                </button>
               </div>
-              <button 
-                onClick={() => supabase.auth.signOut()}
-                className="text-white/40 hover:text-white text-xs font-medium transition-colors"
-              >
-                Déconnexion
-              </button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-3">
+            ) : (
               <button 
                 onClick={() => setIsAuthModalOpen(true)}
-                className="px-4 py-2 text-sm font-medium text-white/60 hover:text-white transition-colors"
+                className="text-white/30 hover:text-white text-[10px] font-black uppercase tracking-widest transition-colors px-4 py-2 hover:bg-white/5 rounded-xl border border-transparent hover:border-white/5"
               >
-                Se connecter
+                Sign In
               </button>
-              <button 
-                onClick={() => setIsAuthModalOpen(true)}
-                className="px-4 py-2 text-sm font-bold bg-white text-black rounded-full hover:bg-white/90 transition-all shadow-lg"
-              >
-                Inscription gratuite
-              </button>
-            </div>
-          )}
+            )}
 
-          <div className="h-8 w-[1px] bg-white/10" />
+            <div className="h-6 w-[1px] bg-white/5" />
 
-          <div className="flex items-center gap-4">
             <button 
               onClick={handleDownload}
               disabled={!generatedCode}
-              title="Télécharger le code HTML"
-              className="text-white/60 hover:text-white transition-colors p-2 hover:bg-white/5 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed"
+              title="Download HTML"
+              className="text-white/30 hover:text-white transition-all p-2.5 hover:bg-white/5 rounded-xl disabled:opacity-10"
             >
               <Download size={20} />
             </button>
             <button 
               onClick={handleGithubClick}
-              className="text-white/60 hover:text-white transition-colors p-2 hover:bg-white/5 rounded-lg"
+              className="text-white/30 hover:text-white transition-all p-2.5 hover:bg-white/5 rounded-xl"
             >
               <Github size={20} />
             </button>
             <button 
               onClick={() => setIsPublishModalOpen(true)}
-              className="bg-orange-primary hover:bg-orange-600 text-white px-6 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-[0_0_20px_rgba(255,107,0,0.2)] active:scale-95"
+              className="bg-orange-primary hover:bg-orange-600 text-white px-8 py-3.5 rounded-[1.25rem] font-black text-xs uppercase tracking-widest transition-all shadow-[0_20px_40px_rgba(255,107,0,0.2)] active:scale-95 hover:-translate-y-0.5"
             >
               Publish
             </button>
@@ -548,9 +599,12 @@ export default function App() {
           prompt={prompt}
           setPrompt={setPrompt}
           handleSend={handleSend}
+          onAbort={handleAbort}
           isLoading={isLoading}
           chatEndRef={chatEndRef}
           logoUrl={LOGO_URL}
+          selectedImage={selectedImage}
+          setSelectedImage={setSelectedImage}
         />
         
         <Preview 
