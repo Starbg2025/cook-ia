@@ -12,7 +12,8 @@ import {
   Globe, 
   Copy, 
   Check,
-  Loader2
+  Loader2,
+  Download
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { generateWebsite, generateTitle } from './services/geminiService';
@@ -296,6 +297,39 @@ export default function App() {
     setTimeout(() => setIsCopied(false), 2000);
   };
 
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [publishedUrl, setPublishedUrl] = useState<string | null>(null);
+
+  const handlePublish = async () => {
+    if (!generatedCode || !user || !siteName.trim()) return;
+    
+    setIsPublishing(true);
+    try {
+      const slug = siteName.toLowerCase().replace(/\s+/g, '-');
+      const { data, error } = await supabase
+        .from('published_sites')
+        .upsert([
+          { 
+            slug, 
+            code: generatedCode, 
+            user_id: user.id 
+          }
+        ], { onConflict: 'slug' })
+        .select();
+
+      if (error) throw error;
+
+      const url = `${window.location.origin}/?p=${slug}`;
+      setPublishedUrl(url);
+      alert(`Félicitations ! Votre site est maintenant en ligne sur ${slug}.cook.ia`);
+    } catch (error: any) {
+      console.error("Error publishing site:", error);
+      alert(`Erreur lors de la publication : ${error.message}`);
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
   const handleRefresh = () => {
     if (generatedCode && iframeRef.current) {
       const doc = iframeRef.current.contentDocument;
@@ -305,6 +339,62 @@ export default function App() {
         doc.close();
       }
     }
+  };
+
+  const [isViewOnly, setIsViewOnly] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const siteSlug = params.get('p');
+    if (siteSlug) {
+      setIsViewOnly(true);
+      const loadPublishedSite = async () => {
+        const { data } = await supabase
+          .from('published_sites')
+          .select('code')
+          .eq('slug', siteSlug)
+          .single();
+        
+        if (data?.code) {
+          setGeneratedCode(data.code);
+          setViewMode('preview');
+        }
+      };
+      loadPublishedSite();
+    }
+  }, []);
+
+  if (isViewOnly && generatedCode) {
+    return (
+      <div className="fixed inset-0 bg-white">
+        <iframe 
+          srcDoc={generatedCode}
+          title="Published Site"
+          className="w-full h-full border-none"
+        />
+        <button 
+          onClick={() => {
+            window.location.href = window.location.origin;
+          }}
+          className="fixed bottom-6 right-6 bg-black/80 backdrop-blur-md border border-white/10 text-white px-4 py-2 rounded-full text-xs font-bold hover:bg-black transition-all z-50 shadow-2xl"
+        >
+          Créé avec COOK IA
+        </button>
+      </div>
+    );
+  }
+
+  const handleDownload = () => {
+    if (!generatedCode) return;
+    const blob = new Blob([generatedCode], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${siteName || 'website'}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   const handleExpand = () => {
@@ -403,6 +493,14 @@ export default function App() {
           <div className="h-8 w-[1px] bg-white/10" />
 
           <div className="flex items-center gap-4">
+            <button 
+              onClick={handleDownload}
+              disabled={!generatedCode}
+              title="Télécharger le code HTML"
+              className="text-white/60 hover:text-white transition-colors p-2 hover:bg-white/5 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <Download size={20} />
+            </button>
             <button 
               onClick={handleGithubClick}
               className="text-white/60 hover:text-white transition-colors p-2 hover:bg-white/5 rounded-lg"
@@ -612,7 +710,12 @@ export default function App() {
                       {siteName || 'votre-site'}.cook.ia
                     </span>
                     <button 
-                      onClick={copyToClipboard}
+                      onClick={() => {
+                        const url = publishedUrl || `${window.location.origin}/?p=${siteName || 'votre-site'}`;
+                        navigator.clipboard.writeText(url);
+                        setIsCopied(true);
+                        setTimeout(() => setIsCopied(false), 2000);
+                      }}
                       className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-white/40 hover:text-white transition-colors"
                     >
                       {isCopied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
@@ -622,20 +725,33 @@ export default function App() {
 
                   <div className="flex gap-3 pt-4">
                     <button 
-                      onClick={() => setIsPublishModalOpen(false)}
+                      onClick={() => {
+                        setIsPublishModalOpen(false);
+                        setPublishedUrl(null);
+                      }}
                       className="flex-1 bg-white/5 hover:bg-white/10 text-white py-4 rounded-2xl font-bold transition-all"
                     >
-                      Cancel
+                      {publishedUrl ? 'Fermer' : 'Annuler'}
                     </button>
-                    <button 
-                      onClick={() => {
-                        alert(`Site published at ${siteName || 'your-site'}.cook.ia!`);
-                        setIsPublishModalOpen(false);
-                      }}
-                      className="flex-1 bg-orange-primary hover:bg-orange-600 text-white py-4 rounded-2xl font-bold transition-all shadow-[0_10px_30px_rgba(255,107,0,0.3)]"
-                    >
-                      Confirm & Visit
-                    </button>
+                    {!publishedUrl && (
+                      <button 
+                        onClick={handlePublish}
+                        disabled={isPublishing || !siteName.trim() || !generatedCode}
+                        className="flex-1 bg-orange-primary hover:bg-orange-600 text-white py-4 rounded-2xl font-bold transition-all shadow-[0_10px_30px_rgba(255,107,0,0.3)] disabled:opacity-50"
+                      >
+                        {isPublishing ? <Loader2 size={18} className="animate-spin mx-auto" /> : 'Confirmer & Publier'}
+                      </button>
+                    )}
+                    {publishedUrl && (
+                      <a 
+                        href={publishedUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 bg-orange-primary hover:bg-orange-600 text-white py-4 rounded-2xl font-bold transition-all shadow-[0_10px_30px_rgba(255,107,0,0.3)] text-center"
+                      >
+                        Visiter le site
+                      </a>
+                    )}
                   </div>
                 </div>
               </div>
