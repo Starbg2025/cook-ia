@@ -64,6 +64,7 @@ export default function App() {
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const skipIframeUpdate = useRef(false);
 
   useEffect(() => {
     loadConversations();
@@ -234,7 +235,7 @@ export default function App() {
   }, [viewMode, generatedCode]);
 
   useEffect(() => {
-    if (generatedCode && iframeRef.current) {
+    if (generatedCode && iframeRef.current && !skipIframeUpdate.current) {
       const doc = iframeRef.current.contentDocument;
       if (doc) {
         doc.open();
@@ -242,6 +243,8 @@ export default function App() {
         doc.close();
       }
     }
+    // Reset skip ref after the effect runs
+    skipIframeUpdate.current = false;
   }, [generatedCode, viewMode]);
 
   const handleSend = async () => {
@@ -613,6 +616,11 @@ export default function App() {
           iframeRef={iframeRef}
           onRefresh={handleRefresh}
           onExpand={handleExpand}
+          onEdit={() => setViewMode('code')}
+          onCodeChange={(newCode) => {
+            skipIframeUpdate.current = true;
+            setGeneratedCode(newCode);
+          }}
         />
       </main>
 
