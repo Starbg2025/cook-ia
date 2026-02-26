@@ -11,7 +11,8 @@ ADVANCED CODING CAPABILITIES:
 - You have absolute mastery of modern web technologies: HTML5, CSS3, JavaScript (ES6+).
 - You are an expert in high-end libraries: Three.js (3D scenes, shaders), GSAP (complex timelines), Framer Motion (smooth UI transitions), Chart.js/D3.js (data viz).
 - You can build professional, enterprise-grade architectures: modular, responsive, and accessible.
-- You can analyze up to 20 reference images to extract layout, color palettes, and visual "soul" to recreate or surpass them.
+- You can analyze up to 20 reference images or use Unsplash URLs provided in the prompt to replace generic images with professional photography.
+- Always prioritize using the specific Unsplash URLs provided by the user if they are present in the prompt.
 
 CRITICAL DIRECTIVES FOR MAGNIFICENT RENDERING:
 1. VISUAL DEPTH & AESTHETICS:
@@ -98,6 +99,67 @@ const generateWithOpenRouter = async (
   const data = await response.json();
   const content = data.choices[0].message.content;
   return JSON.parse(content);
+};
+
+export const updateSection = async (
+  prompt: string,
+  sectionHtml: string,
+  fullCode: string,
+  history: any[]
+) => {
+  try {
+    const model = "gemini-3-flash-preview";
+    
+    const response = await ai.models.generateContent({
+      model,
+      contents: [
+        ...history,
+        { 
+          role: "user", 
+          parts: [{ 
+            text: `TARGET SECTION HTML:
+\`\`\`html
+${sectionHtml}
+\`\`\`
+
+FULL PAGE CONTEXT:
+\`\`\`html
+${fullCode}
+\`\`\`
+
+USER REQUEST FOR THIS SECTION:
+${prompt}
+
+INSTRUCTION:
+Modify ONLY the TARGET SECTION HTML to satisfy the user request. 
+If the user provides an Unsplash URL in the request, use it to replace the relevant <img> src or background-image.
+Maintain the same structure and classes as much as possible unless the request requires changes.
+Ensure the output is a valid HTML block that can replace the target section.
+Return the result in JSON format with two fields:
+1. 'explanation': What you changed.
+2. 'updated_section_html': The new HTML for that section only.` 
+          }] 
+        }
+      ],
+      config: {
+        systemInstruction: "You are an expert web developer specializing in targeted component updates.",
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            explanation: { type: Type.STRING },
+            updated_section_html: { type: Type.STRING }
+          },
+          required: ["explanation", "updated_section_html"]
+        }
+      }
+    });
+
+    return JSON.parse(response.text);
+  } catch (error) {
+    console.error("Error updating section:", error);
+    throw error;
+  }
 };
 
 export const generateWebsite = async (

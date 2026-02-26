@@ -16,15 +16,20 @@ import {
   Download
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { generateWebsite, generateTitle } from './services/geminiService';
-import { Message, ViewMode, Conversation } from './types';
+import { generateWebsite, generateTitle, updateSection } from './services/geminiService';
+import { Message, ViewMode, Conversation, StyleConfig, SectionEditState } from './types';
 import { ChatInterface } from './components/ChatInterface';
 import { Preview } from './components/Preview';
 import { HistorySidebar } from './components/HistorySidebar';
+import { StyleEditor } from './components/StyleEditor';
+import { SectionChat } from './components/SectionChat';
+import { ImageSearchModal } from './components/ImageSearchModal';
 import { AuthModal } from './components/AuthModal';
 import { SettingsModal } from './components/SettingsModal';
 import { supabase } from './services/supabaseService';
+import { deployToNetlify } from './services/netlifyService';
 import JSZip from 'jszip';
+import { Palette, Rocket } from 'lucide-react';
 
 const LOGO_URL = "https://i.ibb.co/mC3M8SSN/logo.png"; // Note: I used a direct link format, you may need to check the exact direct link on ImgBB
 
@@ -53,6 +58,16 @@ export default function App() {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isStyleEditorOpen, setIsStyleEditorOpen] = useState(false);
+  const [isImageSearchOpen, setIsImageSearchOpen] = useState(false);
+  const [imageSearchContext, setImageSearchContext] = useState<'chat' | 'section'>('chat');
+  const [isDeploying, setIsDeploying] = useState(false);
+  const [styleConfig, setStyleConfig] = useState<StyleConfig>({
+    primaryColor: '#FF6B00',
+    fontFamily: 'Inter',
+    borderRadius: '1rem'
+  });
+  const [sectionEdit, setSectionEdit] = useState<SectionEditState>({ isActive: false });
   const [settingsTab, setSettingsTab] = useState<any>('general');
   const [user, setUser] = useState<any>(null);
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
@@ -67,8 +82,18 @@ export default function App() {
   useEffect(() => {
     loadConversations();
     
-    // Check for user session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // Check for user session with error handling
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        console.error("Supabase session error:", error.message);
+        // If the refresh token is invalid, sign out to clear local storage
+        if (error.message.includes("Refresh Token Not Found") || error.message.includes("Invalid Refresh Token")) {
+          supabase.auth.signOut();
+          setUser(null);
+        }
+        return;
+      }
+      
       if (session?.user) {
         fetchProfile(session.user);
       } else {
@@ -76,7 +101,14 @@ export default function App() {
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setConversations([]);
+        setCurrentConversationId(null);
+        return;
+      }
+
       if (session?.user) {
         fetchProfile(session.user);
       } else {
@@ -264,6 +296,75 @@ export default function App() {
     // Reset skip ref after the effect runs
     skipIframeUpdate.current = false;
   }, [generatedCode, viewMode]);
+
+  const handleSectionUpdate = async (sectionPrompt: string) => {
+    if (!sectionEdit.sectionHtml || !generatedCode || isLoading) return;
+
+    setIsLoading(true);
+    try {
+      const history = messages.map(m => ({
+        role: m.role,
+        parts: [{ text: m.content }]
+      }));
+
+      const result = await updateSection(
+        sectionPrompt,
+        sectionEdit.sectionHtml,
+        generatedCode,
+        history
+      );
+
+      // Replace the old section HTML with the new one in the full code
+      const updatedCode = generatedCode.replace(sectionEdit.sectionHtml, result.updated_section_html);
+      
+      const updatedMessages: Message[] = [...messages, { 
+        role: 'model', 
+        content: `J'ai mis à jour la section (${sectionEdit.selector}) : ${result.explanation}`,
+        code: updatedCode
+      }];
+      
+      setMessages(updatedMessages);
+      setGeneratedCode(updatedCode);
+      setSectionEdit({ isActive: false });
+      
+      // Save to Supabase
+      await saveConversation(updatedMessages);
+    } catch (error) {
+      console.error("Error updating section:", error);
+      alert("Erreur lors de la mise à jour de la section.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleNetlifyDeploy = async () => {
+    if (!generatedCode || isDeploying) return;
+    
+    setIsDeploying(true);
+    try {
+      const result = await deployToNetlify(siteName || 'cook-ia-project', generatedCode);
+      if (result.success) {
+        window.open(result.url, '_blank');
+        alert(`Site déployé avec succès sur Netlify !\nURL : ${result.url}`);
+      }
+    } catch (error) {
+      console.error("Netlify deployment failed:", error);
+      alert("Le déploiement sur Netlify a échoué.");
+    } finally {
+      setIsDeploying(false);
+    }
+  };
+
+  const handleImageSelect = (imageUrl: string) => {
+    if (imageSearchContext === 'section' && sectionEdit.isActive) {
+      // If in section edit mode, we'll append a prompt to use this image
+      setPrompt(prev => prev + `\n\nUtilise cette image Unsplash pour remplacer l'image principale de cette section : ${imageUrl}`);
+    } else {
+      // In general chat, add to selected images
+      setSelectedImages(prev => [...prev, imageUrl]);
+    }
+    setIsImageSearchOpen(false);
+  };
 
   const handleSend = async () => {
     if (!prompt.trim() || isLoading) return;
@@ -591,6 +692,21 @@ export default function App() {
 
             <div className="hidden sm:flex items-center gap-2">
               <button 
+                onClick={() => setIsStyleEditorOpen(!isStyleEditorOpen)}
+                title="Style Editor"
+                className={`transition-all p-2 lg:p-2.5 rounded-xl ${isStyleEditorOpen ? 'bg-orange-primary text-white shadow-lg' : 'text-white/30 hover:text-white hover:bg-white/5'}`}
+              >
+                <Palette size={18} />
+              </button>
+              <button 
+                onClick={handleNetlifyDeploy}
+                disabled={!generatedCode || isDeploying}
+                title="Deploy to Netlify"
+                className="text-white/30 hover:text-white transition-all p-2 lg:p-2.5 hover:bg-white/5 rounded-xl disabled:opacity-10 flex items-center gap-2"
+              >
+                {isDeploying ? <Loader2 size={18} className="animate-spin" /> : <Rocket size={18} />}
+              </button>
+              <button 
                 onClick={handleDownload}
                 disabled={!generatedCode}
                 title="Download HTML"
@@ -686,6 +802,10 @@ export default function App() {
             logoUrl={LOGO_URL}
             selectedImages={selectedImages}
             setSelectedImages={setSelectedImages}
+            onOpenImageSearch={() => {
+              setImageSearchContext('chat');
+              setIsImageSearchOpen(true);
+            }}
           />
         </div>
         
@@ -703,9 +823,48 @@ export default function App() {
               setGeneratedCode(newCode);
             }}
             onDownloadZip={handleDownloadZip}
+            styleConfig={styleConfig}
+            sectionEdit={sectionEdit}
+            onSectionSelect={setSectionEdit}
           />
         </div>
       </main>
+
+      <AnimatePresence>
+        {isStyleEditorOpen && (
+          <StyleEditor 
+            isOpen={isStyleEditorOpen}
+            onClose={() => setIsStyleEditorOpen(false)}
+            config={styleConfig}
+            onChange={setStyleConfig}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {sectionEdit.isActive && (
+          <SectionChat 
+            section={sectionEdit}
+            onClose={() => setSectionEdit({ isActive: false })}
+            onUpdate={handleSectionUpdate}
+            isLoading={isLoading}
+            onOpenImageSearch={() => {
+              setImageSearchContext('section');
+              setIsImageSearchOpen(true);
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isImageSearchOpen && (
+          <ImageSearchModal 
+            isOpen={isImageSearchOpen}
+            onClose={() => setIsImageSearchOpen(false)}
+            onSelect={handleImageSelect}
+          />
+        )}
+      </AnimatePresence>
 
       {/* GitHub Sync Modal */}
       <AnimatePresence>

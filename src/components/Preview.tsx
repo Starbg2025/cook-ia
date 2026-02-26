@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Zap, RotateCcw, ExternalLink, Pencil, FileCode, Folder, Download, ChevronRight, ChevronDown } from 'lucide-react';
-import { ViewMode, ProjectFile } from '../types';
+import { Zap, RotateCcw, ExternalLink, Pencil, FileCode, Folder, Download, ChevronRight, ChevronDown, MousePointer2 } from 'lucide-react';
+import { ViewMode, ProjectFile, StyleConfig, SectionEditState } from '../types';
 
 interface PreviewProps {
   viewMode: ViewMode;
@@ -13,6 +13,9 @@ interface PreviewProps {
   onEdit?: () => void;
   onCodeChange?: (newCode: string) => void;
   onDownloadZip?: () => void;
+  styleConfig?: StyleConfig;
+  sectionEdit?: SectionEditState;
+  onSectionSelect?: (section: SectionEditState) => void;
 }
 
 import Prism from 'prismjs';
@@ -30,9 +33,13 @@ export const Preview: React.FC<PreviewProps> = ({
   onExpand,
   onEdit,
   onCodeChange,
-  onDownloadZip
+  onDownloadZip,
+  styleConfig,
+  sectionEdit,
+  onSectionSelect
 }) => {
   const [isVisualEditing, setIsVisualEditing] = React.useState(false);
+  const [isSectionSelectionMode, setIsSectionSelectionMode] = React.useState(false);
   const [selectedFilePath, setSelectedFilePath] = React.useState<string | null>(null);
 
   React.useEffect(() => {
@@ -49,6 +56,48 @@ export const Preview: React.FC<PreviewProps> = ({
     }
   }, [viewMode, selectedFilePath, selectedFile]);
 
+  // Apply Style Overrides
+  React.useEffect(() => {
+    const iframe = iframeRef.current;
+    if (!iframe || !styleConfig || viewMode !== 'preview') return;
+
+    const doc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (!doc) return;
+
+    let styleTag = doc.getElementById('cook-ia-overrides');
+    if (!styleTag) {
+      styleTag = doc.createElement('style');
+      styleTag.id = 'cook-ia-overrides';
+      doc.head.appendChild(styleTag);
+    }
+
+    styleTag.textContent = `
+      :root {
+        --primary: ${styleConfig.primaryColor} !important;
+        --primary-color: ${styleConfig.primaryColor} !important;
+      }
+      body {
+        font-family: "${styleConfig.fontFamily}", sans-serif !important;
+      }
+      button, .btn, .rounded, [class*="rounded-"] {
+        border-radius: ${styleConfig.borderRadius} !important;
+      }
+      /* Override common tailwind primary colors if they are hardcoded */
+      .bg-orange-primary, .bg-primary { background-color: ${styleConfig.primaryColor} !important; }
+      .text-orange-primary, .text-primary { color: ${styleConfig.primaryColor} !important; }
+      .border-orange-primary, .border-primary { border-color: ${styleConfig.primaryColor} !important; }
+    `;
+
+    // Inject Google Fonts if needed
+    if (!doc.getElementById(`font-${styleConfig.fontFamily}`)) {
+      const link = doc.createElement('link');
+      link.id = `font-${styleConfig.fontFamily}`;
+      link.rel = 'stylesheet';
+      link.href = `https://fonts.googleapis.com/css2?family=${styleConfig.fontFamily.replace(/ /g, '+')}:wght@400;700;900&display=swap`;
+      doc.head.appendChild(link);
+    }
+  }, [styleConfig, viewMode, generatedCode]);
+
   React.useEffect(() => {
     const iframe = iframeRef.current;
     if (!iframe || viewMode !== 'preview' || !generatedCode) return;
@@ -56,6 +105,45 @@ export const Preview: React.FC<PreviewProps> = ({
     const handleLoad = () => {
       const doc = iframe.contentDocument || iframe.contentWindow?.document;
       if (!doc) return;
+
+      // Section Selection Logic
+      if (isSectionSelectionMode) {
+        const sections = doc.querySelectorAll('section, header, footer, nav, main');
+        sections.forEach((sec: any) => {
+          sec.style.cursor = 'pointer';
+          sec.style.transition = 'all 0.2s';
+          
+          const handleMouseOver = (e: MouseEvent) => {
+            e.stopPropagation();
+            sec.style.outline = '2px solid var(--primary, #FF6B00)';
+            sec.style.backgroundColor = 'rgba(255, 107, 0, 0.05)';
+          };
+          
+          const handleMouseOut = (e: MouseEvent) => {
+            e.stopPropagation();
+            sec.style.outline = '';
+            sec.style.backgroundColor = '';
+          };
+          
+          const handleClick = (e: MouseEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (onSectionSelect) {
+              onSectionSelect({
+                isActive: true,
+                sectionId: sec.id || `section-${Math.random().toString(36).substr(2, 9)}`,
+                sectionHtml: sec.outerHTML,
+                selector: sec.tagName.toLowerCase() + (sec.id ? `#${sec.id}` : '') + (sec.className ? `.${sec.className.split(' ').join('.')}` : '')
+              });
+            }
+            setIsSectionSelectionMode(false);
+          };
+
+          sec.addEventListener('mouseover', handleMouseOver);
+          sec.addEventListener('mouseout', handleMouseOut);
+          sec.addEventListener('click', handleClick);
+        });
+      }
 
       if (isVisualEditing) {
         // Make all text-containing elements editable
@@ -102,7 +190,7 @@ export const Preview: React.FC<PreviewProps> = ({
     handleLoad();
 
     return () => iframe.removeEventListener('load', handleLoad);
-  }, [isVisualEditing, generatedCode, viewMode]);
+  }, [isVisualEditing, isSectionSelectionMode, generatedCode, viewMode]);
 
   return (
     <section className="flex-1 bg-[#141414] rounded-3xl border border-white/5 overflow-hidden flex flex-col shadow-2xl">
@@ -121,6 +209,11 @@ export const Preview: React.FC<PreviewProps> = ({
               Visual Edit Mode
             </span>
           )}
+          {isSectionSelectionMode && (
+            <span className="text-[9px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full font-bold uppercase tracking-widest animate-pulse">
+              Select a Section
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-4 text-white/30 w-auto justify-end">
@@ -134,6 +227,13 @@ export const Preview: React.FC<PreviewProps> = ({
               <span className="hidden sm:inline">Export ZIP</span>
             </button>
           )}
+          <button 
+            onClick={() => setIsSectionSelectionMode(!isSectionSelectionMode)}
+            className={`transition-all p-1 hover:scale-110 active:scale-95 ${isSectionSelectionMode ? 'text-blue-400' : 'hover:text-white'}`}
+            title="Targeted Section Edit"
+          >
+            <MousePointer2 size={15} />
+          </button>
           <button 
             onClick={() => setIsVisualEditing(!isVisualEditing)}
             className={`transition-all p-1 hover:scale-110 active:scale-95 ${isVisualEditing ? 'text-orange-primary' : 'hover:text-white'}`}

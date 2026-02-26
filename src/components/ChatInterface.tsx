@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Zap, Send, Loader2, ImagePlus, X } from 'lucide-react';
+import { Zap, Send, Loader2, ImagePlus, X, Image as ImageIcon } from 'lucide-react';
 import { Message } from '../types';
 
 interface ChatInterfaceProps {
@@ -14,6 +14,7 @@ interface ChatInterfaceProps {
   logoUrl: string;
   selectedImages: string[];
   setSelectedImages: React.Dispatch<React.SetStateAction<string[]>>;
+  onOpenImageSearch?: () => void;
 }
 
 export const ChatInterface: React.FC<ChatInterfaceProps> = ({
@@ -26,7 +27,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   chatEndRef,
   logoUrl,
   selectedImages,
-  setSelectedImages
+  setSelectedImages,
+  onOpenImageSearch
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -167,6 +169,13 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
               multiple
               className="hidden"
             />
+            <button 
+              onClick={onOpenImageSearch}
+              className="p-2 lg:p-3 text-white/20 hover:text-orange-primary transition-colors"
+              title="Search professional photos on Unsplash"
+            >
+              <ImageIcon size={18} />
+            </button>
             <button 
               onClick={() => fileInputRef.current?.click()}
               className="p-2 lg:p-3 text-white/20 hover:text-orange-primary transition-colors"

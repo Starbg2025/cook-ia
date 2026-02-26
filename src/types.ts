@@ -1,3 +1,16 @@
+export interface StyleConfig {
+  primaryColor: string;
+  fontFamily: string;
+  borderRadius: string;
+}
+
+export interface SectionEditState {
+  isActive: boolean;
+  sectionId?: string;
+  sectionHtml?: string;
+  selector?: string;
+}
+
 export interface ProjectFile {
   path: string;
   content: string;
