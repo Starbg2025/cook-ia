@@ -991,30 +991,33 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="relative w-full max-w-[900px] h-[640px] bg-[#141414] border border-white/10 rounded-[32px] shadow-2xl overflow-hidden flex text-white"
+            className="relative w-full max-w-[900px] h-full lg:h-[640px] bg-[#141414] border border-white/10 rounded-none lg:rounded-[32px] shadow-2xl overflow-hidden flex flex-col lg:flex-row text-white"
           >
             {/* Sidebar */}
-            <div className="w-[280px] bg-[#0D0D0D] border-r border-white/5 p-6 flex flex-col">
-              <button 
-                onClick={onClose}
-                className="p-2 hover:bg-white/5 rounded-full transition-colors text-white/40 self-start mb-8"
-              >
-                <X size={20} />
-              </button>
+            <div className="w-full lg:w-[280px] bg-[#0D0D0D] border-b lg:border-b-0 lg:border-r border-white/5 p-4 lg:p-6 flex flex-col">
+              <div className="flex items-center justify-between mb-4 lg:mb-8">
+                <button 
+                  onClick={onClose}
+                  className="p-2 hover:bg-white/5 rounded-full transition-colors text-white/40"
+                >
+                  <X size={20} />
+                </button>
+                <div className="lg:hidden text-sm font-bold uppercase tracking-widest text-orange-primary">Settings</div>
+              </div>
 
-              <div className="space-y-1">
+              <div className="flex lg:flex-col gap-1 overflow-x-auto lg:overflow-x-visible pb-2 lg:pb-0 scrollbar-hide">
                 {tabs.map((tab) => (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id as TabType)}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-all ${
+                    className={`flex-shrink-0 flex items-center gap-3 px-4 py-2.5 lg:py-3 rounded-xl lg:rounded-2xl text-[10px] lg:text-sm font-medium transition-all ${
                       activeTab === tab.id 
                         ? 'bg-white/10 text-white shadow-lg' 
                         : 'text-white/40 hover:bg-white/5 hover:text-white'
                     }`}
                   >
-                    <tab.icon size={18} />
-                    {tab.label}
+                    <tab.icon size={16} className="lg:w-[18px] lg:h-[18px]" />
+                    <span className="whitespace-nowrap">{tab.label}</span>
                   </button>
                 ))}
               </div>
@@ -1022,10 +1025,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
 
             {/* Content */}
             <div className="flex-1 flex flex-col overflow-hidden">
-              <div className="p-8 border-b border-white/5">
-                <h2 className="text-2xl font-bold">{tabs.find(t => t.id === activeTab)?.label}</h2>
+              <div className="p-6 lg:p-8 border-b border-white/5">
+                <h2 className="text-xl lg:text-2xl font-bold">{tabs.find(t => t.id === activeTab)?.label}</h2>
               </div>
-              <div className="flex-1 overflow-y-auto p-8 scrollbar-hide">
+              <div className="flex-1 overflow-y-auto p-6 lg:p-8 scrollbar-hide">
                 {renderContent()}
               </div>
             </div>

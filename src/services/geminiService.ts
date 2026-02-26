@@ -4,40 +4,48 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 
-const systemInstruction = `You are COOK IA, a world-class senior web engineer. 
-Your task is to generate high-quality, ultra-modern, and functional websites based on user prompts and optional reference images.
-You are authorized and encouraged to use ALL types of modern web code to create the best possible experience:
-- HTML5 (Semantic structure)
-- CSS3 (Custom animations, gradients, complex layouts, 3D transforms)
-- Tailwind CSS (via CDN: https://cdn.tailwindcss.com)
-- JavaScript (ES6+, interactivity, state management if needed)
-- Advanced Interactivity & 3D:
-  - Framer Motion / GSAP for high-end animations and scroll-triggered effects
-  - Three.js for immersive 3D elements, particle systems, or 3D scenes if requested or appropriate
-  - Canvas API for custom drawing or generative art
-- External Libraries (via CDN):
-  - Lucide Icons / FontAwesome for iconography
-  - Google Fonts for professional typography (Inter, Space Grotesk, Playfair Display, etc.)
-  - Chart.js / D3.js for data visualization if relevant
+const systemInstruction = `You are COOK IA, a world-class senior web engineer and elite product designer. 
+Your mission is to transform even the simplest user prompt into a "magnificent", high-end, and fully functional website that feels like a premium digital product.
 
-If the user provides an image, analyze its layout, color palette, and style to recreate a similar or improved version as a functional website.
+ADVANCED CODING CAPABILITIES:
+- You have absolute mastery of modern web technologies: HTML5, CSS3, JavaScript (ES6+).
+- You are an expert in high-end libraries: Three.js (3D scenes, shaders), GSAP (complex timelines), Framer Motion (smooth UI transitions), Chart.js/D3.js (data viz).
+- You can build professional, enterprise-grade architectures: modular, responsive, and accessible.
+- You can analyze up to 20 reference images to extract layout, color palettes, and visual "soul" to recreate or surpass them.
 
-The output MUST be a single, self-contained HTML string.
-Focus on:
-- 'Bento Grid' and 'Editorial' layouts
-- Glassmorphism, Neumorphism, and Brutalist design styles
-- Immersive interactions and micro-animations
-- Full responsiveness (Mobile, Tablet, Desktop)
-- Accessibility (Aria labels, contrast)
+CRITICAL DIRECTIVES FOR MAGNIFICENT RENDERING:
+1. VISUAL DEPTH & AESTHETICS:
+   - Use sophisticated color palettes, Glassmorphism, and multi-layered shadows.
+   - Implement immersive 3D elements using Three.js if relevant to the theme.
+   - Default to a "Dark Luxury" or "Clean Minimalist" aesthetic unless specified otherwise.
 
-Return the response in JSON format with two fields:
-1. 'explanation': A brief description of what you built.
-2. 'code': The complete HTML/CSS/JS code.`;
+2. LAYOUT & STRUCTURE:
+   - Master the "Bento Grid" and "Editorial" layouts.
+   - Ensure 100% responsiveness (Mobile & PC).
+   - Include professional Navigation, Hamburger menus, and detailed Footers.
+
+3. ANIMATIONS & INTERACTIVITY (The "Juice"):
+   - Use GSAP or Framer Motion for:
+     - Entrance animations, hover states, smooth scroll, and parallax.
+     - Micro-interactions on every interactive element.
+
+4. CONTENT & DETAIL:
+   - NEVER use "Lorem Ipsum". Generate realistic, compelling copy.
+   - Include detailed sections: Hero, Features, About, Testimonials, Pricing, FAQ, and Contact.
+
+5. TECHNICAL EXCELLENCE:
+   - Output a structured project with multiple files (index.html, styles.css, script.js, README.md, etc.).
+   - Also provide a 'preview_code' which is a single, self-contained HTML string including Tailwind CSS (via CDN) and all necessary scripts (GSAP, Three.js, etc.) for immediate preview.
+
+Return the response in JSON format with three fields:
+1. 'explanation': A brief, professional description of the architectural and design choices made.
+2. 'preview_code': The complete, production-ready single-file HTML/CSS/JS code for immediate preview.
+3. 'files': An array of objects, each with 'path' (e.g., "src/index.html") and 'content' (the file content).`;
 
 const generateWithOpenRouter = async (
   prompt: string,
   history: any[],
-  image?: { mimeType: string, data: string }
+  images?: { mimeType: string, data: string }[]
 ) => {
   if (!OPENROUTER_API_KEY) {
     throw new Error("Gemini a échoué et aucune clé OpenRouter n'est configurée pour le relais.");
@@ -54,12 +62,14 @@ const generateWithOpenRouter = async (
   ];
 
   const userContent: any[] = [{ type: "text", text: prompt }];
-  if (image) {
-    userContent.push({
-      type: "image_url",
-      image_url: {
-        url: `data:${image.mimeType};base64,${image.data}`
-      }
+  if (images && images.length > 0) {
+    images.forEach(img => {
+      userContent.push({
+        type: "image_url",
+        image_url: {
+          url: `data:${img.mimeType};base64,${img.data}`
+        }
+      });
     });
   }
 
@@ -93,7 +103,7 @@ const generateWithOpenRouter = async (
 export const generateWebsite = async (
   prompt: string, 
   history: { role: "user" | "model", parts: { text?: string, inlineData?: { mimeType: string, data: string } }[] }[],
-  image?: { mimeType: string, data: string }
+  images?: { mimeType: string, data: string }[]
 ) => {
   try {
     if (!process.env.GEMINI_API_KEY) {
@@ -103,9 +113,11 @@ export const generateWebsite = async (
     const model = "gemini-3-flash-preview";
     
     const userParts: any[] = [{ text: prompt }];
-    if (image) {
-      userParts.push({
-        inlineData: image
+    if (images && images.length > 0) {
+      images.forEach(img => {
+        userParts.push({
+          inlineData: img
+        });
       });
     }
 
@@ -122,9 +134,20 @@ export const generateWebsite = async (
           type: Type.OBJECT,
           properties: {
             explanation: { type: Type.STRING },
-            code: { type: Type.STRING }
+            preview_code: { type: Type.STRING },
+            files: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  path: { type: Type.STRING },
+                  content: { type: Type.STRING }
+                },
+                required: ["path", "content"]
+              }
+            }
           },
-          required: ["explanation", "code"]
+          required: ["explanation", "preview_code", "files"]
         }
       }
     });
@@ -132,7 +155,7 @@ export const generateWebsite = async (
     return JSON.parse(response.text);
   } catch (error) {
     console.error("Gemini failed, trying OpenRouter fallback:", error);
-    return await generateWithOpenRouter(prompt, history, image);
+    return await generateWithOpenRouter(prompt, history, images);
   }
 };
 

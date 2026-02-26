@@ -24,11 +24,7 @@ import { HistorySidebar } from './components/HistorySidebar';
 import { AuthModal } from './components/AuthModal';
 import { SettingsModal } from './components/SettingsModal';
 import { supabase } from './services/supabaseService';
-import Prism from 'prismjs';
-import 'prismjs/themes/prism-tomorrow.css';
-import 'prismjs/components/prism-markup';
-import 'prismjs/components/prism-css';
-import 'prismjs/components/prism-javascript';
+import JSZip from 'jszip';
 
 const LOGO_URL = "https://i.ibb.co/mC3M8SSN/logo.png"; // Note: I used a direct link format, you may need to check the exact direct link on ImgBB
 
@@ -59,12 +55,14 @@ export default function App() {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<any>('general');
   const [user, setUser] = useState<any>(null);
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [abortController, setAbortController] = useState<AbortController | null>(null);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const skipIframeUpdate = useRef(false);
+
+  const [activeMobileTab, setActiveMobileTab] = useState<'chat' | 'preview'>('chat');
 
   useEffect(() => {
     loadConversations();
@@ -255,12 +253,6 @@ export default function App() {
   }, [messages]);
 
   useEffect(() => {
-    if (viewMode === 'code' && generatedCode) {
-      Prism.highlightAll();
-    }
-  }, [viewMode, generatedCode]);
-
-  useEffect(() => {
     if (generatedCode && iframeRef.current && !skipIframeUpdate.current) {
       const doc = iframeRef.current.contentDocument;
       if (doc) {
@@ -282,14 +274,14 @@ export default function App() {
     }
 
     const userMessage = prompt;
-    const currentImage = selectedImage;
+    const currentImages = [...selectedImages];
     setPrompt('');
-    setSelectedImage(null);
+    setSelectedImages([]);
     
     const newMessages: Message[] = [...messages, { 
       role: 'user', 
       content: userMessage,
-      image: currentImage || undefined
+      images: currentImages.length > 0 ? currentImages : undefined
     }];
     setMessages(newMessages);
     const controller = new AbortController();
@@ -299,13 +291,15 @@ export default function App() {
     try {
       const history = newMessages.map(m => {
         const parts: any[] = [{ text: m.content + (m.code ? `\n\nCode:\n${m.code}` : '') }];
-        if (m.image) {
-          const [mimeType, data] = m.image.split(';base64,');
-          parts.push({
-            inlineData: {
-              mimeType: mimeType.split(':')[1],
-              data: data
-            }
+        if (m.images && m.images.length > 0) {
+          m.images.forEach(img => {
+            const [mimeType, data] = img.split(';base64,');
+            parts.push({
+              inlineData: {
+                mimeType: mimeType.split(':')[1],
+                data: data
+              }
+            });
           });
         }
         return {
@@ -314,25 +308,28 @@ export default function App() {
         };
       });
 
-      // Prepare current image for API if exists
-      let imagePart;
-      if (currentImage) {
-        const [mimeType, data] = currentImage.split(';base64,');
-        imagePart = {
-          mimeType: mimeType.split(':')[1],
-          data: data
-        };
+      // Prepare current images for API if exists
+      let imageParts;
+      if (currentImages.length > 0) {
+        imageParts = currentImages.map(img => {
+          const [mimeType, data] = img.split(';base64,');
+          return {
+            mimeType: mimeType.split(':')[1],
+            data: data
+          };
+        });
       }
 
-      const result = await generateWebsite(userMessage, history.slice(0, -1), imagePart);
+      const result = await generateWebsite(userMessage, history.slice(0, -1), imageParts);
       
       const updatedMessages: Message[] = [...newMessages, { 
         role: 'model', 
         content: result.explanation,
-        code: result.code
+        code: result.preview_code,
+        files: result.files
       }];
       setMessages(updatedMessages);
-      setGeneratedCode(result.code);
+      setGeneratedCode(result.preview_code);
       setViewMode('preview');
       
       // Enqueue invisible background task (Watchdog Architecture)
@@ -341,7 +338,7 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           type: 'site_optimization', 
-          payload: { siteName: siteName || 'untitled', codeLength: result.code.length } 
+          payload: { siteName: siteName || 'untitled', codeLength: result.preview_code.length } 
         })
       }).catch(err => console.error("Watchdog enqueue failed:", err));
 
@@ -370,6 +367,25 @@ export default function App() {
     }
   };
 
+  const handleDownloadZip = async () => {
+    const lastModelMessage = [...messages].reverse().find(m => m.role === 'model' && m.files);
+    if (!lastModelMessage?.files) return;
+
+    const zip = new JSZip();
+    lastModelMessage.files.forEach(file => {
+      zip.file(file.path, file.content);
+    });
+
+    const content = await zip.generateAsync({ type: 'blob' });
+    const url = URL.createObjectURL(content);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${siteName || 'cook-ia-project'}.zip`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
   const handleAbort = () => {
     if (abortController) {
       abortController.abort();
@@ -499,34 +515,34 @@ export default function App() {
   return (
     <div className="flex flex-col h-screen bg-[#0A0A0A] text-white overflow-hidden font-sans">
       {/* Header */}
-      <header className="flex items-center justify-between px-10 py-6 border-b border-white/5 bg-[#0A0A0A]/90 backdrop-blur-xl z-50 sticky top-0">
-        <div className="flex items-center gap-6">
+      <header className="flex items-center justify-between px-4 lg:px-10 py-4 lg:py-6 border-b border-white/5 bg-[#0A0A0A]/90 backdrop-blur-xl z-50 sticky top-0">
+        <div className="flex items-center gap-3 lg:gap-6">
           <button 
             onClick={() => setIsHistoryOpen(!isHistoryOpen)}
-            className={`p-3.5 rounded-2xl transition-all duration-300 ${isHistoryOpen ? 'bg-white text-black' : 'bg-[#141414] text-white/40 hover:bg-[#1A1A1A] hover:text-white'} border border-white/5 shadow-2xl group`}
+            className={`p-2.5 lg:p-3.5 rounded-xl lg:rounded-2xl transition-all duration-300 ${isHistoryOpen ? 'bg-white text-black' : 'bg-[#141414] text-white/40 hover:bg-[#1A1A1A] hover:text-white'} border border-white/5 shadow-2xl group`}
           >
-            <div className="flex flex-col gap-1.5 w-5">
-              <div className={`h-[2px] transition-all duration-300 ${isHistoryOpen ? 'w-full bg-black' : 'w-full bg-current'}`} />
-              <div className={`h-[2px] transition-all duration-300 ${isHistoryOpen ? 'w-2/3 bg-black' : 'w-full bg-current'}`} />
-              <div className={`h-[2px] transition-all duration-300 ${isHistoryOpen ? 'w-full bg-black' : 'w-full bg-current'}`} />
+            <div className="flex flex-col gap-1 w-4 lg:w-5">
+              <div className={`h-[1.5px] lg:h-[2px] transition-all duration-300 ${isHistoryOpen ? 'w-full bg-black' : 'w-full bg-current'}`} />
+              <div className={`h-[1.5px] lg:h-[2px] transition-all duration-300 ${isHistoryOpen ? 'w-2/3 bg-black' : 'w-full bg-current'}`} />
+              <div className={`h-[1.5px] lg:h-[2px] transition-all duration-300 ${isHistoryOpen ? 'w-full bg-black' : 'w-full bg-current'}`} />
             </div>
           </button>
           
-          <div className="flex items-center gap-4 group cursor-pointer">
-            <div className="w-12 h-12 bg-[#141414] rounded-[1.25rem] flex items-center justify-center shadow-2xl border border-white/10 overflow-hidden transition-transform group-hover:scale-105">
+          <div className="flex items-center gap-2 lg:gap-4 group cursor-pointer">
+            <div className="w-8 h-8 lg:w-12 lg:h-12 bg-[#141414] rounded-lg lg:rounded-[1.25rem] flex items-center justify-center shadow-2xl border border-white/10 overflow-hidden transition-transform group-hover:scale-105">
               <img src={LOGO_URL} alt="COOK IA Logo" className="w-full h-full object-cover" />
             </div>
-            <div>
-              <h1 className="text-2xl font-black tracking-tighter flex items-center gap-1.5 leading-none mb-1">
+            <div className="hidden sm:block">
+              <h1 className="text-lg lg:text-2xl font-black tracking-tighter flex items-center gap-1.5 leading-none mb-0.5 lg:mb-1">
                 COOK <span className="text-orange-primary">IA</span>
               </h1>
-              <p className="text-[10px] text-white/20 uppercase tracking-[0.3em] font-bold">Full-Stack Web Development</p>
+              <p className="text-[8px] lg:text-[10px] text-white/20 uppercase tracking-[0.2em] lg:tracking-[0.3em] font-bold">Full-Stack Web Development</p>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-8">
-          <div className="flex bg-[#0D0D0D] p-1.5 rounded-[1.25rem] border border-white/5 shadow-inner">
+        <div className="flex items-center gap-2 lg:gap-8">
+          <div className="hidden md:flex bg-[#0D0D0D] p-1.5 rounded-[1.25rem] border border-white/5 shadow-inner">
             <button 
               onClick={() => setViewMode('preview')}
               className={`flex items-center gap-2.5 px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all duration-300 ${viewMode === 'preview' ? 'bg-white text-black shadow-2xl scale-105' : 'text-white/30 hover:text-white'}`}
@@ -543,21 +559,21 @@ export default function App() {
             </button>
           </div>
 
-          <div className="h-10 w-[1px] bg-white/5" />
+          <div className="hidden md:block h-10 w-[1px] bg-white/5" />
           
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2 lg:gap-6">
             {user ? (
-              <div className="flex items-center gap-4 bg-white/5 pl-2 pr-4 py-1.5 rounded-2xl border border-white/5">
-                <div className="w-8 h-8 rounded-xl bg-orange-primary/20 border border-orange-primary/20 flex items-center justify-center overflow-hidden shadow-inner">
+              <div className="flex items-center gap-2 lg:gap-4 bg-white/5 pl-1.5 lg:pl-2 pr-3 lg:pr-4 py-1 lg:py-1.5 rounded-xl lg:rounded-2xl border border-white/5">
+                <div className="w-6 h-6 lg:w-8 lg:h-8 rounded-lg lg:rounded-xl bg-orange-primary/20 border border-orange-primary/20 flex items-center justify-center overflow-hidden shadow-inner">
                   {user.user_metadata?.avatar_url ? (
                     <img src={user.user_metadata.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
                   ) : (
-                    <span className="text-[10px] font-black text-orange-primary">{user.email?.charAt(0).toUpperCase()}</span>
+                    <span className="text-[8px] lg:text-[10px] font-black text-orange-primary">{user.email?.charAt(0).toUpperCase()}</span>
                   )}
                 </div>
                 <button 
                   onClick={() => supabase.auth.signOut()}
-                  className="text-white/30 hover:text-white text-[10px] font-black uppercase tracking-widest transition-colors"
+                  className="text-white/30 hover:text-white text-[8px] lg:text-[10px] font-black uppercase tracking-widest transition-colors"
                 >
                   Logout
                 </button>
@@ -565,31 +581,34 @@ export default function App() {
             ) : (
               <button 
                 onClick={() => setIsAuthModalOpen(true)}
-                className="text-white/30 hover:text-white text-[10px] font-black uppercase tracking-widest transition-colors px-4 py-2 hover:bg-white/5 rounded-xl border border-transparent hover:border-white/5"
+                className="text-white/30 hover:text-white text-[8px] lg:text-[10px] font-black uppercase tracking-widest transition-colors px-3 lg:px-4 py-1.5 lg:py-2 hover:bg-white/5 rounded-lg lg:rounded-xl border border-transparent hover:border-white/5"
               >
                 Sign In
               </button>
             )}
 
-            <div className="h-6 w-[1px] bg-white/5" />
+            <div className="hidden sm:block h-6 w-[1px] bg-white/5" />
 
-            <button 
-              onClick={handleDownload}
-              disabled={!generatedCode}
-              title="Download HTML"
-              className="text-white/30 hover:text-white transition-all p-2.5 hover:bg-white/5 rounded-xl disabled:opacity-10"
-            >
-              <Download size={20} />
-            </button>
-            <button 
-              onClick={handleGithubClick}
-              className="text-white/30 hover:text-white transition-all p-2.5 hover:bg-white/5 rounded-xl"
-            >
-              <Github size={20} />
-            </button>
+            <div className="hidden sm:flex items-center gap-2">
+              <button 
+                onClick={handleDownload}
+                disabled={!generatedCode}
+                title="Download HTML"
+                className="text-white/30 hover:text-white transition-all p-2 lg:p-2.5 hover:bg-white/5 rounded-xl disabled:opacity-10"
+              >
+                <Download size={18} />
+              </button>
+              <button 
+                onClick={handleGithubClick}
+                className="text-white/30 hover:text-white transition-all p-2 lg:p-2.5 hover:bg-white/5 rounded-xl"
+              >
+                <Github size={18} />
+              </button>
+            </div>
+            
             <button 
               onClick={() => setIsPublishModalOpen(true)}
-              className="bg-orange-primary hover:bg-orange-600 text-white px-8 py-3.5 rounded-[1.25rem] font-black text-xs uppercase tracking-widest transition-all shadow-[0_20px_40px_rgba(255,107,0,0.2)] active:scale-95 hover:-translate-y-0.5"
+              className="bg-orange-primary hover:bg-orange-600 text-white px-4 lg:px-8 py-2.5 lg:py-3.5 rounded-xl lg:rounded-[1.25rem] font-black text-[10px] lg:text-xs uppercase tracking-widest transition-all shadow-[0_10px_20px_rgba(255,107,0,0.15)] lg:shadow-[0_20px_40px_rgba(255,107,0,0.2)] active:scale-95 hover:-translate-y-0.5"
             >
               Publish
             </button>
@@ -597,57 +616,95 @@ export default function App() {
         </div>
       </header>
 
-      <main className="flex flex-1 overflow-hidden p-4 gap-4">
+      {/* Mobile Tab Switcher */}
+      <div className="lg:hidden flex border-b border-white/5 bg-[#0A0A0A]">
+        <button 
+          onClick={() => setActiveMobileTab('chat')}
+          className={`flex-1 py-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all ${activeMobileTab === 'chat' ? 'text-orange-primary border-b-2 border-orange-primary' : 'text-white/20'}`}
+        >
+          Chat
+        </button>
+        <button 
+          onClick={() => setActiveMobileTab('preview')}
+          className={`flex-1 py-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all ${activeMobileTab === 'preview' ? 'text-orange-primary border-b-2 border-orange-primary' : 'text-white/20'}`}
+        >
+          Preview
+        </button>
+      </div>
+
+      <main className="flex flex-1 overflow-hidden p-2 lg:p-4 gap-2 lg:gap-4 relative">
         <AnimatePresence>
           {isHistoryOpen && (
-            <motion.div
-              initial={{ width: 0, opacity: 0, x: -20 }}
-              animate={{ width: 256, opacity: 1, x: 0 }}
-              exit={{ width: 0, opacity: 0, x: -20 }}
-              transition={{ type: 'spring', damping: 20, stiffness: 100 }}
-              className="overflow-hidden"
-            >
-              <HistorySidebar 
-                conversations={conversations}
-                currentConversationId={currentConversationId}
-                onSelectConversation={handleSelectConversation}
-                onNewChat={handleNewChat}
-                onDeleteConversation={handleDeleteConversation}
-                onOpenSettings={(tab) => {
-                  setSettingsTab(tab || 'general');
-                  setIsSettingsModalOpen(true);
-                }}
-                user={user}
+            <>
+              {/* Mobile Overlay */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setIsHistoryOpen(false)}
+                className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[60]"
               />
-            </motion.div>
+              <motion.div
+                initial={{ width: 0, opacity: 0, x: -20 }}
+                animate={{ width: 280, opacity: 1, x: 0 }}
+                exit={{ width: 0, opacity: 0, x: -20 }}
+                transition={{ type: 'spring', damping: 25, stiffness: 120 }}
+                className="absolute lg:relative left-0 top-0 bottom-0 z-[70] lg:z-0 h-full overflow-hidden bg-[#0D0D0D] lg:bg-transparent"
+              >
+                <HistorySidebar 
+                  conversations={conversations}
+                  currentConversationId={currentConversationId}
+                  onSelectConversation={(id) => {
+                    handleSelectConversation(id);
+                    if (window.innerWidth < 1024) setIsHistoryOpen(false);
+                  }}
+                  onNewChat={() => {
+                    handleNewChat();
+                    if (window.innerWidth < 1024) setIsHistoryOpen(false);
+                  }}
+                  onDeleteConversation={handleDeleteConversation}
+                  onOpenSettings={(tab) => {
+                    setSettingsTab(tab || 'general');
+                    setIsSettingsModalOpen(true);
+                  }}
+                  user={user}
+                />
+              </motion.div>
+            </>
           )}
         </AnimatePresence>
 
-        <ChatInterface 
-          messages={messages}
-          prompt={prompt}
-          setPrompt={setPrompt}
-          handleSend={handleSend}
-          onAbort={handleAbort}
-          isLoading={isLoading}
-          chatEndRef={chatEndRef}
-          logoUrl={LOGO_URL}
-          selectedImage={selectedImage}
-          setSelectedImage={setSelectedImage}
-        />
+        <div className={`flex-1 flex gap-2 lg:gap-4 h-full overflow-hidden ${activeMobileTab === 'chat' ? 'flex' : 'hidden lg:flex'}`}>
+          <ChatInterface 
+            messages={messages}
+            prompt={prompt}
+            setPrompt={setPrompt}
+            handleSend={handleSend}
+            onAbort={handleAbort}
+            isLoading={isLoading}
+            chatEndRef={chatEndRef}
+            logoUrl={LOGO_URL}
+            selectedImages={selectedImages}
+            setSelectedImages={setSelectedImages}
+          />
+        </div>
         
-        <Preview 
-          viewMode={viewMode}
-          generatedCode={generatedCode}
-          iframeRef={iframeRef}
-          onRefresh={handleRefresh}
-          onExpand={handleExpand}
-          onEdit={() => setViewMode('code')}
-          onCodeChange={(newCode) => {
-            skipIframeUpdate.current = true;
-            setGeneratedCode(newCode);
-          }}
-        />
+        <div className={`flex-1 flex h-full overflow-hidden ${activeMobileTab === 'preview' ? 'flex' : 'hidden lg:flex'}`}>
+          <Preview 
+            viewMode={viewMode}
+            generatedCode={generatedCode}
+            files={[...messages].reverse().find(m => m.role === 'model' && m.files)?.files || []}
+            iframeRef={iframeRef}
+            onRefresh={handleRefresh}
+            onExpand={handleExpand}
+            onEdit={() => setViewMode('code')}
+            onCodeChange={(newCode) => {
+              skipIframeUpdate.current = true;
+              setGeneratedCode(newCode);
+            }}
+            onDownloadZip={handleDownloadZip}
+          />
+        </div>
       </main>
 
       {/* GitHub Sync Modal */}

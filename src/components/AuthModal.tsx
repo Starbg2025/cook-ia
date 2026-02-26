@@ -177,24 +177,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="relative w-full max-w-[440px] bg-[#141414] border border-white/10 rounded-[32px] p-10 shadow-2xl text-white"
+            className="relative w-full max-w-[440px] bg-[#141414] border border-white/10 rounded-2xl lg:rounded-[32px] p-6 lg:p-10 shadow-2xl text-white overflow-y-auto max-h-[90vh] scrollbar-hide"
           >
             {mode !== 'username_setup' && (
               <button 
                 onClick={onClose}
-                className="absolute top-6 right-6 p-2 hover:bg-white/5 rounded-full transition-colors text-white/40"
+                className="absolute top-4 lg:top-6 right-4 lg:right-6 p-2 hover:bg-white/5 rounded-full transition-colors text-white/40"
               >
                 <X size={20} />
               </button>
             )}
 
-            <div className="text-center mb-8">
-              <h2 className="text-[32px] font-semibold leading-tight mb-4 tracking-tight">
+            <div className="text-center mb-6 lg:mb-8">
+              <h2 className="text-2xl lg:text-[32px] font-semibold leading-tight mb-3 lg:mb-4 tracking-tight">
                 {mode === 'username_setup' ? 'Choisissez un pseudo' : 
                  mode === 'signup' ? 'Créez votre compte' : 
                  'Bon retour parmi nous'}
               </h2>
-              <p className="text-white/60 text-[15px] leading-relaxed px-4">
+              <p className="text-white/60 text-sm lg:text-[15px] leading-relaxed px-2 lg:px-4">
                 {mode === 'username_setup' ? 'Dernière étape ! Comment souhaitez-vous être appelé sur COOK IA ?' :
                  'Vous recevrez un site web full-stack prêt à l\'emploi, avec une architecture moderne.'}
               </p>

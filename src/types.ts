@@ -1,15 +1,23 @@
+export interface ProjectFile {
+  path: string;
+  content: string;
+}
+
 export interface Message {
   role: 'user' | 'model';
   content: string;
   code?: string;
-  image?: string;
+  image?: string; // Keep for backward compatibility if needed, but we'll use images
+  images?: string[];
+  files?: ProjectFile[];
 }
 
 export type ViewMode = 'preview' | 'code';
 
 export interface WebsiteGenerationResult {
   explanation: string;
-  code: string;
+  preview_code: string;
+  files: ProjectFile[];
 }
 
 export interface Conversation {
