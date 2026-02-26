@@ -99,6 +99,32 @@ export default function App() {
     setUser({ ...authUser, profile });
   };
 
+  useEffect(() => {
+    if (user) {
+      const channel = supabase.channel('online_users', {
+        config: {
+          presence: {
+            key: user.id,
+          },
+        },
+      });
+
+      channel.subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await channel.track({
+            id: user.id,
+            email: user.email,
+            online_at: new Date().toISOString(),
+          });
+        }
+      });
+
+      return () => {
+        channel.unsubscribe();
+      };
+    }
+  }, [user]);
+
   const loadConversations = async () => {
     const { data, error } = await supabase
       .from('conversations')

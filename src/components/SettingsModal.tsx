@@ -31,7 +31,7 @@ interface SettingsModalProps {
   user: any;
 }
 
-type TabType = 'general' | 'notifications' | 'personalization' | 'applications' | 'data' | 'security' | 'parental' | 'account' | 'help' | 'sites' | 'policy' | 'watchdog';
+type TabType = 'general' | 'notifications' | 'personalization' | 'applications' | 'data' | 'security' | 'parental' | 'account' | 'help' | 'sites' | 'policy' | 'watchdog' | 'admin';
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialTab = 'general', user }) => {
   const [activeTab, setActiveTab] = useState<TabType>(initialTab);
@@ -59,19 +59,78 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
   const [watchdogData, setWatchdogData] = useState<any>(null);
   const [isRefreshingWatchdog, setIsRefreshingWatchdog] = useState(false);
 
+  // Admin state
+  const [adminData, setAdminData] = useState<{
+    users: any[];
+    sites: any[];
+    conversations: any[];
+    onlineUsers: any[];
+  }>({ users: [], sites: [], conversations: [], onlineUsers: [] });
+  const [isAdminLoading, setIsAdminLoading] = useState(false);
+
   React.useEffect(() => {
     if (isOpen) {
       setActiveTab(initialTab);
       setEditUsername(user?.profile?.username || '');
       setEditFullName(user?.profile?.full_name || user?.user_metadata?.full_name || '');
+    }
+  }, [isOpen, initialTab]);
+
+  React.useEffect(() => {
+    if (isOpen) {
       if (activeTab === 'sites') {
         loadPublishedSites();
       }
       if (activeTab === 'watchdog') {
         loadWatchdogStatus();
       }
+      if (activeTab === 'admin' && user?.email === 'benit800@gmail.com') {
+        loadAdminData();
+        const cleanup = setupPresence();
+        return cleanup;
+      }
     }
-  }, [isOpen, initialTab, user, activeTab]);
+  }, [activeTab, isOpen]);
+
+  const setupPresence = () => {
+    if (user?.email !== 'benit800@gmail.com') return;
+
+    const channel = supabase.channel('online_users');
+
+    channel
+      .on('presence', { event: 'sync' }, () => {
+        const state = channel.presenceState();
+        const online = Object.values(state).flat();
+        setAdminData(prev => ({ ...prev, onlineUsers: online }));
+      })
+      .subscribe();
+
+    return () => {
+      channel.unsubscribe();
+    };
+  };
+
+  const loadAdminData = async () => {
+    setIsAdminLoading(true);
+    try {
+      const [usersRes, sitesRes, convsRes] = await Promise.all([
+        supabase.from('profiles').select('*'),
+        supabase.from('published_sites').select('*'),
+        supabase.from('conversations').select('*')
+      ]);
+
+      setAdminData(prev => ({
+        ...prev,
+        users: usersRes.data || [],
+        sites: sitesRes.data || [],
+        conversations: convsRes.data || []
+      }));
+    } catch (error) {
+      console.error("Error loading admin data:", error);
+    } finally {
+      setIsAdminLoading(false);
+    }
+  };
 
   const loadWatchdogStatus = async () => {
     setIsRefreshingWatchdog(true);
@@ -196,6 +255,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
     { id: 'parental', label: 'Contrôles parentaux', icon: Users },
     { id: 'sites', label: 'Mes Sites', icon: Layout },
     { id: 'watchdog', label: 'Architecture Watchdog', icon: Activity },
+    ...(user?.email === 'benit800@gmail.com' ? [{ id: 'admin', label: 'Admin Panel', icon: Shield }] : []),
     { id: 'policy', label: 'Politique d\'utilisation', icon: FileText },
     { id: 'account', label: 'Compte', icon: User },
     { id: 'help', label: 'Aide', icon: HelpCircleIcon },
@@ -784,6 +844,125 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
               <p className="text-xs text-white/40 leading-relaxed">
                 L'architecture Watchdog utilise une file d'attente asynchrone pour traiter les tâches lourdes (optimisation, scan de sécurité, synchronisation) sans bloquer l'interface utilisateur. C'est ce qui rend l'expérience COOK IA fluide et "invisible".
               </p>
+            </div>
+          </div>
+        );
+      case 'admin':
+        return (
+          <div className="space-y-8">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <h3 className="text-xl font-bold">Panneau d'Administration</h3>
+                <p className="text-sm text-white/40">Vue globale de la base de données Supabase.</p>
+              </div>
+              <button 
+                onClick={loadAdminData}
+                disabled={isAdminLoading}
+                className="p-2 bg-white/5 rounded-xl hover:bg-white/10 transition-all"
+              >
+                <Loader2 size={16} className={isAdminLoading ? 'animate-spin' : ''} />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-4 gap-4">
+              <div className="bg-white/5 border border-white/5 rounded-2xl p-6">
+                <p className="text-xs text-white/20 uppercase tracking-widest font-bold mb-2">Utilisateurs</p>
+                <span className="text-2xl font-black">{adminData.users.length}</span>
+              </div>
+              <div className="bg-white/5 border border-white/5 rounded-2xl p-6">
+                <p className="text-xs text-white/20 uppercase tracking-widest font-bold mb-2">En Ligne</p>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-2xl font-black">{adminData.onlineUsers.length}</span>
+                </div>
+              </div>
+              <div className="bg-white/5 border border-white/5 rounded-2xl p-6">
+                <p className="text-xs text-white/20 uppercase tracking-widest font-bold mb-2">Sites Publiés</p>
+                <span className="text-2xl font-black">{adminData.sites.length}</span>
+              </div>
+              <div className="bg-white/5 border border-white/5 rounded-2xl p-6">
+                <p className="text-xs text-white/20 uppercase tracking-widest font-bold mb-2">Conversations</p>
+                <span className="text-2xl font-black">{adminData.conversations.length}</span>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <section className="space-y-4">
+                <h4 className="text-sm font-bold flex items-center gap-2">
+                  <Activity size={16} className="text-emerald-500" /> Personnes Connectées ({adminData.onlineUsers.length})
+                </h4>
+                <div className="grid grid-cols-2 gap-3">
+                  {adminData.onlineUsers.map((u: any, i: number) => (
+                    <div key={i} className="bg-white/5 border border-white/5 rounded-xl p-3 flex items-center gap-3">
+                      <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                      <div className="flex flex-col">
+                        <span className="text-xs font-bold">{u.email || 'Utilisateur Anonyme'}</span>
+                        <span className="text-[10px] text-white/20">Connecté à {new Date(u.online_at).toLocaleTimeString()}</span>
+                      </div>
+                    </div>
+                  ))}
+                  {adminData.onlineUsers.length === 0 && (
+                    <p className="text-xs text-white/20 italic col-span-2 py-4 text-center">Aucun utilisateur en ligne actuellement.</p>
+                  )}
+                </div>
+              </section>
+
+              <section className="space-y-4">
+                <h4 className="text-sm font-bold flex items-center gap-2">
+                  <User size={16} className="text-orange-primary" /> Utilisateurs Récents (Supabase)
+                </h4>
+                <div className="bg-white/5 border border-white/5 rounded-2xl overflow-hidden">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-white/5 text-white/40 uppercase tracking-widest font-bold">
+                      <tr>
+                        <th className="px-4 py-3">Email / Username</th>
+                        <th className="px-4 py-3">Full Name</th>
+                        <th className="px-4 py-3">Created At</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                      {adminData.users.slice(0, 10).map((u) => (
+                        <tr key={u.id}>
+                          <td className="px-4 py-3">
+                            <div className="flex flex-col">
+                              <span className="font-bold text-white">{u.email || u.username || 'N/A'}</span>
+                              <span className="text-[10px] text-white/20 font-mono">{u.id}</span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-white/60">{u.full_name || 'N/A'}</td>
+                          <td className="px-4 py-3 text-white/40">{new Date(u.created_at).toLocaleDateString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              <section className="space-y-4">
+                <h4 className="text-sm font-bold flex items-center gap-2">
+                  <Globe size={16} className="text-emerald-500" /> Sites Récemment Publiés
+                </h4>
+                <div className="bg-white/5 border border-white/5 rounded-2xl overflow-hidden">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-white/5 text-white/40 uppercase tracking-widest font-bold">
+                      <tr>
+                        <th className="px-4 py-3">Slug</th>
+                        <th className="px-4 py-3">User ID</th>
+                        <th className="px-4 py-3">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                      {adminData.sites.slice(0, 5).map((s) => (
+                        <tr key={s.id}>
+                          <td className="px-4 py-3 font-medium text-emerald-500">{s.slug}.cook.ia</td>
+                          <td className="px-4 py-3 text-white/40 font-mono">{s.user_id.slice(0, 8)}...</td>
+                          <td className="px-4 py-3 text-white/40">{new Date(s.created_at).toLocaleDateString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
             </div>
           </div>
         );
