@@ -739,36 +739,57 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
         );
       case 'policy':
         return (
-          <div className="space-y-8 prose prose-invert prose-sm max-w-none">
+          <div className="space-y-12 pb-12">
             <div className="space-y-4">
-              <h3 className="text-xl font-bold">Politique d'Utilisation de COOK IA</h3>
-              <p className="text-white/60">Dernière mise à jour : 25 Février 2026</p>
+              <h3 className="text-2xl font-bold tracking-tight">Mentions Légales</h3>
+              <p className="text-white/40 text-sm">Dernière mise à jour : 27 Février 2026</p>
             </div>
 
-            <div className="space-y-6">
-              <section className="space-y-2">
-                <h4 className="text-white font-bold">1. Acceptation des conditions</h4>
-                <p className="text-white/40">En utilisant COOK IA, vous acceptez d'être lié par les présentes conditions. Si vous n'acceptez pas ces conditions, veuillez ne pas utiliser le service.</p>
+            <div className="space-y-10">
+              <section className="space-y-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-orange-primary/10 flex items-center justify-center">
+                    <FileText size={16} className="text-orange-primary" />
+                  </div>
+                  <h4 className="text-lg font-bold">Conditions d'Utilisation</h4>
+                </div>
+                <div className="grid gap-6 pl-11">
+                  {[
+                    { title: "1. Acceptation", text: "En utilisant COOK IA, vous acceptez d'être lié par les présentes conditions d'utilisation." },
+                    { title: "2. Service", text: "COOK IA fournit des outils de génération de sites web assistés par IA. Vous êtes responsable du contenu généré." },
+                    { title: "3. Propriété", text: "Le code généré vous appartient. L'architecture de la plateforme reste la propriété de COOK IA." },
+                    { title: "4. Responsabilité", text: "COOK IA est fourni 'en l'état'. Nous ne sommes pas responsables des dommages résultant de l'utilisation du service." }
+                  ].map((item, i) => (
+                    <div key={i} className="space-y-1">
+                      <p className="text-sm font-semibold text-white/90">{item.title}</p>
+                      <p className="text-sm text-white/40 leading-relaxed">{item.text}</p>
+                    </div>
+                  ))}
+                </div>
               </section>
 
-              <section className="space-y-2">
-                <h4 className="text-white font-bold">2. Utilisation du service</h4>
-                <p className="text-white/40">COOK IA est un outil de génération de sites web assisté par IA. Vous êtes responsable du contenu généré et de son utilisation. Il est interdit d'utiliser le service pour créer du contenu illégal, haineux, ou portant atteinte aux droits d'autrui.</p>
-              </section>
+              <div className="h-px bg-white/5 w-full" />
 
-              <section className="space-y-2">
-                <h4 className="text-white font-bold">3. Propriété intellectuelle</h4>
-                <p className="text-white/40">Le code généré par COOK IA vous appartient pour une utilisation personnelle ou commerciale. Cependant, l'architecture et les algorithmes de COOK IA restent la propriété exclusive de Benit Madimba.</p>
-              </section>
-
-              <section className="space-y-2">
-                <h4 className="text-white font-bold">4. Publication et Hébergement</h4>
-                <p className="text-white/40">Les sites publiés via notre sous-domaine .cook.ia sont hébergés à titre gracieux. Nous nous réservons le droit de supprimer tout site ne respectant pas nos règles de sécurité ou d'éthique.</p>
-              </section>
-
-              <section className="space-y-2">
-                <h4 className="text-white font-bold">5. Limitation de responsabilité</h4>
-                <p className="text-white/40">COOK IA est fourni "en l'état". Nous ne garantissons pas que le service sera exempt d'erreurs ou d'interruptions. Benit Madimba ne pourra être tenu responsable des dommages directs ou indirects résultant de l'utilisation du service.</p>
+              <section className="space-y-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                    <Shield size={16} className="text-blue-500" />
+                  </div>
+                  <h4 className="text-lg font-bold">Politique de Confidentialité</h4>
+                </div>
+                <div className="grid gap-6 pl-11">
+                  {[
+                    { title: "1. Données collectées", text: "Nous collectons votre email et nom d'utilisateur pour la gestion de votre compte." },
+                    { title: "2. Utilisation", text: "Vos données servent à personnaliser votre expérience et assurer le fonctionnement du service." },
+                    { title: "3. Sécurité", text: "Nous utilisons des protocoles de sécurité avancés pour protéger vos informations personnelles." },
+                    { title: "4. Vos droits", text: "Vous disposez d'un droit d'accès, de rectification et de suppression de vos données." }
+                  ].map((item, i) => (
+                    <div key={i} className="space-y-1">
+                      <p className="text-sm font-semibold text-white/90">{item.title}</p>
+                      <p className="text-sm text-white/40 leading-relaxed">{item.text}</p>
+                    </div>
+                  ))}
+                </div>
               </section>
             </div>
           </div>

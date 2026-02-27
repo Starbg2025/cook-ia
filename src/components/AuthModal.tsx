@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Github, Mail, Chrome, Lock, User, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '../services/supabaseService';
+import { LegalModal } from './LegalModal';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -18,6 +19,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [legalModal, setLegalModal] = useState<{ isOpen: boolean, type: 'tos' | 'privacy' }>({
+    isOpen: false,
+    type: 'tos'
+  });
 
   // Check if user needs username setup after login
   useEffect(() => {
@@ -352,9 +357,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             )}
 
             <p className="mt-8 text-center text-[12px] text-white/40 leading-relaxed">
-              En continuant, vous acceptez nos <span className="underline cursor-pointer">conditions d'utilisation</span> et notre <span className="underline cursor-pointer">politique de confidentialité</span>.
+              En continuant, vous acceptez nos <span 
+                onClick={() => setLegalModal({ isOpen: true, type: 'tos' })}
+                className="underline cursor-pointer hover:text-white transition-colors"
+              >conditions d'utilisation</span> et notre <span 
+                onClick={() => setLegalModal({ isOpen: true, type: 'privacy' })}
+                className="underline cursor-pointer hover:text-white transition-colors"
+              >politique de confidentialité</span>.
             </p>
           </motion.div>
+
+          <LegalModal 
+            isOpen={legalModal.isOpen} 
+            type={legalModal.type} 
+            onClose={() => setLegalModal({ ...legalModal, isOpen: false })} 
+          />
         </div>
       )}
     </AnimatePresence>
