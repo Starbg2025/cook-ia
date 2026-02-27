@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Zap, Send, Loader2, ImagePlus, X, Image as ImageIcon } from 'lucide-react';
+import { Zap, Send, Loader2, ImagePlus, X, Image as ImageIcon, Copy, ShoppingBag } from 'lucide-react';
 import { Message } from '../types';
 
 interface ChatInterfaceProps {
@@ -15,6 +15,8 @@ interface ChatInterfaceProps {
   selectedImages: string[];
   setSelectedImages: React.Dispatch<React.SetStateAction<string[]>>;
   onOpenImageSearch?: () => void;
+  onCloneSite?: () => void;
+  onEcommerceProduct?: () => void;
 }
 
 export const ChatInterface: React.FC<ChatInterfaceProps> = ({
@@ -28,7 +30,9 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   logoUrl,
   selectedImages,
   setSelectedImages,
-  onOpenImageSearch
+  onOpenImageSearch,
+  onCloneSite,
+  onEcommerceProduct
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -158,9 +162,9 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
             onChange={(e) => setPrompt(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())}
             placeholder="Describe your masterpiece..."
-            className="w-full bg-[#050505] border border-white/5 rounded-2xl lg:rounded-[1.5rem] p-4 lg:p-5 pr-20 lg:pr-24 text-xs lg:text-sm focus:outline-none focus:border-orange-primary/40 transition-all resize-none h-24 lg:h-28 scrollbar-hide placeholder:text-white/10"
+            className="w-full bg-[#050505] border border-white/5 rounded-2xl lg:rounded-[1.5rem] p-4 lg:p-5 pr-36 lg:pr-48 text-xs lg:text-sm focus:outline-none focus:border-orange-primary/40 transition-all resize-none h-24 lg:h-28 scrollbar-hide placeholder:text-white/10"
           />
-          <div className="absolute right-3 lg:right-4 bottom-3 lg:bottom-4 flex items-center gap-1.5 lg:gap-2">
+          <div className="absolute right-3 lg:right-4 bottom-3 lg:bottom-4 flex items-center gap-1.5 lg:gap-2 z-10">
             <input 
               type="file"
               ref={fileInputRef}
@@ -169,6 +173,20 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
               multiple
               className="hidden"
             />
+            <button 
+              onClick={onCloneSite}
+              className="p-2 lg:p-3 text-white/20 hover:text-orange-primary transition-colors"
+              title="Clone a website from URL"
+            >
+              <Copy size={18} />
+            </button>
+            <button 
+              onClick={onEcommerceProduct}
+              className="p-2 lg:p-3 text-white/20 hover:text-orange-primary transition-colors"
+              title="Create E-commerce from product URL"
+            >
+              <ShoppingBag size={18} />
+            </button>
             <button 
               onClick={onOpenImageSearch}
               className="p-2 lg:p-3 text-white/20 hover:text-orange-primary transition-colors"

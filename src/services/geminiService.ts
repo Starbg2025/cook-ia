@@ -274,6 +274,7 @@ export const generateWebsite = async (
       config: {
         systemInstruction,
         responseMimeType: "application/json",
+        tools: [{ urlContext: {} }],
         responseSchema: {
           type: Type.OBJECT,
           properties: {

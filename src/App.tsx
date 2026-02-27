@@ -24,6 +24,7 @@ import { HistorySidebar } from './components/HistorySidebar';
 import { StyleEditor } from './components/StyleEditor';
 import { SectionChat } from './components/SectionChat';
 import { ImageSearchModal } from './components/ImageSearchModal';
+import { UrlInputModal } from './components/UrlInputModal';
 import { AuthModal } from './components/AuthModal';
 import { SettingsModal } from './components/SettingsModal';
 import { supabase } from './services/supabaseService';
@@ -60,6 +61,8 @@ export default function App() {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isStyleEditorOpen, setIsStyleEditorOpen] = useState(false);
   const [isImageSearchOpen, setIsImageSearchOpen] = useState(false);
+  const [isUrlModalOpen, setIsUrlModalOpen] = useState(false);
+  const [urlModalType, setUrlModalType] = useState<'clone' | 'ecommerce'>('clone');
   const [isConverting, setIsConverting] = useState(false);
   const [imageSearchContext, setImageSearchContext] = useState<'chat' | 'section'>('chat');
   const [isDeploying, setIsDeploying] = useState(false);
@@ -446,6 +449,26 @@ export default function App() {
     } catch (e) {
       console.error("Failed to fetch image for base64 conversion", e);
       return null;
+    }
+  };
+
+  const handleCloneSite = () => {
+    setUrlModalType('clone');
+    setIsUrlModalOpen(true);
+  };
+
+  const handleEcommerceProduct = () => {
+    setUrlModalType('ecommerce');
+    setIsUrlModalOpen(true);
+  };
+
+  const handleUrlSubmit = (url: string) => {
+    if (urlModalType === 'clone') {
+      const clonePrompt = `CLONE CE SITE WEB : ${url}\n\nVisite le lien, analyse l'interface, les couleurs, la disposition et le contenu, puis reproduis-le fidèlement.`;
+      setPrompt(clonePrompt);
+    } else {
+      const ecoPrompt = `CRÉE UN SITE E-COMMERCE POUR CE PRODUIT : ${url}\n\nVisite le lien pour extraire les détails du produit (nom, prix, description, images) et crée une boutique en ligne magnifique autour de ce produit.`;
+      setPrompt(ecoPrompt);
     }
   };
 
@@ -923,6 +946,8 @@ export default function App() {
               setImageSearchContext('chat');
               setIsImageSearchOpen(true);
             }}
+            onCloneSite={handleCloneSite}
+            onEcommerceProduct={handleEcommerceProduct}
           />
         </div>
         
@@ -1181,6 +1206,13 @@ export default function App() {
           </div>
         )}
       </AnimatePresence>
+
+      <UrlInputModal 
+        isOpen={isUrlModalOpen}
+        onClose={() => setIsUrlModalOpen(false)}
+        onSubmit={handleUrlSubmit}
+        type={urlModalType}
+      />
 
       <AuthModal 
         isOpen={isAuthModalOpen}
