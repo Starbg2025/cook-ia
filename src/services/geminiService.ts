@@ -101,6 +101,88 @@ const generateWithOpenRouter = async (
   return JSON.parse(content);
 };
 
+export const convertToReact = async (htmlCode: string, framework: 'react' | 'nextjs') => {
+  try {
+    const model = "gemini-3-flash-preview";
+    const response = await ai.models.generateContent({
+      model,
+      contents: [{
+        role: "user",
+        parts: [{
+          text: `CONVERT THIS HTML/CSS/JS CODE TO ${framework.toUpperCase()} COMPONENTS WITH TAILWIND CSS:
+\`\`\`html
+${htmlCode}
+\`\`\`
+
+INSTRUCTIONS:
+1. Break the code into logical, reusable components.
+2. Use Tailwind CSS for all styling.
+3. If there are animations (GSAP/Framer Motion), implement them using the appropriate React hooks/libraries.
+4. Ensure the code is clean, typed with TypeScript, and follows best practices.
+5. Return the result as a JSON object with a 'files' array, where each file has a 'path' and 'content'.`
+        }]
+      }],
+      config: {
+        systemInstruction: "You are a world-class React and Next.js developer.",
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            files: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  path: { type: Type.STRING },
+                  content: { type: Type.STRING }
+                },
+                required: ["path", "content"]
+              }
+            }
+          },
+          required: ["files"]
+        }
+      }
+    });
+    return JSON.parse(response.text);
+  } catch (error) {
+    console.error("Error converting to React:", error);
+    throw error;
+  }
+};
+
+export const improveText = async (text: string, style: 'professional' | 'creative' | 'sales') => {
+  try {
+    const model = "gemini-3-flash-preview";
+    const stylePrompts = {
+      professional: "Rewrite this text to be professional, serious, and reassuring. Suitable for corporate or B2B contexts.",
+      creative: "Rewrite this text to be creative, original, and dynamic. Suitable for startups or creative agencies.",
+      sales: "Rewrite this text to be sales-oriented, persuasive, and focused on conversion. Use marketing psychological triggers."
+    };
+
+    const response = await ai.models.generateContent({
+      model,
+      contents: [{
+        role: "user",
+        parts: [{
+          text: `ORIGINAL TEXT: "${text}"
+          
+STYLE REQUEST: ${stylePrompts[style]}
+
+Return ONLY the improved text string.`
+        }]
+      }],
+      config: {
+        systemInstruction: "You are an expert copywriter."
+      }
+    });
+    return response.text;
+  } catch (error) {
+    console.error("Error improving text:", error);
+    throw error;
+  }
+};
+
 export const updateSection = async (
   prompt: string,
   sectionHtml: string,

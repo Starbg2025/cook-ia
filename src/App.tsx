@@ -16,7 +16,7 @@ import {
   Download
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { generateWebsite, generateTitle, updateSection } from './services/geminiService';
+import { generateWebsite, generateTitle, updateSection, convertToReact, improveText } from './services/geminiService';
 import { Message, ViewMode, Conversation, StyleConfig, SectionEditState } from './types';
 import { ChatInterface } from './components/ChatInterface';
 import { Preview } from './components/Preview';
@@ -29,7 +29,7 @@ import { SettingsModal } from './components/SettingsModal';
 import { supabase } from './services/supabaseService';
 import { deployToNetlify } from './services/netlifyService';
 import JSZip from 'jszip';
-import { Palette, Rocket } from 'lucide-react';
+import { Palette, Rocket, Braces } from 'lucide-react';
 
 const LOGO_URL = "https://i.ibb.co/mC3M8SSN/logo.png"; // Note: I used a direct link format, you may need to check the exact direct link on ImgBB
 
@@ -60,6 +60,7 @@ export default function App() {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isStyleEditorOpen, setIsStyleEditorOpen] = useState(false);
   const [isImageSearchOpen, setIsImageSearchOpen] = useState(false);
+  const [isConverting, setIsConverting] = useState(false);
   const [imageSearchContext, setImageSearchContext] = useState<'chat' | 'section'>('chat');
   const [isDeploying, setIsDeploying] = useState(false);
   const [styleConfig, setStyleConfig] = useState<StyleConfig>({
@@ -366,6 +367,88 @@ export default function App() {
     setIsImageSearchOpen(false);
   };
 
+  const handleImproveText = async (style: 'professional' | 'creative' | 'sales') => {
+    if (!sectionEdit.sectionHtml || isLoading) return;
+
+    setIsLoading(true);
+    try {
+      const improved = await improveText(sectionEdit.sectionHtml, style);
+      
+      // We'll use the updateSection logic but with a pre-defined prompt
+      const result = await updateSection(
+        `Réécris le texte de cette section dans un style ${style}. Voici le nouveau texte à intégrer intelligemment : "${improved}"`,
+        sectionEdit.sectionHtml,
+        generatedCode,
+        []
+      );
+
+      const updatedCode = generatedCode.replace(sectionEdit.sectionHtml, result.updated_section_html);
+      
+      const updatedMessages: Message[] = [...messages, { 
+        role: 'model', 
+        content: `J'ai réécrit le texte de la section en style ${style}.`,
+        code: updatedCode
+      }];
+      
+      setMessages(updatedMessages);
+      setGeneratedCode(updatedCode);
+      setSectionEdit({ isActive: false });
+      await saveConversation(updatedMessages);
+    } catch (error) {
+      console.error("Error improving text:", error);
+      alert("Erreur lors de l'amélioration du texte.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleConvertToReact = async (framework: 'react' | 'nextjs') => {
+    if (!generatedCode || isConverting) return;
+
+    setIsConverting(true);
+    try {
+      const result = await convertToReact(generatedCode, framework);
+      
+      const updatedMessages: Message[] = [...messages, { 
+        role: 'model', 
+        content: `Voici la conversion de votre site en composants ${framework === 'nextjs' ? 'Next.js' : 'React'} avec Tailwind CSS.`,
+        files: result.files
+      }];
+      
+      setMessages(updatedMessages);
+      setViewMode('code');
+      await saveConversation(updatedMessages);
+    } catch (error) {
+      console.error("Error converting to React:", error);
+      alert("Erreur lors de la conversion.");
+    } finally {
+      setIsConverting(false);
+    }
+  };
+
+  const fetchImageAsBase64 = async (url: string): Promise<{mimeType: string, data: string} | null> => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64data = reader.result as string;
+          const [mimePart, dataPart] = base64data.split(';base64,');
+          resolve({
+            mimeType: mimePart.split(':')[1],
+            data: dataPart
+          });
+        };
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(blob);
+      });
+    } catch (e) {
+      console.error("Failed to fetch image for base64 conversion", e);
+      return null;
+    }
+  };
+
   const handleSend = async () => {
     if (!prompt.trim() || isLoading) return;
 
@@ -390,38 +473,64 @@ export default function App() {
     setIsLoading(true);
 
     try {
-      const history = newMessages.map(m => {
+      const history = await Promise.all(newMessages.map(async (m) => {
         const parts: any[] = [{ text: m.content + (m.code ? `\n\nCode:\n${m.code}` : '') }];
         if (m.images && m.images.length > 0) {
-          m.images.forEach(img => {
-            const [mimeType, data] = img.split(';base64,');
-            parts.push({
-              inlineData: {
-                mimeType: mimeType.split(':')[1],
-                data: data
+          for (const img of m.images) {
+            if (img.startsWith('data:')) {
+              const [mimeTypePart, data] = img.split(';base64,');
+              parts.push({
+                inlineData: {
+                  mimeType: mimeTypePart.split(':')[1],
+                  data: data
+                }
+              });
+            } else {
+              // It's a URL (like Unsplash)
+              const base64Img = await fetchImageAsBase64(img);
+              if (base64Img) {
+                parts.push({
+                  inlineData: base64Img
+                });
+              } else {
+                parts.push({ text: `[Reference Image URL: ${img}]` });
               }
-            });
-          });
+            }
+          }
         }
         return {
           role: m.role,
           parts
         };
-      });
+      }));
 
       // Prepare current images for API if exists
-      let imageParts;
+      let imageParts: any[] = [];
       if (currentImages.length > 0) {
-        imageParts = currentImages.map(img => {
-          const [mimeType, data] = img.split(';base64,');
-          return {
-            mimeType: mimeType.split(':')[1],
-            data: data
-          };
-        });
+        for (const img of currentImages) {
+          if (img.startsWith('data:')) {
+            const [mimeTypePart, data] = img.split(';base64,');
+            imageParts.push({
+              mimeType: mimeTypePart.split(':')[1],
+              data: data
+            });
+          } else {
+            const base64Img = await fetchImageAsBase64(img);
+            if (base64Img) {
+              imageParts.push(base64Img);
+            }
+          }
+        }
       }
 
-      const result = await generateWebsite(userMessage, history.slice(0, -1), imageParts);
+      // If there are URLs in currentImages, append them to the userMessage
+      let enrichedUserMessage = userMessage;
+      const urls = currentImages.filter(img => !img.startsWith('data:'));
+      if (urls.length > 0) {
+        enrichedUserMessage += "\n\nReference Images (URLs):\n" + urls.join('\n');
+      }
+
+      const result = await generateWebsite(enrichedUserMessage, history.slice(0, -1), imageParts.length > 0 ? imageParts : undefined);
       
       const updatedMessages: Message[] = [...newMessages, { 
         role: 'model', 
@@ -699,6 +808,14 @@ export default function App() {
                 <Palette size={18} />
               </button>
               <button 
+                onClick={() => handleConvertToReact('nextjs')}
+                disabled={!generatedCode || isConverting}
+                title="Convert to Next.js"
+                className="text-white/30 hover:text-white transition-all p-2 lg:p-2.5 hover:bg-white/5 rounded-xl disabled:opacity-10 flex items-center gap-2"
+              >
+                {isConverting ? <Loader2 size={18} className="animate-spin" /> : <Braces size={18} />}
+              </button>
+              <button 
                 onClick={handleNetlifyDeploy}
                 disabled={!generatedCode || isDeploying}
                 title="Deploy to Netlify"
@@ -852,6 +969,7 @@ export default function App() {
               setImageSearchContext('section');
               setIsImageSearchOpen(true);
             }}
+            onImproveText={handleImproveText}
           />
         )}
       </AnimatePresence>

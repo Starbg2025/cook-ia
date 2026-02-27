@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Sparkles, Send, Loader2, Image as ImageIcon } from 'lucide-react';
+import { X, Sparkles, Send, Loader2, Image as ImageIcon, Type } from 'lucide-react';
 import { SectionEditState } from '../types';
 
 interface SectionChatProps {
@@ -9,6 +9,7 @@ interface SectionChatProps {
   onUpdate: (prompt: string) => void;
   isLoading: boolean;
   onOpenImageSearch?: () => void;
+  onImproveText?: (style: 'professional' | 'creative' | 'sales') => void;
 }
 
 export const SectionChat: React.FC<SectionChatProps> = ({
@@ -16,11 +17,19 @@ export const SectionChat: React.FC<SectionChatProps> = ({
   onClose,
   onUpdate,
   isLoading,
-  onOpenImageSearch
+  onOpenImageSearch,
+  onImproveText
 }) => {
   const [prompt, setPrompt] = useState('');
+  const [showCopywriting, setShowCopywriting] = useState(false);
 
   if (!section.isActive) return null;
+
+  const copywritingStyles: { id: 'professional' | 'creative' | 'sales', label: string, desc: string }[] = [
+    { id: 'professional', label: 'Professional', desc: 'Serious & Reassuring' },
+    { id: 'creative', label: 'Creative', desc: 'Original & Dynamic' },
+    { id: 'sales', label: 'Sales', desc: 'Conversion Focused' },
+  ];
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-none">
@@ -65,6 +74,41 @@ export const SectionChat: React.FC<SectionChatProps> = ({
               className="w-full bg-[#050505] border border-white/5 rounded-2xl p-4 pr-24 text-xs focus:outline-none focus:border-orange-primary/40 transition-all resize-none h-24 scrollbar-hide"
             />
             <div className="absolute right-3 bottom-3 flex items-center gap-2">
+              <div className="relative">
+                <button
+                  onClick={() => setShowCopywriting(!showCopywriting)}
+                  className={`p-2 transition-colors rounded-xl ${showCopywriting ? 'bg-white/10 text-white' : 'text-white/20 hover:text-orange-primary'}`}
+                  title="Copywriting Assistant"
+                >
+                  <Type size={16} />
+                </button>
+                
+                <AnimatePresence>
+                  {showCopywriting && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.9 }}
+                      className="absolute bottom-full right-0 mb-2 w-48 bg-[#1A1A1A] border border-white/10 rounded-2xl shadow-2xl p-2 z-10"
+                    >
+                      {copywritingStyles.map((style) => (
+                        <button
+                          key={style.id}
+                          onClick={() => {
+                            if (onImproveText) onImproveText(style.id);
+                            setShowCopywriting(false);
+                          }}
+                          className="w-full text-left px-3 py-2 rounded-xl hover:bg-white/5 transition-all group"
+                        >
+                          <p className="text-[10px] font-black uppercase tracking-widest text-white/60 group-hover:text-white">{style.label}</p>
+                          <p className="text-[8px] text-white/20 uppercase tracking-widest font-bold">{style.desc}</p>
+                        </button>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
               <button
                 onClick={onOpenImageSearch}
                 className="p-2 text-white/20 hover:text-orange-primary transition-colors"
