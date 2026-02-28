@@ -104,7 +104,7 @@ const generateWithOpenRouter = async (
 
 export const convertToReact = async (htmlCode: string, framework: 'react' | 'nextjs') => {
   try {
-    const model = "gemini-3.1-pro-preview";
+    const model = "gemini-3-flash-preview";
     const response = await ai.models.generateContent({
       model,
       contents: [{
@@ -154,7 +154,7 @@ INSTRUCTIONS:
 
 export const improveText = async (text: string, style: 'professional' | 'creative' | 'sales') => {
   try {
-    const model = "gemini-3.1-pro-preview";
+    const model = "gemini-3-flash-preview";
     const stylePrompts = {
       professional: "Rewrite this text to be professional, serious, and reassuring. Suitable for corporate or B2B contexts.",
       creative: "Rewrite this text to be creative, original, and dynamic. Suitable for startups or creative agencies.",
@@ -191,7 +191,7 @@ export const updateSection = async (
   history: any[]
 ) => {
   try {
-    const model = "gemini-3.1-pro-preview";
+    const model = "gemini-3-flash-preview";
     
     const response = await ai.models.generateContent({
       model,
@@ -255,7 +255,7 @@ export const generateWebsite = async (
       throw new Error("Gemini API key missing");
     }
 
-    const model = "gemini-3.1-pro-preview";
+    const model = "gemini-3-flash-preview";
     
     const userParts: any[] = [{ text: prompt }];
     if (images && images.length > 0) {
@@ -294,7 +294,7 @@ export const generateWebsite = async (
 
 export const generateTitle = async (prompt: string) => {
   try {
-    const model = "gemini-3.1-pro-preview";
+    const model = "gemini-3-flash-preview";
     const response = await ai.models.generateContent({
       model,
       contents: `Generate a very short, catchy title (max 4 words) for a website project based on this prompt: "${prompt}". Return only the title text.`,
