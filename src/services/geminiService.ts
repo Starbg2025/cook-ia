@@ -39,7 +39,7 @@ CRITICAL DIRECTIVES FOR MAGNIFICENT RENDERING:
    - Output a structured project with multiple files (index.html, styles.css, script.js, README.md, etc.).
    - Also provide a 'preview_code' which is a single, self-contained HTML string including Tailwind CSS (via CDN) and all necessary scripts (GSAP, Three.js, etc.) for immediate preview.
 
-Return the response in JSON format with three fields:
+Return the response EXCLUSIVELY in JSON format with three fields (do not include any other text outside the JSON):
 1. 'explanation': A brief, professional description of the architectural and design choices made.
 2. 'preview_code': The complete, production-ready single-file HTML/CSS/JS code for immediate preview.
 3. 'files': An array of objects, each with 'path' (e.g., "src/index.html") and 'content' (the file content).`;
@@ -255,7 +255,7 @@ export const generateWebsite = async (
       throw new Error("Gemini API key missing");
     }
 
-    const model = "gemini-3-flash-preview";
+    const model = "gemini-3.1-pro-preview";
     
     const userParts: any[] = [{ text: prompt }];
     if (images && images.length > 0) {
@@ -274,31 +274,18 @@ export const generateWebsite = async (
       ],
       config: {
         systemInstruction,
-        responseMimeType: "application/json",
         tools: [{ urlContext: {} }],
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            explanation: { type: Type.STRING },
-            preview_code: { type: Type.STRING },
-            files: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  path: { type: Type.STRING },
-                  content: { type: Type.STRING }
-                },
-                required: ["path", "content"]
-              }
-            }
-          },
-          required: ["explanation", "preview_code", "files"]
-        }
       }
     });
 
-    return JSON.parse(response.text);
+    const text = response.text;
+    if (!text) throw new Error("No response from Gemini");
+
+    // Try to find JSON in the response
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    const jsonStr = jsonMatch ? jsonMatch[0] : text;
+    
+    return JSON.parse(jsonStr);
   } catch (error) {
     console.error("Gemini failed, trying OpenRouter fallback:", error);
     return await generateWithOpenRouter(prompt, history, images);

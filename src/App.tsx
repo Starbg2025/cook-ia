@@ -599,9 +599,14 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
         return;
       }
       console.error("Error generating website:", error);
-      const errorMessage = error.message?.includes("API key") 
-        ? "Clé API invalide ou manquante. Vérifiez votre configuration Netlify."
-        : "Désolé, une erreur est survenue lors de la génération. Veuillez réessayer.";
+      let errorMessage = "Désolé, une erreur est survenue lors de la génération. Veuillez réessayer.";
+      if (error.message?.includes("API key")) {
+        errorMessage = "Clé API invalide ou manquante. Vérifiez votre configuration.";
+      } else if (error.message?.includes("safety") || error.message?.includes("blocked")) {
+        errorMessage = "Le contenu a été bloqué par les filtres de sécurité. Essayez une autre URL ou un autre prompt.";
+      } else if (error.message?.includes("JSON")) {
+        errorMessage = "L'IA a eu du mal à structurer sa réponse. Veuillez réessayer, cela arrive parfois avec des sites complexes.";
+      }
         
       setMessages(prev => [...prev, { 
         role: 'model', 
