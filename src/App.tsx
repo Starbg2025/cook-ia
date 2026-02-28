@@ -467,7 +467,23 @@ export default function App() {
       const clonePrompt = `CLONE CE SITE WEB : ${url}\n\nVisite le lien, analyse l'interface, les couleurs, la disposition et le contenu, puis reproduis-le fidèlement.`;
       setPrompt(clonePrompt);
     } else {
-      const ecoPrompt = `CRÉE UN SITE E-COMMERCE POUR CE PRODUIT : ${url}\n\nVisite le lien pour extraire les détails du produit (nom, prix, description, images) et crée une boutique en ligne magnifique autour de ce produit.`;
+      const ecoPrompt = `CRÉE UN SITE E-COMMERCE PROFESSIONNEL POUR CE PRODUIT : ${url}
+
+INSTRUCTIONS CRITIQUES :
+1. EXTRACTION D'IMAGES : Visite impérativement le lien pour extraire l'image principale du produit et ses variantes. Utilise ces images réelles dans le site généré (ne pas utiliser de placeholders si l'image est accessible).
+2. DÉTAILS DU PRODUIT : Récupère le nom exact, le prix, la description et les caractéristiques techniques directement depuis la page pour un rendu authentique.
+
+INSTRUCTIONS DE DESIGN (BASÉES SUR L'IMAGE DE RÉFÉRENCE) :
+1. LAYOUT PRODUIT : Utilise une disposition "Product Detail Page" classique et haut de gamme.
+   - Galerie à gauche : Une colonne verticale de miniatures cliquables.
+   - Image principale : Grande image centrale avec zoom au survol.
+   - Infos à droite : Titre en gras, prix bien visible (avec promo si applicable), sélecteur de taille (S, M, L, XL, etc.), sélecteur de quantité, et un bouton "AJOUTER AU PANIER" large et contrasté.
+2. HEADER : Barre de recherche centrale, logo à gauche, icônes compte/favoris/panier à droite.
+3. NAVIGATION : Menu horizontal avec catégories (Vêtements, Chaussures, Accessoires, etc.).
+4. DÉTAILS : Liste à puces pour les caractéristiques techniques, badges de confiance (Livraison offerte, Paiement sécurisé).
+5. STYLE : Utilise une esthétique propre, moderne, type "Avenue du Style", avec des accents de couleur vifs pour les boutons d'action.
+
+Analyse le lien et crée cette interface magnifique avec les vraies données du produit.`;
       setPrompt(ecoPrompt);
     }
   };
