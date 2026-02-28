@@ -469,21 +469,18 @@ export default function App() {
     } else {
       const ecoPrompt = `CRÉE UN SITE E-COMMERCE PROFESSIONNEL POUR CE PRODUIT : ${url}
 
-INSTRUCTIONS CRITIQUES :
-1. EXTRACTION D'IMAGES : Visite impérativement le lien pour extraire l'image principale du produit et ses variantes. Utilise ces images réelles dans le site généré (ne pas utiliser de placeholders si l'image est accessible).
-2. DÉTAILS DU PRODUIT : Récupère le nom exact, le prix, la description et les caractéristiques techniques directement depuis la page pour un rendu authentique.
+INSTRUCTIONS CRITIQUES D'EXTRACTION (PRIORITÉ ABSOLUE) :
+1. IMAGES RÉELLES : Tu DOIS utiliser l'outil 'urlContext' pour scanner la page et extraire les URLs des images réelles du produit. Ne génère AUCUNE image générique ou placeholder. Si tu trouves plusieurs images (galerie), utilise-les toutes pour créer la section galerie du site.
+2. FIDÉLITÉ DES DONNÉES : Récupère le nom exact du produit, son prix actuel, la devise, et la description détaillée.
 
-INSTRUCTIONS DE DESIGN (BASÉES SUR L'IMAGE DE RÉFÉRENCE) :
-1. LAYOUT PRODUIT : Utilise une disposition "Product Detail Page" classique et haut de gamme.
-   - Galerie à gauche : Une colonne verticale de miniatures cliquables.
-   - Image principale : Grande image centrale avec zoom au survol.
-   - Infos à droite : Titre en gras, prix bien visible (avec promo si applicable), sélecteur de taille (S, M, L, XL, etc.), sélecteur de quantité, et un bouton "AJOUTER AU PANIER" large et contrasté.
-2. HEADER : Barre de recherche centrale, logo à gauche, icônes compte/favoris/panier à droite.
-3. NAVIGATION : Menu horizontal avec catégories (Vêtements, Chaussures, Accessoires, etc.).
-4. DÉTAILS : Liste à puces pour les caractéristiques techniques, badges de confiance (Livraison offerte, Paiement sécurisé).
-5. STYLE : Utilise une esthétique propre, moderne, type "Avenue du Style", avec des accents de couleur vifs pour les boutons d'action.
+INSTRUCTIONS DE DESIGN (STYLE HAUT DE GAMME) :
+1. LAYOUT PRODUIT : Utilise une disposition "Product Detail Page" inspirée des meilleurs sites de mode.
+   - Galerie à gauche : Miniatures verticales.
+   - Image principale : Large, avec les vraies photos extraites du lien.
+   - Infos à droite : Titre, prix, sélecteurs de variantes (tailles/couleurs) trouvés sur le site, et bouton "AJOUTER AU PANIER".
+2. HEADER & STYLE : Design épuré, moderne, avec une navigation fluide et des icônes minimalistes.
 
-Analyse le lien et crée cette interface magnifique avec les vraies données du produit.`;
+Analyse le lien maintenant et construis le site avec les VRAIES photos du produit.`;
       setPrompt(ecoPrompt);
     }
   };
