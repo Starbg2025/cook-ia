@@ -14,8 +14,12 @@ export const UrlInputModal: React.FC<UrlInputModalProps> = ({ isOpen, onClose, o
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (url.trim().startsWith('http')) {
-      onSubmit(url.trim());
+    let formattedUrl = url.trim();
+    if (formattedUrl) {
+      if (!formattedUrl.startsWith('http')) {
+        formattedUrl = `https://${formattedUrl}`;
+      }
+      onSubmit(formattedUrl);
       setUrl('');
       onClose();
     }
@@ -81,7 +85,7 @@ export const UrlInputModal: React.FC<UrlInputModalProps> = ({ isOpen, onClose, o
                 <div className="relative group">
                   <LinkIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-orange-primary transition-colors" size={18} />
                   <input 
-                    type="url"
+                    type="text"
                     value={url}
                     onChange={(e) => setUrl(e.target.value)}
                     placeholder={current.placeholder}
@@ -94,7 +98,7 @@ export const UrlInputModal: React.FC<UrlInputModalProps> = ({ isOpen, onClose, o
 
               <button 
                 type="submit"
-                disabled={!url.trim().startsWith('http')}
+                disabled={!url.trim()}
                 className="w-full bg-white text-black py-4 rounded-2xl font-bold text-sm hover:bg-white/90 transition-all disabled:opacity-20 flex items-center justify-center gap-2 group"
               >
                 {current.buttonText}
