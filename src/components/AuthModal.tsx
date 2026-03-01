@@ -307,11 +307,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                   <input 
                     type="text"
                     value={otp}
-                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    placeholder="Code à 6 chiffres"
-                    className="w-full bg-[#0A0A0A] border border-white/10 rounded-2xl p-4 pl-12 text-[15px] focus:outline-none focus:border-white/30 transition-all placeholder:text-white/30 text-white tracking-[0.5em] font-mono text-center"
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                    placeholder="Code de vérification"
+                    className="w-full bg-[#0A0A0A] border border-white/10 rounded-2xl p-4 pl-12 text-[15px] focus:outline-none focus:border-white/30 transition-all placeholder:text-white/30 text-white tracking-[0.3em] font-mono text-center"
                     required
-                    maxLength={6}
+                    maxLength={8}
                   />
                 </div>
                 {errorMsg && <p className="text-red-500 text-xs text-center">{errorMsg}</p>}
