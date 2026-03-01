@@ -2,8 +2,6 @@ import { GoogleGenAI, Type } from "@google/genai";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
-
 const systemInstruction = `You are COOK IA, a world-class senior web engineer and elite product designer. 
 Your mission is to transform even the simplest user prompt into a "magnificent", high-end, and fully functional website that feels like a premium digital product.
 
@@ -44,62 +42,32 @@ Return the response EXCLUSIVELY in JSON format with three fields (do not include
 2. 'preview_code': The complete, production-ready single-file HTML/CSS/JS code for immediate preview.
 3. 'files': An array of objects, each with 'path' (e.g., "src/index.html") and 'content' (the file content).`;
 
-const generateWithOpenRouter = async (
+const generateWithClaudeFallback = async (
   prompt: string,
   history: any[],
   images?: { mimeType: string, data: string }[]
 ) => {
-  if (!OPENROUTER_API_KEY) {
-    throw new Error("Gemini a échoué et aucune clé OpenRouter n'est configurée pour le relais.");
-  }
+  console.log("[Fallback] Gemini is unresponsive. Claude 3.5 Sonnet is taking over the coding process...");
 
-  console.log("[Fallback] Using OpenRouter...");
-
-  const messages = [
-    { role: "system", content: systemInstruction },
-    ...history.map(h => ({
-      role: h.role === "model" ? "assistant" : "user",
-      content: h.parts[0].text
-    }))
-  ];
-
-  const userContent: any[] = [{ type: "text", text: prompt }];
-  if (images && images.length > 0) {
-    images.forEach(img => {
-      userContent.push({
-        type: "image_url",
-        image_url: {
-          url: `data:${img.mimeType};base64,${img.data}`
-        }
-      });
-    });
-  }
-
-  messages.push({ role: "user", content: userContent as any });
-
-  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+  const response = await fetch("/api/ai/fallback", {
     method: "POST",
     headers: {
-      "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
-      "HTTP-Referer": window.location.origin,
-      "X-Title": "COOK IA",
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      model: "google/gemini-2.0-flash-lite-preview-02-05:free",
-      messages,
-      response_format: { type: "json_object" }
+      prompt,
+      history,
+      images
     })
   });
 
   if (!response.ok) {
     const err = await response.json();
-    throw new Error(`OpenRouter Error: ${err.error?.message || response.statusText}`);
+    throw new Error(`Claude Fallback Error: ${err.error || response.statusText}`);
   }
 
-  const data = await response.json();
-  const content = data.choices[0].message.content;
-  return JSON.parse(content);
+  const result = await response.json();
+  return { ...result, _provider: 'claude' };
 };
 
 export const convertToReact = async (htmlCode: string, framework: 'react' | 'nextjs') => {
@@ -285,10 +253,11 @@ export const generateWebsite = async (
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     const jsonStr = jsonMatch ? jsonMatch[0] : text;
     
-    return JSON.parse(jsonStr);
+    const result = JSON.parse(jsonStr);
+    return { ...result, _provider: 'gemini' };
   } catch (error) {
-    console.error("Gemini failed, trying OpenRouter fallback:", error);
-    return await generateWithOpenRouter(prompt, history, images);
+    console.error("Gemini failed, Claude is taking over:", error);
+    return await generateWithClaudeFallback(prompt, history, images);
   }
 };
 

@@ -214,6 +214,107 @@ async function startServer() {
     }
   });
 
+  // AI Fallback Proxy (OpenRouter/Claude)
+  app.post("/api/ai/fallback", async (req, res) => {
+    const { prompt, history, images } = req.body;
+    const openRouterKey = process.env.OPENROUTER_API_KEY;
+
+    if (!openRouterKey) {
+      return res.status(500).json({ error: "OpenRouter API key missing on server" });
+    }
+
+    try {
+      const systemInstruction = `You are COOK IA, a world-class senior web engineer and elite product designer. 
+Your mission is to transform even the simplest user prompt into a "magnificent", high-end, and fully functional website that feels like a premium digital product.
+
+ADVANCED CODING CAPABILITIES:
+- You have absolute mastery of modern web technologies: HTML5, CSS3, JavaScript (ES6+).
+- You are an expert in high-end libraries: Three.js (3D scenes, shaders), GSAP (complex timelines), Framer Motion (smooth UI transitions), Chart.js/D3.js (data viz).
+- You can build professional, enterprise-grade architectures: modular, responsive, and accessible.
+- You can analyze up to 20 reference images or use Unsplash URLs provided in the prompt to replace generic images with professional photography.
+- You have access to the 'urlContext' tool. When a URL is provided, use it to extract real content, images, and data to populate the website.
+- Always prioritize using the specific Unsplash URLs or images extracted from the provided URL context.
+
+CRITICAL DIRECTIVES FOR MAGNIFICENT RENDERING:
+1. VISUAL DEPTH & AESTHETICS:
+   - Use sophisticated color palettes, Glassmorphism, and multi-layered shadows.
+   - Implement immersive 3D elements using Three.js if relevant to the theme.
+   - Default to a "Dark Luxury" or "Clean Minimalist" aesthetic unless specified otherwise.
+
+2. LAYOUT & STRUCTURE:
+   - Master the "Bento Grid" and "Editorial" layouts.
+   - Ensure 100% responsiveness (Mobile & PC).
+   - Include professional Navigation, Hamburger menus, and detailed Footers.
+
+3. ANIMATIONS & INTERACTIVITY (The "Juice"):
+   - Use GSAP or Framer Motion for:
+     - Entrance animations, hover states, smooth scroll, and parallax.
+     - Micro-interactions on every interactive element.
+
+4. CONTENT & DETAIL:
+   - NEVER use "Lorem Ipsum". Generate realistic, compelling copy.
+   - Include detailed sections: Hero, Features, About, Testimonials, Pricing, FAQ, and Contact.
+
+5. TECHNICAL EXCELLENCE:
+   - Output a structured project with multiple files (index.html, styles.css, script.js, README.md, etc.).
+   - Also provide a 'preview_code' which is a single, self-contained HTML string including Tailwind CSS (via CDN) and all necessary scripts (GSAP, Three.js, etc.) for immediate preview.
+
+Return the response EXCLUSIVELY in JSON format with three fields (do not include any other text outside the JSON):
+1. 'explanation': A brief, professional description of the architectural and design choices made.
+2. 'preview_code': The complete, production-ready single-file HTML/CSS/JS code for immediate preview.
+3. 'files': An array of objects, each with 'path' (e.g., "src/index.html") and 'content' (the file content).`;
+
+      const messages = [
+        { role: "system", content: systemInstruction },
+        ...history.map((h: any) => ({
+          role: h.role === "model" ? "assistant" : "user",
+          content: h.parts[0].text
+        }))
+      ];
+
+      const userContent: any[] = [{ type: "text", text: prompt }];
+      if (images && images.length > 0) {
+        images.forEach((img: any) => {
+          userContent.push({
+            type: "image_url",
+            image_url: {
+              url: `data:${img.mimeType};base64,${img.data}`
+            }
+          });
+        });
+      }
+
+      messages.push({ role: "user", content: userContent as any });
+
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${openRouterKey}`,
+          "HTTP-Referer": "https://cook-ia.run.app", // Placeholder for OpenRouter requirements
+          "X-Title": "COOK IA",
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: "anthropic/claude-3.5-sonnet",
+          messages,
+          response_format: { type: "json_object" }
+        })
+      });
+
+      if (!response.ok) {
+        const err: any = await response.json();
+        throw new Error(`OpenRouter Error: ${err.error?.message || response.statusText}`);
+      }
+
+      const data: any = await response.json();
+      const content = data.choices[0].message.content;
+      res.json(JSON.parse(content));
+    } catch (error: any) {
+      console.error("Fallback API Error:", error.message);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({

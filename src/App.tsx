@@ -570,7 +570,9 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
       
       const updatedMessages: Message[] = [...newMessages, { 
         role: 'model', 
-        content: result.explanation,
+        content: result._provider === 'claude' 
+          ? `[Claude 3.5 Sonnet Fallback] ${result.explanation}` 
+          : result.explanation,
         code: result.preview_code,
         files: result.files
       }];
