@@ -9,12 +9,13 @@ interface AuthModalProps {
   onClose: () => void;
 }
 
-type AuthMode = 'magic_link' | 'login' | 'signup' | 'username_setup';
+type AuthMode = 'magic_link' | 'login' | 'signup' | 'username_setup' | 'verify_otp';
 
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
+  const [otp, setOtp] = useState('');
   const [mode, setMode] = useState<AuthMode>('magic_link');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -116,8 +117,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           });
         }
         
-        alert('Inscription réussie ! Vérifiez vos emails si nécessaire.');
-        onClose();
+        setMode('verify_otp');
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email,
@@ -167,6 +167,48 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     }
   };
 
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!otp || otp.length < 6) return;
+
+    setIsLoading(true);
+    setErrorMsg(null);
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        email,
+        token: otp,
+        type: 'signup',
+      });
+      if (error) throw error;
+      
+      // After verification, check if username exists
+      await checkUserSession();
+      if (mode !== 'username_setup') onClose();
+    } catch (error: any) {
+      console.error('Error verifying OTP:', error);
+      setErrorMsg(error.message || 'Code invalide ou expiré');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    setIsLoading(true);
+    setErrorMsg(null);
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: email,
+      });
+      if (error) throw error;
+      alert('Nouveau code envoyé !');
+    } catch (error: any) {
+      setErrorMsg(error.message || 'Erreur lors de l\'envoi du code');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -197,15 +239,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
               <h2 className="text-2xl lg:text-[32px] font-semibold leading-tight mb-3 lg:mb-4 tracking-tight">
                 {mode === 'username_setup' ? 'Choisissez un pseudo' : 
                  mode === 'signup' ? 'Créez votre compte' : 
+                 mode === 'verify_otp' ? 'Vérifiez votre email' :
                  'Bon retour parmi nous'}
               </h2>
               <p className="text-white/60 text-sm lg:text-[15px] leading-relaxed px-2 lg:px-4">
                 {mode === 'username_setup' ? 'Dernière étape ! Comment souhaitez-vous être appelé sur COOK IA ?' :
+                 mode === 'verify_otp' ? `Nous avons envoyé un code de vérification à ${email}.` :
                  'Vous recevrez un site web full-stack prêt à l\'emploi, avec une architecture moderne.'}
               </p>
             </div>
 
-            {mode !== 'username_setup' && (
+            {mode !== 'username_setup' && mode !== 'verify_otp' && (
               <>
                 <div className="space-y-3 mb-8">
                   <button 
@@ -255,6 +299,46 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                 >
                   {isLoading ? 'Enregistrement...' : 'Terminer'}
                 </button>
+              </form>
+            ) : mode === 'verify_otp' ? (
+              <form onSubmit={handleVerifyOtp} className="space-y-4">
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={18} />
+                  <input 
+                    type="text"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    placeholder="Code à 6 chiffres"
+                    className="w-full bg-[#0A0A0A] border border-white/10 rounded-2xl p-4 pl-12 text-[15px] focus:outline-none focus:border-white/30 transition-all placeholder:text-white/30 text-white tracking-[0.5em] font-mono text-center"
+                    required
+                    maxLength={6}
+                  />
+                </div>
+                {errorMsg && <p className="text-red-500 text-xs text-center">{errorMsg}</p>}
+                <button 
+                  type="submit"
+                  disabled={isLoading || otp.length < 6}
+                  className="w-full bg-white text-black py-4 rounded-full font-bold text-[15px] transition-all hover:bg-white/90 disabled:opacity-50"
+                >
+                  {isLoading ? 'Vérification...' : 'Vérifier le code'}
+                </button>
+                <div className="flex flex-col gap-2 items-center">
+                  <button 
+                    type="button"
+                    onClick={handleResendOtp}
+                    disabled={isLoading}
+                    className="text-white/40 text-sm hover:text-white transition-colors"
+                  >
+                    Renvoyer le code
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => setMode('signup')}
+                    className="text-white/40 text-sm hover:text-white transition-colors"
+                  >
+                    Retour à l'inscription
+                  </button>
+                </div>
               </form>
             ) : mode === 'magic_link' ? (
               <form onSubmit={handleEmailLogin} className="space-y-4">
