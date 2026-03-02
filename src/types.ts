@@ -22,6 +22,7 @@ export interface Message {
   code?: string;
   image?: string; // Keep for backward compatibility if needed, but we'll use images
   images?: string[];
+  videos?: string[];
   files?: ProjectFile[];
 }
 

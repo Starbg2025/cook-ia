@@ -9,7 +9,7 @@ interface AuthModalProps {
   onClose: () => void;
 }
 
-type AuthMode = 'magic_link' | 'login' | 'signup' | 'username_setup' | 'verify_otp';
+type AuthMode = 'magic_link' | 'login' | 'signup' | 'username_setup' | 'verify_otp' | 'forgot_password' | 'new_password';
 
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const [email, setEmail] = useState('');
@@ -17,6 +17,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const [username, setUsername] = useState('');
   const [otp, setOtp] = useState('');
   const [mode, setMode] = useState<AuthMode>('magic_link');
+  const [otpType, setOtpType] = useState<'signup' | 'recovery'>('signup');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -117,6 +118,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           });
         }
         
+        setOtpType('signup');
         setMode('verify_otp');
       } else {
         const { error } = await supabase.auth.signInWithPassword({
@@ -131,6 +133,47 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
       }
     } catch (error: any) {
       setErrorMsg(error.message || 'Une erreur est survenue');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) return;
+
+    setIsLoading(true);
+    setErrorMsg(null);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      if (error) throw error;
+      
+      setOtpType('recovery');
+      setMode('verify_otp');
+      alert('Code de réinitialisation envoyé par email !');
+    } catch (error: any) {
+      setErrorMsg(error.message || 'Erreur lors de l\'envoi du code');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!password) return;
+
+    setIsLoading(true);
+    setErrorMsg(null);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: password
+      });
+      if (error) throw error;
+      
+      alert('Mot de passe modifié avec succès ! Un email de confirmation vous a été envoyé.');
+      setMode('login');
+    } catch (error: any) {
+      setErrorMsg(error.message || 'Erreur lors de la modification du mot de passe');
     } finally {
       setIsLoading(false);
     }
@@ -177,13 +220,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
       const { error } = await supabase.auth.verifyOtp({
         email,
         token: otp,
-        type: 'signup',
+        type: otpType as any,
       });
       if (error) throw error;
       
-      // After verification, check if username exists
-      await checkUserSession();
-      if (mode !== 'username_setup') onClose();
+      if (otpType === 'recovery') {
+        setMode('new_password');
+      } else {
+        // After verification, check if username exists
+        await checkUserSession();
+        if (mode !== 'username_setup') onClose();
+      }
     } catch (error: any) {
       console.error('Error verifying OTP:', error);
       setErrorMsg(error.message || 'Code invalide ou expiré');
@@ -197,7 +244,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     setErrorMsg(null);
     try {
       const { error } = await supabase.auth.resend({
-        type: 'signup',
+        type: (otpType === 'recovery' ? 'recovery' : 'signup') as any,
         email: email,
       });
       if (error) throw error;
@@ -240,16 +287,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                 {mode === 'username_setup' ? 'Choisissez un pseudo' : 
                  mode === 'signup' ? 'Créez votre compte' : 
                  mode === 'verify_otp' ? 'Vérifiez votre email' :
+                 mode === 'forgot_password' ? 'Mot de passe oublié' :
+                 mode === 'new_password' ? 'Nouveau mot de passe' :
                  'Bon retour parmi nous'}
               </h2>
               <p className="text-white/60 text-sm lg:text-[15px] leading-relaxed px-2 lg:px-4">
                 {mode === 'username_setup' ? 'Dernière étape ! Comment souhaitez-vous être appelé sur COOK IA ?' :
                  mode === 'verify_otp' ? `Nous avons envoyé un code de vérification à ${email}.` :
+                 mode === 'forgot_password' ? 'Entrez votre email pour recevoir un code de réinitialisation.' :
+                 mode === 'new_password' ? 'Choisissez un nouveau mot de passe sécurisé.' :
                  'Vous recevrez un site web full-stack prêt à l\'emploi, avec une architecture moderne.'}
               </p>
             </div>
 
-            {mode !== 'username_setup' && mode !== 'verify_otp' && (
+            {mode !== 'username_setup' && mode !== 'verify_otp' && mode !== 'forgot_password' && mode !== 'new_password' && (
               <>
                 <div className="space-y-3 mb-8">
                   <button 
@@ -300,6 +351,64 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                   {isLoading ? 'Enregistrement...' : 'Terminer'}
                 </button>
               </form>
+            ) : mode === 'forgot_password' ? (
+              <form onSubmit={handleForgotPassword} className="space-y-4">
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={18} />
+                  <input 
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Adresse e-mail"
+                    className="w-full bg-[#0A0A0A] border border-white/10 rounded-2xl p-4 pl-12 text-[15px] focus:outline-none focus:border-white/30 transition-all placeholder:text-white/30 text-white"
+                    required
+                  />
+                </div>
+                {errorMsg && <p className="text-red-500 text-xs text-center">{errorMsg}</p>}
+                <button 
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full bg-white text-black py-4 rounded-full font-bold text-[15px] transition-all hover:bg-white/90 disabled:opacity-50"
+                >
+                  {isLoading ? 'Envoi...' : 'Envoyer le code'}
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => setMode('login')}
+                  className="w-full text-white/40 text-sm hover:text-white transition-colors"
+                >
+                  Retour à la connexion
+                </button>
+              </form>
+            ) : mode === 'new_password' ? (
+              <form onSubmit={handleUpdatePassword} className="space-y-4">
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={18} />
+                  <input 
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Nouveau mot de passe"
+                    className="w-full bg-[#0A0A0A] border border-white/10 rounded-2xl p-4 pl-12 pr-12 text-[15px] focus:outline-none focus:border-white/30 transition-all placeholder:text-white/30 text-white"
+                    required
+                  />
+                  <button 
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-white transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+                {errorMsg && <p className="text-red-500 text-xs text-center">{errorMsg}</p>}
+                <button 
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full bg-white text-black py-4 rounded-full font-bold text-[15px] transition-all hover:bg-white/90 disabled:opacity-50"
+                >
+                  {isLoading ? 'Mise à jour...' : 'Changer le mot de passe'}
+                </button>
+              </form>
             ) : mode === 'verify_otp' ? (
               <form onSubmit={handleVerifyOtp} className="space-y-4">
                 <div className="relative">
@@ -333,10 +442,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                   </button>
                   <button 
                     type="button"
-                    onClick={() => setMode('signup')}
+                    onClick={() => setMode(otpType === 'recovery' ? 'forgot_password' : 'signup')}
                     className="text-white/40 text-sm hover:text-white transition-colors"
                   >
-                    Retour à l'inscription
+                    {otpType === 'recovery' ? 'Retour' : 'Retour à l\'inscription'}
                   </button>
                 </div>
               </form>
@@ -422,6 +531,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                   {isLoading ? 'Chargement...' : mode === 'signup' ? 'S\'inscrire' : 'Se connecter'}
                 </button>
                 <div className="flex flex-col gap-2 items-center">
+                  {mode === 'login' && (
+                    <button 
+                      type="button"
+                      onClick={() => setMode('forgot_password')}
+                      className="text-white/40 text-sm hover:text-white transition-colors"
+                    >
+                      Mot de passe oublié ?
+                    </button>
+                  )}
                   <button 
                     type="button"
                     onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}

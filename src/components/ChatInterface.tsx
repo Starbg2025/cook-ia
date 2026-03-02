@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Zap, Send, Loader2, ImagePlus, X, Image as ImageIcon, Copy, ShoppingBag } from 'lucide-react';
+import { Zap, Send, Loader2, ImagePlus, X, Image as ImageIcon, Copy, ShoppingBag, Video } from 'lucide-react';
 import { Message } from '../types';
 
 interface ChatInterfaceProps {
@@ -14,6 +14,8 @@ interface ChatInterfaceProps {
   logoUrl: string;
   selectedImages: string[];
   setSelectedImages: React.Dispatch<React.SetStateAction<string[]>>;
+  selectedVideos: string[];
+  setSelectedVideos: React.Dispatch<React.SetStateAction<string[]>>;
   onOpenImageSearch?: () => void;
   onCloneSite?: () => void;
   onEcommerceProduct?: () => void;
@@ -30,11 +32,14 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   logoUrl,
   selectedImages,
   setSelectedImages,
+  selectedVideos,
+  setSelectedVideos,
   onOpenImageSearch,
   onCloneSite,
   onEcommerceProduct
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -56,8 +61,32 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     });
   };
 
+  const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    const remainingSlots = 5 - selectedVideos.length;
+    const filesToProcess = files.slice(0, remainingSlots);
+
+    if (files.length > remainingSlots) {
+      alert(`You can only upload up to 5 videos. Adding the first ${remainingSlots} selected.`);
+    }
+
+    filesToProcess.forEach(file => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSelectedVideos(prev => [...prev, reader.result as string]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
   const removeImage = (index: number) => {
     setSelectedImages(selectedImages.filter((_, i) => i !== index));
+  };
+
+  const removeVideo = (index: number) => {
+    setSelectedVideos(selectedVideos.filter((_, i) => i !== index));
   };
 
   return (
@@ -92,6 +121,15 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 {msg.images.map((img, i) => (
                   <div key={i} className="w-20 h-20 lg:w-24 lg:h-24 rounded-xl lg:rounded-2xl overflow-hidden border border-white/10 shadow-xl">
                     <img src={img} alt={`Reference ${i}`} className="w-full h-full object-cover" />
+                  </div>
+                ))}
+              </div>
+            )}
+            {msg.videos && msg.videos.length > 0 && (
+              <div className="mb-2 flex flex-wrap gap-2 max-w-[92%] justify-end">
+                {msg.videos.map((vid, i) => (
+                  <div key={i} className="w-20 h-20 lg:w-24 lg:h-24 rounded-xl lg:rounded-2xl overflow-hidden border border-white/10 shadow-xl bg-black">
+                    <video src={vid} className="w-full h-full object-cover" muted />
                   </div>
                 ))}
               </div>
@@ -154,6 +192,27 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
               ))}
             </div>
           )}
+          {selectedVideos.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-3 lg:mb-4 max-h-32 overflow-y-auto scrollbar-hide p-1">
+              {selectedVideos.map((vid, index) => (
+                <motion.div 
+                  key={index}
+                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                  className="relative w-12 h-12 lg:w-16 lg:h-16 rounded-lg lg:rounded-xl overflow-hidden border border-blue-500/30 shadow-2xl group shrink-0 bg-black"
+                >
+                  <video src={vid} className="w-full h-full object-cover" muted />
+                  <button 
+                    onClick={() => removeVideo(index)}
+                    className="absolute top-0.5 right-0.5 p-0.5 bg-black/60 text-white rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <X size={8} />
+                  </button>
+                </motion.div>
+              ))}
+            </div>
+          )}
         </AnimatePresence>
 
         <div className="relative group">
@@ -170,6 +229,14 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
               ref={fileInputRef}
               onChange={handleImageChange}
               accept="image/*"
+              multiple
+              className="hidden"
+            />
+            <input 
+              type="file"
+              ref={videoInputRef}
+              onChange={handleVideoChange}
+              accept="video/*"
               multiple
               className="hidden"
             />
@@ -195,6 +262,13 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
               <ImageIcon size={18} />
             </button>
             <button 
+              onClick={() => videoInputRef.current?.click()}
+              className="p-2 lg:p-3 text-white/20 hover:text-blue-500 transition-colors"
+              title="Add reference videos (max 5)"
+            >
+              <Video size={18} />
+            </button>
+            <button 
               onClick={() => fileInputRef.current?.click()}
               className="p-2 lg:p-3 text-white/20 hover:text-orange-primary transition-colors"
               title="Add reference images (max 20)"
@@ -203,7 +277,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
             </button>
             <button 
               onClick={handleSend}
-              disabled={isLoading || (!prompt.trim() && selectedImages.length === 0)}
+              disabled={isLoading || (!prompt.trim() && selectedImages.length === 0 && selectedVideos.length === 0)}
               className="p-2.5 lg:p-3 bg-orange-primary text-white rounded-xl lg:rounded-2xl hover:scale-105 active:scale-95 transition-all disabled:opacity-20 disabled:grayscale disabled:cursor-not-allowed shadow-xl shadow-orange-primary/20"
             >
               <Send size={18} />

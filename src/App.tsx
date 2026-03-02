@@ -75,6 +75,7 @@ export default function App() {
   const [settingsTab, setSettingsTab] = useState<any>('general');
   const [user, setUser] = useState<any>(null);
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
+  const [selectedVideos, setSelectedVideos] = useState<string[]>([]);
   const [abortController, setAbortController] = useState<AbortController | null>(null);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -495,13 +496,16 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
 
     const userMessage = prompt;
     const currentImages = [...selectedImages];
+    const currentVideos = [...selectedVideos];
     setPrompt('');
     setSelectedImages([]);
+    setSelectedVideos([]);
     
     const newMessages: Message[] = [...messages, { 
       role: 'user', 
       content: userMessage,
-      images: currentImages.length > 0 ? currentImages : undefined
+      images: currentImages.length > 0 ? currentImages : undefined,
+      videos: currentVideos.length > 0 ? currentVideos : undefined
     }];
     setMessages(newMessages);
     const controller = new AbortController();
@@ -559,6 +563,19 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
         }
       }
 
+      let videoParts: any[] = [];
+      if (currentVideos.length > 0) {
+        for (const vid of currentVideos) {
+          if (vid.startsWith('data:')) {
+            const [mimeTypePart, data] = vid.split(';base64,');
+            videoParts.push({
+              mimeType: mimeTypePart.split(':')[1],
+              data: data
+            });
+          }
+        }
+      }
+
       // If there are URLs in currentImages, append them to the userMessage
       let enrichedUserMessage = userMessage;
       const urls = currentImages.filter(img => !img.startsWith('data:'));
@@ -566,7 +583,12 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
         enrichedUserMessage += "\n\nReference Images (URLs):\n" + urls.join('\n');
       }
 
-      const result = await generateWebsite(enrichedUserMessage, history.slice(0, -1), imageParts.length > 0 ? imageParts : undefined);
+      const result = await generateWebsite(
+        enrichedUserMessage, 
+        history.slice(0, -1), 
+        imageParts.length > 0 ? imageParts : undefined,
+        videoParts.length > 0 ? videoParts : undefined
+      );
       
       const updatedMessages: Message[] = [...newMessages, { 
         role: 'model', 
@@ -962,6 +984,8 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
             logoUrl={LOGO_URL}
             selectedImages={selectedImages}
             setSelectedImages={setSelectedImages}
+            selectedVideos={selectedVideos}
+            setSelectedVideos={setSelectedVideos}
             onOpenImageSearch={() => {
               setImageSearchContext('chat');
               setIsImageSearchOpen(true);
