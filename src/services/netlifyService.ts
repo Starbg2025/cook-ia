@@ -12,13 +12,12 @@ export const deployToNetlify = async (siteName: string, htmlCode: string) => {
   // 1. Create a site: POST https://api.netlify.com/api/v1/sites
   // 2. Deploy: POST https://api.netlify.com/api/v1/sites/{site_id}/deploys
   
-  const slug = siteName.toLowerCase().replace(/\s+/g, '-') || 'cook-ia-site';
-  const randomId = Math.random().toString(36).substr(2, 5);
-  const url = `https://${slug}-${randomId}.netlify.app`;
+  const slug = siteName.toLowerCase().replace(/\s+/g, '-') || 'site';
+  const url = `https://${slug}.cook-ia.online`;
   
   return {
     success: true,
     url: url,
-    admin_url: `https://app.netlify.com/sites/${slug}-${randomId}`
+    admin_url: `https://app.netlify.com/sites/${slug}`
   };
 };

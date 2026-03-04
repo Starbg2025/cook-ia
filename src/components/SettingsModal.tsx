@@ -696,7 +696,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                         </div>
                       ) : (
                         <>
-                          <h4 className="font-bold truncate">{site.slug}.cook.ia</h4>
+                          <h4 className="font-bold truncate">{site.slug}.cook-ia.online</h4>
                           <p className="text-[10px] text-white/20 uppercase tracking-widest mt-1">
                             Publié le {new Date(site.created_at).toLocaleDateString()}
                           </p>
@@ -715,7 +715,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                         <Settings size={16} />
                       </button>
                       <a 
-                        href={`${window.location.origin}/?p=${site.slug}`}
+                        href={`https://${site.slug}.cook-ia.online`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="p-2 hover:bg-white/10 rounded-lg text-white/40 hover:text-white transition-all"
@@ -975,7 +975,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                     <tbody className="divide-y divide-white/5">
                       {adminData.sites.slice(0, 5).map((s) => (
                         <tr key={s.id}>
-                          <td className="px-4 py-3 font-medium text-emerald-500">{s.slug}.cook.ia</td>
+                          <td className="px-4 py-3 font-medium text-emerald-500">{s.slug}.cook-ia.online</td>
                           <td className="px-4 py-3 text-white/40 font-mono">{s.user_id.slice(0, 8)}...</td>
                           <td className="px-4 py-3 text-white/40">{new Date(s.created_at).toLocaleDateString()}</td>
                         </tr>

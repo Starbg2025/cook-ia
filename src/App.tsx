@@ -670,7 +670,7 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
   };
 
   const copyToClipboard = () => {
-    const url = `${siteName || 'votre-site'}.cook.ia`;
+    const url = `${siteName || 'votre-site'}.cook-ia.online`;
     navigator.clipboard.writeText(url);
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2000);
@@ -698,9 +698,9 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
 
       if (error) throw error;
 
-      const url = `${window.location.origin}/?p=${slug}`;
+      const url = `https://${slug}.cook-ia.online`;
       setPublishedUrl(url);
-      alert(`Félicitations ! Votre site est maintenant en ligne sur ${slug}.cook.ia`);
+      alert(`Félicitations ! Votre site est maintenant en ligne sur ${slug}.cook-ia.online`);
     } catch (error: any) {
       console.error("Error publishing site:", error);
       alert(`Erreur lors de la publication : ${error.message}`);
@@ -753,10 +753,11 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
         />
         <button 
           onClick={() => {
-            window.location.href = window.location.origin;
+            window.location.href = "https://cook-ia.online";
           }}
-          className="fixed bottom-6 right-6 bg-black/80 backdrop-blur-md border border-white/10 text-white px-4 py-2 rounded-full text-xs font-bold hover:bg-black transition-all z-50 shadow-2xl"
+          className="fixed bottom-6 right-6 bg-black/80 backdrop-blur-md border border-white/10 text-white px-4 py-2 rounded-full text-xs font-bold hover:bg-black transition-all z-50 shadow-2xl flex items-center gap-2"
         >
+          <img src={LOGO_URL} alt="Logo" className="w-4 h-4 object-contain" />
           Créé avec COOK IA
         </button>
       </div>
@@ -1190,19 +1191,19 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
                         value={siteName}
                         onChange={(e) => setSiteName(e.target.value.toLowerCase().replace(/\s+/g, '-'))}
                         placeholder="my-awesome-site"
-                        className="w-full bg-[#0A0A0A] border border-white/5 rounded-2xl p-4 pr-20 text-sm font-mono focus:outline-none focus:border-orange-primary/50 transition-all"
+                        className="w-full bg-[#0A0A0A] border border-white/5 rounded-2xl p-4 pr-32 text-sm font-mono focus:outline-none focus:border-orange-primary/50 transition-all"
                       />
-                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 font-mono text-sm">.cook.ia</span>
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 font-mono text-sm">.cook-ia.online</span>
                     </div>
                   </div>
 
                   <div className="bg-[#0A0A0A] border border-white/5 rounded-2xl p-4 flex items-center justify-between group">
                     <span className="text-orange-primary font-mono text-sm truncate mr-4">
-                      {siteName || 'votre-site'}.cook.ia
+                      {siteName || 'votre-site'}.cook-ia.online
                     </span>
                     <button 
                       onClick={() => {
-                        const url = publishedUrl || `${window.location.origin}/?p=${siteName || 'votre-site'}`;
+                        const url = publishedUrl || `https://${siteName || 'votre-site'}.cook-ia.online`;
                         navigator.clipboard.writeText(url);
                         setIsCopied(true);
                         setTimeout(() => setIsCopied(false), 2000);
