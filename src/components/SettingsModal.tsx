@@ -20,6 +20,8 @@ import {
   FileText,
   Layout,
   Loader2,
+  HelpCircle,
+  Palette,
   Activity
 } from 'lucide-react';
 import { supabase } from '../services/supabaseService';
@@ -258,7 +260,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
     ...(user?.email === 'benit800@gmail.com' ? [{ id: 'admin', label: 'Admin Panel', icon: Shield }] : []),
     { id: 'policy', label: 'Politique d\'utilisation', icon: FileText },
     { id: 'account', label: 'Compte', icon: User },
-    { id: 'help', label: 'Aide', icon: HelpCircleIcon },
+    { id: 'help', label: 'Aide', icon: HelpCircle },
   ];
 
   const renderContent = () => {
@@ -479,12 +481,26 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
       case 'help':
         return (
           <div className="space-y-8">
-            <div className="space-y-2">
-              <h3 className="text-xl font-bold">Comment pouvons-nous vous aider ?</h3>
-              <p className="text-sm text-white/40">Décrivez votre problème ou posez votre question ci-dessous. Notre équipe vous répondra directement sur votre adresse e-mail.</p>
+            <div className="space-y-4">
+              <h3 className="text-xl font-bold">Centre d'Aide</h3>
+              
+            <div className="grid grid-cols-1 gap-4">
+              <div className="p-6 bg-white/5 border border-white/5 rounded-2xl">
+                <h4 className="font-bold mb-1">Besoin d'aide ?</h4>
+                <p className="text-xs text-white/40">Utilisez le formulaire ci-dessous pour contacter notre équipe de support.</p>
+              </div>
+            </div>
             </div>
 
-            <form onSubmit={handleSubmitHelp} className="space-y-6">
+            <div className="h-[1px] bg-white/5" />
+
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <h4 className="text-sm font-bold">Contactez le support</h4>
+                <p className="text-xs text-white/40">Vous ne trouvez pas de réponse ? Envoyez-nous un message.</p>
+              </div>
+
+              <form onSubmit={handleSubmitHelp} className="space-y-6">
               <div className="space-y-2">
                 <label className="text-xs text-white/40 uppercase tracking-widest font-bold">Sujet</label>
                 <input 
@@ -514,26 +530,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                 {isSubmittingHelp ? 'Envoi en cours...' : 'Envoyer ma demande'}
               </button>
             </form>
-
-            <div className="p-6 bg-white/5 rounded-2xl border border-white/5 space-y-4">
-              <h4 className="text-sm font-bold">Autres ressources</h4>
-              <div className="grid grid-cols-2 gap-4">
-                <button className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 text-sm text-white/60 hover:text-white transition-all border border-white/5">
-                  <Globe size={16} /> Documentation
-                </button>
-                <button className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 text-sm text-white/60 hover:text-white transition-all border border-white/5">
-                  <ExternalLink size={16} /> Communauté
-                </button>
-              </div>
-            </div>
           </div>
-        );
+        </div>
+      );
       case 'parental':
         return (
           <div className="space-y-6">
             <div className="flex items-center gap-2">
               <h3 className="text-xl font-bold">Contrôles parentaux</h3>
-              <HelpCircleIcon size={16} className="text-white/20" />
+              <HelpCircle size={16} className="text-white/20" />
             </div>
             <p className="text-sm text-white/60 leading-relaxed">
               Les comptes parents et adolescents peuvent être liés, ce qui donne aux parents la possibilité d'ajuster certains paramètres, de fixer des limites et d'ajouter des protections adaptées aux besoins de la famille.

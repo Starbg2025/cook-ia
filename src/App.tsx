@@ -27,6 +27,7 @@ import { ImageSearchModal } from './components/ImageSearchModal';
 import { UrlInputModal } from './components/UrlInputModal';
 import { AuthModal } from './components/AuthModal';
 import { SettingsModal } from './components/SettingsModal';
+import { AntiBot } from './components/AntiBot';
 import { supabase } from './services/supabaseService';
 import { deployToNetlify } from './services/netlifyService';
 import JSZip from 'jszip';
@@ -66,6 +67,8 @@ export default function App() {
   const [isConverting, setIsConverting] = useState(false);
   const [imageSearchContext, setImageSearchContext] = useState<'chat' | 'section'>('chat');
   const [isDeploying, setIsDeploying] = useState(false);
+  const [isAntiBotOpen, setIsAntiBotOpen] = useState(false);
+  const [pendingSend, setPendingSend] = useState<boolean>(false);
   const [styleConfig, setStyleConfig] = useState<StyleConfig>({
     primaryColor: '#FF6B00',
     fontFamily: 'Inter',
@@ -494,6 +497,39 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
       return;
     }
 
+    // Check if verification is needed today
+    const lastVerification = user.user_metadata?.last_verification_date;
+    const today = new Date().toISOString().split('T')[0];
+
+    if (lastVerification === today) {
+      // Already verified today, send directly
+      executeSend();
+    } else {
+      // Need verification
+      setIsAntiBotOpen(true);
+      setPendingSend(true);
+    }
+  };
+
+  const executeSend = async () => {
+    // If we are coming from the Anti-bot modal, update the verification date in user metadata
+    if (isAntiBotOpen && user) {
+      const today = new Date().toISOString().split('T')[0];
+      try {
+        const { data, error } = await supabase.auth.updateUser({
+          data: { last_verification_date: today }
+        });
+        if (!error && data.user) {
+          setUser(data.user);
+        }
+      } catch (err) {
+        console.error("Error updating verification date:", err);
+      }
+    }
+
+    setIsAntiBotOpen(false);
+    setPendingSend(false);
+
     const userMessage = prompt;
     const currentImages = [...selectedImages];
     const currentVideos = [...selectedVideos];
@@ -790,6 +826,10 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
 
   return (
     <div className="flex flex-col h-screen bg-[#0A0A0A] text-white overflow-hidden font-sans">
+      <AntiBot 
+        isOpen={isAntiBotOpen} 
+        onVerify={executeSend} 
+      />
       {/* Header */}
       <header className="flex items-center justify-between px-4 lg:px-10 py-4 lg:py-6 border-b border-white/5 bg-[#0A0A0A]/90 backdrop-blur-xl z-50 sticky top-0">
         <div className="flex items-center gap-3 lg:gap-6">
@@ -814,6 +854,10 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
               </h1>
               <p className="text-[8px] lg:text-[10px] text-white/20 uppercase tracking-[0.2em] lg:tracking-[0.3em] font-bold">Full-Stack Web Development</p>
             </div>
+          </div>
+
+          <div className="hidden xl:flex items-center gap-6 ml-4">
+            {/* Removed Documentation, Community, Gacha and Credits per user request */}
           </div>
         </div>
 
