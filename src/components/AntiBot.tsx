@@ -1,10 +1,11 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { motion, useMotionValue, useTransform, useAnimation } from 'motion/react';
-import { Shield, Check, ChevronRight, Lock, Loader2, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion } from 'motion/react';
+import { Shield, Check, Lock, AlertCircle } from 'lucide-react';
 
 declare global {
   interface Window {
     grecaptcha: any;
+    onRecaptchaLoaded: () => void;
   }
 }
 
@@ -13,197 +14,230 @@ interface AntiBotProps {
   isOpen: boolean;
 }
 
+// ✅ Ta clé publique (safe à mettre dans le frontend)
+const SITE_KEY = "6LdTZoMsAAAAADwDW39iCQPo7Szlz1aelljqmvHa";
+
+// ✅ URL de ta Netlify Function
+const VERIFY_URL = "/.netlify/functions/verify-captcha";
+
 export const AntiBot: React.FC<AntiBotProps> = ({ onVerify, isOpen }) => {
-  const [isChecked, setIsChecked] = useState(false);
-  const [isVerified, setIsVerified] = useState(false);
+  const [isVerified, setIsVerified]   = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  
-  const [isFallbackMode, setIsFallbackMode] = useState(false);
-  
+  const [error, setError]             = useState<string | null>(null);
+  const [scriptReady, setScriptReady] = useState(false);
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const widgetIdRef  = useRef<number | null>(null);
+
+  // ── 1. Charger le script reCAPTCHA v2 une seule fois ──
   useEffect(() => {
-    // Try to load reCAPTCHA script if not present
-    if (!document.querySelector('script[src*="recaptcha/api.js"]')) {
-      const script = document.createElement('script');
-      script.src = "https://www.google.com/recaptcha/api.js";
-      script.async = true;
-      script.defer = true;
-      document.head.appendChild(script);
+    if (window.grecaptcha) {
+      setScriptReady(true);
+      return;
     }
+
+    if (document.querySelector('script[src*="recaptcha/api.js"]')) {
+      const interval = setInterval(() => {
+        if (window.grecaptcha) {
+          clearInterval(interval);
+          setScriptReady(true);
+        }
+      }, 100);
+      return;
+    }
+
+    window.onRecaptchaLoaded = () => setScriptReady(true);
+
+    const script = document.createElement('script');
+    script.src = `https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoaded&render=explicit`;
+    script.async = true;
+    script.defer = true;
+    document.head.appendChild(script);
   }, []);
 
-  const handleCheck = async () => {
-    if (isVerifying || isVerified) return;
-    
-    setIsChecked(true);
-    setIsVerifying(true);
-    setError(null);
-    
-    try {
-      console.log("Starting verification...");
-      
-      let token = "";
-      const siteKey = "66LdtZYMsAAAAAKR_2XRgGvNTs2eey2xFSteprQ1U";
-      
-      if (!isFallbackMode) {
-        try {
-          // 1. Get reCAPTCHA token
-          token = await new Promise<string>((resolve, reject) => {
-            let attempts = 0;
-            const checkInterval = setInterval(() => {
-              if (window.grecaptcha) {
-                clearInterval(checkInterval);
-                
-                // For v2 Checkbox, we might need to render it or use a hidden one
-                // But since we have a custom UI, we'll try to use the invisible approach if the key allows it
-                // or prompt for fallback if it's strictly v2 checkbox
-                window.grecaptcha.ready(() => {
-                  try {
-                    // Try v3 style first, if it fails or if it's v2, we'll handle it
-                    window.grecaptcha.execute(siteKey, { action: 'verify' })
-                      .then(resolve)
-                      .catch((err: any) => {
-                        console.warn("v3 execution failed, trying v2 fallback", err);
-                        // If it's a v2 key, execute might not work this way
-                        reject(err);
-                      });
-                  } catch (e) {
-                    reject(e);
-                  }
-                });
-              } else {
-                attempts++;
-                if (attempts > 30) {
-                  clearInterval(checkInterval);
-                  reject(new Error("Timeout"));
-                }
-              }
-            }, 100);
-          });
-        } catch (e) {
-          console.warn("reCAPTCHA verification failed, switching to fallback mode");
-          setIsFallbackMode(true);
-          setIsVerifying(false);
-          setIsChecked(false);
-          return;
-        }
-      } else {
-        // Fallback mode: simple delay to simulate "human" interaction
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        token = "fallback_token_" + Math.random().toString(36).substring(7);
-      }
+  // ── 2. Rendre le widget quand le script est prêt et le modal ouvert ──
+  useEffect(() => {
+    if (!isOpen || !scriptReady || !containerRef.current) return;
+    if (widgetIdRef.current !== null) return;
 
-      // 2. Verify with backend
-      const response = await fetch('/api/verify-captcha', {
-        method: 'POST',
+    try {
+      widgetIdRef.current = window.grecaptcha.render(containerRef.current, {
+        sitekey:            SITE_KEY,
+        theme:              'dark',
+        callback:           handleCaptchaSuccess,
+        'expired-callback': handleCaptchaExpire,
+        'error-callback':   handleCaptchaError,
+      });
+    } catch (e) {
+      console.error('Erreur rendu reCAPTCHA:', e);
+      setError('Impossible de charger le CAPTCHA. Vérifie ta connexion.');
+    }
+  }, [isOpen, scriptReady]);
+
+  // ── 3. Reset à chaque fermeture du modal ──
+  useEffect(() => {
+    if (!isOpen) {
+      setIsVerified(false);
+      setIsVerifying(false);
+      setError(null);
+      if (widgetIdRef.current !== null && window.grecaptcha) {
+        try { window.grecaptcha.reset(widgetIdRef.current); } catch (_) {}
+      }
+    }
+  }, [isOpen]);
+
+  // ── Callback : l'utilisateur a coché la case ──
+  const handleCaptchaSuccess = async (token: string) => {
+    setError(null);
+    setIsVerifying(true);
+
+    try {
+      const response = await fetch(VERIFY_URL, {
+        method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, isFallback: isFallbackMode })
+        body:    JSON.stringify({ token }),
       });
 
-      const contentType = response.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        const text = await response.text();
-        console.error("Expected JSON but got:", text);
-        throw new Error("Le serveur a renvoyé une réponse invalide (non-JSON).");
+      const contentType = response.headers.get('content-type');
+      if (!contentType?.includes('application/json')) {
+        throw new Error('Réponse serveur invalide.');
       }
 
       const data = await response.json();
 
       if (data.success) {
         setIsVerified(true);
-        setTimeout(() => {
-          onVerify();
-          setTimeout(() => {
-            setIsVerified(false);
-            setIsVerifying(false);
-            setIsChecked(false);
-          }, 500);
-        }, 1000);
+        setIsVerifying(false);
+        setTimeout(() => onVerify(), 1000);
       } else {
-        throw new Error(data.message || "Verification failed");
+        throw new Error(data.message || 'Vérification échouée.');
       }
     } catch (err: any) {
-      console.error("Verification error:", err);
-      setError(err.message || "Une erreur est survenue");
       setIsVerifying(false);
-      setIsChecked(false);
+      setError(err.message || 'Une erreur est survenue.');
+      if (widgetIdRef.current !== null && window.grecaptcha) {
+        window.grecaptcha.reset(widgetIdRef.current);
+      }
     }
+  };
+
+  const handleCaptchaExpire = () => {
+    setError('La vérification a expiré. Recommence.');
+    setIsVerifying(false);
+  };
+
+  const handleCaptchaError = () => {
+    setError('Erreur reCAPTCHA. Vérifie ta connexion.');
+    setIsVerifying(false);
   };
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-[700] flex items-center justify-center p-4 bg-black/95 backdrop-blur-xl">
-      <motion.div 
+      <motion.div
         initial={{ scale: 0.9, opacity: 0, y: 20 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 25 }}
         className="w-full max-w-sm bg-[#0D0D0D] border border-white/10 rounded-[2.5rem] p-10 space-y-10 shadow-[0_0_100px_rgba(255,107,0,0.1)] relative overflow-hidden"
       >
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-orange-primary to-transparent opacity-50" />
-        
+        {/* Ligne décorative */}
+        <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-orange-500 to-transparent opacity-50" />
+
+        {/* ── Header ── */}
         <div className="flex flex-col items-center text-center space-y-6">
-          <motion.div 
-            animate={isVerifying ? { rotate: 360 } : {}}
-            transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-            className="w-20 h-20 rounded-3xl bg-orange-primary/10 flex items-center justify-center border border-orange-primary/20"
+          <motion.div
+            animate={
+              isVerifying
+                ? { rotate: 360 }
+                : isVerified
+                ? { scale: [1, 1.2, 1] }
+                : {}
+            }
+            transition={
+              isVerifying
+                ? { duration: 3, repeat: Infinity, ease: 'linear' }
+                : { duration: 0.4 }
+            }
+            className={`w-20 h-20 rounded-3xl flex items-center justify-center border transition-all duration-500 ${
+              isVerified
+                ? 'bg-green-500/10 border-green-500/40'
+                : 'bg-orange-500/10 border-orange-500/20'
+            }`}
           >
-            <Shield className="text-orange-primary" size={40} />
+            {isVerified
+              ? <Check className="text-green-500" size={40} />
+              : <Shield className="text-orange-500" size={40} />
+            }
           </motion.div>
-          <div className="space-y-3">
-            <h2 className="text-3xl font-black tracking-tighter text-white">ÊTES-VOUS HUMAIN ?</h2>
+
+          <div className="space-y-2">
+            <h2 className="text-3xl font-black tracking-tighter text-white">
+              {isVerified ? 'VÉRIFIÉ !' : 'ÊTES-VOUS HUMAIN ?'}
+            </h2>
             <p className="text-xs text-white/40 uppercase tracking-[0.2em] font-bold">
               Sécurité COOK IA v2.5
             </p>
           </div>
         </div>
 
-        <div className="space-y-6">
-          <button
-            onClick={handleCheck}
-            disabled={isVerifying || isVerified}
-            className={`w-full group relative flex items-center gap-4 p-6 rounded-2xl border transition-all duration-500 ${
-              isVerified 
-                ? 'bg-green-500/10 border-green-500/50 text-green-500' 
-                : isVerifying 
-                  ? 'bg-white/5 border-white/10 text-white/40' 
-                  : 'bg-white/5 border-white/10 hover:border-orange-primary/50 text-white hover:bg-white/[0.08]'
-            }`}
-          >
-            <div className={`w-8 h-8 rounded-lg border-2 flex items-center justify-center transition-all duration-300 ${
-              isVerified 
-                ? 'bg-green-500 border-green-500' 
-                : isChecked 
-                  ? 'bg-orange-primary border-orange-primary' 
-                  : 'border-white/20 group-hover:border-orange-primary/50'
-            }`}>
-              {isVerified ? (
-                <Check size={18} className="text-white" />
-              ) : isVerifying ? (
-                <Loader2 size={18} className="text-white animate-spin" />
-              ) : isChecked ? (
-                <div className="w-2 h-2 bg-white rounded-full" />
-              ) : null}
-            </div>
-            <span className="text-sm font-black uppercase tracking-widest">
-              {isVerified ? "VÉRIFIÉ" : isVerifying ? "VÉRIFICATION..." : isFallbackMode ? "CLIQUEZ POUR VÉRIFIER" : "JE SUIS UN HUMAIN"}
-            </span>
-            
-            {!isVerifying && !isVerified && (
-              <ChevronRight size={18} className="ml-auto text-white/20 group-hover:text-orange-primary transition-colors" />
-            )}
-          </button>
+        {/* ── Corps ── */}
+        <div className="flex flex-col items-center gap-5">
 
-          {isFallbackMode && !isVerified && !isVerifying && (
-            <p className="text-[9px] text-orange-primary/60 text-center font-bold uppercase tracking-tighter">
-              Mode de secours activé : Cliquez sur le bouton pour valider manuellement.
-            </p>
+          {!isVerified && (
+            <>
+              {!scriptReady ? (
+                <div className="flex items-center gap-2 text-white/30 text-sm py-4">
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                    className="w-4 h-4 border-2 border-white/20 border-t-orange-500 rounded-full"
+                  />
+                  Chargement du CAPTCHA…
+                </div>
+              ) : (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 }}
+                >
+                  {/* ✅ Widget Google reCAPTCHA v2 "Je ne suis pas un robot" */}
+                  <div ref={containerRef} />
+                </motion.div>
+              )}
+
+              {isVerifying && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="flex items-center gap-2 text-orange-500/80 text-xs font-black uppercase tracking-widest"
+                >
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                    className="w-3 h-3 border-2 border-orange-500/30 border-t-orange-500 rounded-full"
+                  />
+                  Vérification en cours…
+                </motion.div>
+              )}
+            </>
+          )}
+
+          {isVerified && (
+            <motion.p
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-sm text-green-400 font-black uppercase tracking-widest"
+            >
+              Accès accordé 🎉
+            </motion.p>
           )}
 
           {error && (
-            <motion.div 
-              initial={{ opacity: 0, y: -10 }}
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
-              className="flex items-center gap-2 justify-center text-red-500 text-[10px] font-black uppercase tracking-widest bg-red-500/10 p-3 rounded-xl border border-red-500/20"
+              className="flex items-center gap-2 text-red-500 text-[10px] font-black uppercase tracking-widest bg-red-500/10 p-3 rounded-xl border border-red-500/20 w-full justify-center"
             >
               <AlertCircle size={14} />
               {error}
@@ -211,13 +245,15 @@ export const AntiBot: React.FC<AntiBotProps> = ({ onVerify, isOpen }) => {
           )}
         </div>
 
-        <div className="flex flex-col items-center gap-4">
+        {/* ── Footer ── */}
+        <div className="flex flex-col items-center gap-3">
           <div className="flex items-center gap-2 text-[10px] text-white/20 uppercase tracking-[0.3em] font-black">
             <Lock size={12} />
-            <span>PROTECTION RECAPTCHA V3</span>
+            <span>PROTECTION RECAPTCHA V2</span>
           </div>
           <p className="text-[8px] text-white/10 text-center max-w-[200px] leading-relaxed">
-            Cette vérification utilise Google reCAPTCHA pour protéger vos données contre les accès automatisés.
+            Coche la case pour prouver que tu es humain.
+            Tes données sont protégées par Google reCAPTCHA.
           </p>
         </div>
       </motion.div>
