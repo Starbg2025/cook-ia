@@ -56,12 +56,12 @@ Return the response EXCLUSIVELY in JSON format with three fields (do not include
 2. 'preview_code': The complete, production-ready single-file HTML/CSS/JS code for immediate preview.
 3. 'files': An array of objects, each with 'path' (e.g., "src/index.html") and 'content' (the file content).`;
 
-const generateWithClaudeFallback = async (
+const generateWithAIFallback = async (
   prompt: string,
   history: any[],
   images?: { mimeType: string, data: string }[]
 ) => {
-  console.log("[Fallback] Gemini is unresponsive. Claude 3.5 Sonnet is taking over the coding process...");
+  console.log("[Fallback] Gemini is unresponsive. Fallback AI (Groq/OpenRouter) is taking over...");
 
   const response = await fetch("/api/ai/fallback", {
     method: "POST",
@@ -77,11 +77,11 @@ const generateWithClaudeFallback = async (
 
   if (!response.ok) {
     const err = await response.json();
-    throw new Error(`Claude Fallback Error: ${err.error || response.statusText}`);
+    throw new Error(`AI Fallback Error: ${err.error || response.statusText}`);
   }
 
   const result = await response.json();
-  return { ...result, _provider: 'claude' };
+  return result;
 };
 
 export const convertToReact = async (htmlCode: string, framework: 'react' | 'nextjs' | 'python' | 'javascript') => {
@@ -306,8 +306,8 @@ export const generateWebsite = async (
     const result = JSON.parse(jsonStr);
     return { ...result, _provider: 'gemini' };
   } catch (error) {
-    console.error("Gemini failed, Claude is taking over:", error);
-    return await generateWithClaudeFallback(prompt, history, images);
+    console.error("Gemini failed, trying fallback chain:", error);
+    return await generateWithAIFallback(prompt, history, images);
   }
 };
 
