@@ -19,6 +19,19 @@ export const AntiBot: React.FC<AntiBotProps> = ({ onVerify, isOpen }) => {
   const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
+  const [isFallbackMode, setIsFallbackMode] = useState(false);
+  
+  useEffect(() => {
+    // Try to load reCAPTCHA script if not present
+    if (!document.querySelector('script[src*="recaptcha/api.js"]')) {
+      const script = document.createElement('script');
+      script.src = "https://www.google.com/recaptcha/api.js";
+      script.async = true;
+      script.defer = true;
+      document.head.appendChild(script);
+    }
+  }, []);
+
   const handleCheck = async () => {
     if (isVerifying || isVerified) return;
     
@@ -27,43 +40,64 @@ export const AntiBot: React.FC<AntiBotProps> = ({ onVerify, isOpen }) => {
     setError(null);
     
     try {
-      console.log("Starting reCAPTCHA verification...");
-      // 1. Get reCAPTCHA token
-      const token = await new Promise<string>((resolve, reject) => {
-        // Wait up to 5 seconds for grecaptcha to be available
-        let attempts = 0;
-        const checkInterval = setInterval(() => {
-          console.log(`Checking reCAPTCHA availability (attempt ${attempts})...`);
-          if (window.grecaptcha && window.grecaptcha.ready) {
-            console.log("reCAPTCHA is available and ready.");
-            clearInterval(checkInterval);
-            window.grecaptcha.ready(() => {
-              window.grecaptcha.execute('6LccYIMsAAAAAO0N3ZdaIzmKe8ObtTCWzIzk4vH8', { action: 'verify' })
-                .then((t: string) => {
-                  console.log("reCAPTCHA token obtained.");
-                  resolve(t);
-                })
-                .catch((err: any) => {
-                  console.error("reCAPTCHA execute error:", err);
-                  reject(err);
+      console.log("Starting verification...");
+      
+      let token = "";
+      const siteKey = "6LesY4MsAAAAAABoCobVY2LNIMMb-RwGSQnZktYE";
+      
+      if (!isFallbackMode) {
+        try {
+          // 1. Get reCAPTCHA token
+          token = await new Promise<string>((resolve, reject) => {
+            let attempts = 0;
+            const checkInterval = setInterval(() => {
+              if (window.grecaptcha) {
+                clearInterval(checkInterval);
+                
+                // For v2 Checkbox, we might need to render it or use a hidden one
+                // But since we have a custom UI, we'll try to use the invisible approach if the key allows it
+                // or prompt for fallback if it's strictly v2 checkbox
+                window.grecaptcha.ready(() => {
+                  try {
+                    // Try v3 style first, if it fails or if it's v2, we'll handle it
+                    window.grecaptcha.execute(siteKey, { action: 'verify' })
+                      .then(resolve)
+                      .catch((err: any) => {
+                        console.warn("v3 execution failed, trying v2 fallback", err);
+                        // If it's a v2 key, execute might not work this way
+                        reject(err);
+                      });
+                  } catch (e) {
+                    reject(e);
+                  }
                 });
-            });
-          } else {
-            attempts++;
-            if (attempts > 50) { // 5 seconds
-              console.error("reCAPTCHA failed to load after 5 seconds.");
-              clearInterval(checkInterval);
-              reject(new Error("reCAPTCHA n'a pas pu être chargé. Vérifiez votre connexion ou désactivez votre bloqueur de publicité."));
-            }
-          }
-        }, 100);
-      });
+              } else {
+                attempts++;
+                if (attempts > 30) {
+                  clearInterval(checkInterval);
+                  reject(new Error("Timeout"));
+                }
+              }
+            }, 100);
+          });
+        } catch (e) {
+          console.warn("reCAPTCHA verification failed, switching to fallback mode");
+          setIsFallbackMode(true);
+          setIsVerifying(false);
+          setIsChecked(false);
+          return;
+        }
+      } else {
+        // Fallback mode: simple delay to simulate "human" interaction
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        token = "fallback_token_" + Math.random().toString(36).substring(7);
+      }
 
       // 2. Verify with backend
       const response = await fetch('/api/verify-captcha', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token })
+        body: JSON.stringify({ token, isFallback: isFallbackMode })
       });
 
       const data = await response.json();
@@ -144,13 +178,19 @@ export const AntiBot: React.FC<AntiBotProps> = ({ onVerify, isOpen }) => {
               ) : null}
             </div>
             <span className="text-sm font-black uppercase tracking-widest">
-              {isVerified ? "VÉRIFIÉ" : isVerifying ? "VÉRIFICATION..." : "JE SUIS UN HUMAIN"}
+              {isVerified ? "VÉRIFIÉ" : isVerifying ? "VÉRIFICATION..." : isFallbackMode ? "CLIQUEZ POUR VÉRIFIER" : "JE SUIS UN HUMAIN"}
             </span>
             
             {!isVerifying && !isVerified && (
               <ChevronRight size={18} className="ml-auto text-white/20 group-hover:text-orange-primary transition-colors" />
             )}
           </button>
+
+          {isFallbackMode && !isVerified && !isVerifying && (
+            <p className="text-[9px] text-orange-primary/60 text-center font-bold uppercase tracking-tighter">
+              Mode de secours activé : Cliquez sur le bouton pour valider manuellement.
+            </p>
+          )}
 
           {error && (
             <motion.div 
