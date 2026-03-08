@@ -777,7 +777,13 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
     setIsPublishing(true);
     try {
       const slug = siteName.toLowerCase().replace(/\s+/g, '-');
-      const { data, error } = await supabase
+      
+      // Get files from the last model message
+      const lastModelMessage = [...messages].reverse().find(m => m.role === 'model' && m.files);
+      const files = lastModelMessage?.files || [];
+
+      // 1. Save to database for persistence
+      const { error: dbError } = await supabase
         .from('published_sites')
         .upsert([
           { 
@@ -785,14 +791,19 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
             code: generatedCode, 
             user_id: user.id 
           }
-        ], { onConflict: 'slug' })
-        .select();
+        ], { onConflict: 'slug' });
 
-      if (error) throw error;
+      if (dbError) throw dbError;
 
-      const url = `https://${slug}.cook-ia.online`;
-      setPublishedUrl(url);
-      alert(`Félicitations ! Votre site est maintenant en ligne sur ${slug}.cook-ia.online`);
+      // 2. Deploy via Backend API (The requested flow)
+      // Frontend sends request -> Backend receives -> Site deployed -> URL accessible
+      const result = await deployToNetlify(siteName, generatedCode, files, user.id);
+      
+      if (result.success) {
+        setPublishedUrl(result.url);
+      } else {
+        throw new Error("Deployment failed");
+      }
     } catch (error: any) {
       console.error("Error publishing site:", error);
       alert(`Erreur lors de la publication : ${error.message}`);
