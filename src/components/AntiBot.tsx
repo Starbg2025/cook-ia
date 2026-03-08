@@ -43,7 +43,7 @@ export const AntiBot: React.FC<AntiBotProps> = ({ onVerify, isOpen }) => {
       console.log("Starting verification...");
       
       let token = "";
-      const siteKey = "6LesY4MsAAAAAABoCobVY2LNIMMb-RwGSQnZktYE";
+      const siteKey = "66LdtZYMsAAAAAKR_2XRgGvNTs2eey2xFSteprQ1U";
       
       if (!isFallbackMode) {
         try {
@@ -99,6 +99,13 @@ export const AntiBot: React.FC<AntiBotProps> = ({ onVerify, isOpen }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, isFallback: isFallbackMode })
       });
+
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        const text = await response.text();
+        console.error("Expected JSON but got:", text);
+        throw new Error("Le serveur a renvoyé une réponse invalide (non-JSON).");
+      }
 
       const data = await response.json();
 
