@@ -14,154 +14,145 @@ interface AntiBotProps {
 }
 
 export const AntiBot: React.FC<AntiBotProps> = ({ onVerify, isOpen }) => {
+  const [isChecked, setIsChecked] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const x = useMotionValue(0);
-  const controls = useAnimation();
   
-  // Calculate the width of the track for the slider
-  const [trackWidth, setTrackWidth] = useState(0);
-  const sliderWidth = 60; // Width of the handle
-
-  useEffect(() => {
-    if (containerRef.current) {
-      setTrackWidth(containerRef.current.offsetWidth - sliderWidth - 8); // 8 for padding
-    }
-  }, [isOpen]);
-
-  const opacity = useTransform(x, [0, trackWidth * 0.5], [1, 0]);
-  const bgOpacity = useTransform(x, [0, trackWidth], [0.05, 0.2]);
-
-  const handleDragEnd = async () => {
-    if (x.get() > trackWidth * 0.9) {
-      setIsVerifying(true);
-      setError(null);
-      
-      try {
-        // 1. Get reCAPTCHA token
-        const token = await new Promise<string>((resolve, reject) => {
-          if (!window.grecaptcha) {
-            reject(new Error("reCAPTCHA not loaded"));
-            return;
-          }
-          window.grecaptcha.ready(() => {
-            window.grecaptcha.execute('6LccYIMsAAAAAO0N3ZdaIzmKe8ObtTCWzIzk4vH8', { action: 'verify' })
-              .then(resolve)
-              .catch(reject);
-          });
-        });
-
-        // 2. Verify with backend
-        const response = await fetch('/api/verify-captcha', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token })
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-          setIsVerified(true);
-          controls.start({ x: trackWidth });
-          setTimeout(() => {
-            onVerify();
-            setTimeout(() => {
-              setIsVerified(false);
-              setIsVerifying(false);
-              x.set(0);
-            }, 500);
-          }, 800);
-        } else {
-          throw new Error(data.message || "Verification failed");
+  const handleCheck = async () => {
+    if (isVerifying || isVerified) return;
+    
+    setIsChecked(true);
+    setIsVerifying(true);
+    setError(null);
+    
+    try {
+      // 1. Get reCAPTCHA token
+      const token = await new Promise<string>((resolve, reject) => {
+        if (!window.grecaptcha) {
+          reject(new Error("reCAPTCHA not loaded"));
+          return;
         }
-      } catch (err: any) {
-        console.error("Verification error:", err);
-        setError(err.message || "Une erreur est survenue");
-        controls.start({ x: 0 });
-        setIsVerifying(false);
+        window.grecaptcha.ready(() => {
+          window.grecaptcha.execute('6LccYIMsAAAAAO0N3ZdaIzmKe8ObtTCWzIzk4vH8', { action: 'verify' })
+            .then(resolve)
+            .catch(reject);
+        });
+      });
+
+      // 2. Verify with backend
+      const response = await fetch('/api/verify-captcha', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setIsVerified(true);
+        setTimeout(() => {
+          onVerify();
+          setTimeout(() => {
+            setIsVerified(false);
+            setIsVerifying(false);
+            setIsChecked(false);
+          }, 500);
+        }, 1000);
+      } else {
+        throw new Error(data.message || "Verification failed");
       }
-    } else {
-      controls.start({ x: 0 });
+    } catch (err: any) {
+      console.error("Verification error:", err);
+      setError(err.message || "Une erreur est survenue");
+      setIsVerifying(false);
+      setIsChecked(false);
     }
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[700] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
+    <div className="fixed inset-0 z-[700] flex items-center justify-center p-4 bg-black/95 backdrop-blur-xl">
       <motion.div 
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        className="w-full max-w-sm bg-[#0D0D0D] border border-white/10 rounded-[2.5rem] p-8 space-y-8 shadow-2xl"
+        initial={{ scale: 0.9, opacity: 0, y: 20 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        className="w-full max-w-sm bg-[#0D0D0D] border border-white/10 rounded-[2.5rem] p-10 space-y-10 shadow-[0_0_100px_rgba(255,107,0,0.1)] relative overflow-hidden"
       >
-        <div className="flex flex-col items-center text-center space-y-4">
-          <div className="w-16 h-16 rounded-2xl bg-orange-primary/10 flex items-center justify-center">
-            <Shield className="text-orange-primary" size={32} />
-          </div>
-          <div className="space-y-2">
-            <h2 className="text-2xl font-black tracking-tight">VÉRIFICATION HUMAINE</h2>
-            <p className="text-sm text-white/40 leading-relaxed">
-              Veuillez confirmer que vous êtes un humain pour continuer.
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-orange-primary to-transparent opacity-50" />
+        
+        <div className="flex flex-col items-center text-center space-y-6">
+          <motion.div 
+            animate={isVerifying ? { rotate: 360 } : {}}
+            transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+            className="w-20 h-20 rounded-3xl bg-orange-primary/10 flex items-center justify-center border border-orange-primary/20"
+          >
+            <Shield className="text-orange-primary" size={40} />
+          </motion.div>
+          <div className="space-y-3">
+            <h2 className="text-3xl font-black tracking-tighter text-white">ÊTES-VOUS HUMAIN ?</h2>
+            <p className="text-xs text-white/40 uppercase tracking-[0.2em] font-bold">
+              Sécurité COOK IA v2.5
             </p>
           </div>
         </div>
 
-        <div 
-          ref={containerRef}
-          className={`relative h-16 bg-white/5 rounded-2xl border border-white/5 p-1 flex items-center overflow-hidden ${isVerifying ? 'opacity-50 pointer-events-none' : ''}`}
-        >
-          <motion.div 
-            style={{ opacity: bgOpacity }}
-            className="absolute inset-0 bg-orange-primary"
-          />
-          
-          <motion.div 
-            style={{ opacity }}
-            className="absolute inset-0 flex items-center justify-center pointer-events-none"
-          >
-            <span className="text-xs font-bold uppercase tracking-[0.2em] text-white/20">
-              {isVerifying ? "Vérification..." : "Glisser pour vérifier"}
-            </span>
-          </motion.div>
-
-          <motion.div
-            drag={isVerifying ? false : "x"}
-            dragConstraints={{ left: 0, right: trackWidth }}
-            dragElastic={0.1}
-            dragMomentum={false}
-            onDragEnd={handleDragEnd}
-            animate={controls}
-            style={{ x }}
-            className={`relative z-10 w-[60px] h-full rounded-xl flex items-center justify-center cursor-grab active:cursor-grabbing transition-colors ${
-              isVerified ? 'bg-green-500' : isVerifying ? 'bg-orange-primary/50' : 'bg-white text-black'
+        <div className="space-y-6">
+          <button
+            onClick={handleCheck}
+            disabled={isVerifying || isVerified}
+            className={`w-full group relative flex items-center gap-4 p-6 rounded-2xl border transition-all duration-500 ${
+              isVerified 
+                ? 'bg-green-500/10 border-green-500/50 text-green-500' 
+                : isVerifying 
+                  ? 'bg-white/5 border-white/10 text-white/40' 
+                  : 'bg-white/5 border-white/10 hover:border-orange-primary/50 text-white hover:bg-white/[0.08]'
             }`}
           >
-            {isVerified ? (
-              <Check size={24} className="text-white" />
-            ) : isVerifying ? (
-              <Loader2 size={24} className="text-white animate-spin" />
-            ) : (
-              <ChevronRight size={24} />
+            <div className={`w-8 h-8 rounded-lg border-2 flex items-center justify-center transition-all duration-300 ${
+              isVerified 
+                ? 'bg-green-500 border-green-500' 
+                : isChecked 
+                  ? 'bg-orange-primary border-orange-primary' 
+                  : 'border-white/20 group-hover:border-orange-primary/50'
+            }`}>
+              {isVerified ? (
+                <Check size={18} className="text-white" />
+              ) : isVerifying ? (
+                <Loader2 size={18} className="text-white animate-spin" />
+              ) : isChecked ? (
+                <div className="w-2 h-2 bg-white rounded-full" />
+              ) : null}
+            </div>
+            <span className="text-sm font-black uppercase tracking-widest">
+              {isVerified ? "VÉRIFIÉ" : isVerifying ? "VÉRIFICATION..." : "JE SUIS UN HUMAIN"}
+            </span>
+            
+            {!isVerifying && !isVerified && (
+              <ChevronRight size={18} className="ml-auto text-white/20 group-hover:text-orange-primary transition-colors" />
             )}
-          </motion.div>
+          </button>
+
+          {error && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center gap-2 justify-center text-red-500 text-[10px] font-black uppercase tracking-widest bg-red-500/10 p-3 rounded-xl border border-red-500/20"
+            >
+              <AlertCircle size={14} />
+              {error}
+            </motion.div>
+          )}
         </div>
 
-        {error && (
-          <motion.div 
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex items-center gap-2 justify-center text-red-500 text-[10px] font-bold uppercase tracking-wider"
-          >
-            <AlertCircle size={12} />
-            {error}
-          </motion.div>
-        )}
-
-        <div className="flex items-center justify-center gap-2 text-[10px] text-white/20 uppercase tracking-widest font-bold">
-          <Lock size={10} />
-          <span>Sécurisé par COOK IA Anti-Bot</span>
+        <div className="flex flex-col items-center gap-4">
+          <div className="flex items-center gap-2 text-[10px] text-white/20 uppercase tracking-[0.3em] font-black">
+            <Lock size={12} />
+            <span>PROTECTION RECAPTCHA V3</span>
+          </div>
+          <p className="text-[8px] text-white/10 text-center max-w-[200px] leading-relaxed">
+            Cette vérification utilise Google reCAPTCHA pour protéger vos données contre les accès automatisés.
+          </p>
         </div>
       </motion.div>
     </div>

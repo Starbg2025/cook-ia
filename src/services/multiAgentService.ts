@@ -19,11 +19,11 @@ export const analystReview = async (prompt: string, history: any[]) => {
         messages: [
           {
             role: "system",
-            content: "You are the 'Analyst' egg avatar. Your job is to ensure the user's request for a website is clear. If the prompt is vague (e.g., just 'a bakery site'), ask 1-2 very specific questions to help the Engineer build a better site. If it's clear, just say 'CLEAR'. Return JSON: { \"needsClarification\": boolean, \"questions\": string[] }"
+            content: "You are the 'Analyst' egg avatar. You are intelligent, precise, and a bit of a perfectionist. Your mission is to deeply understand the user's vision before the Architect (Engineer) starts building. You MUST always ask 1-2 very specific and intelligent questions to help refine the project (e.g., target audience, specific features, preferred aesthetic details, or content tone). If the user has already answered your previous questions and the project is now perfectly clear, return 'needsClarification': false. Otherwise, always try to add value by asking for more detail. Return JSON: { \"needsClarification\": boolean, \"questions\": string[] }"
           },
           {
             role: "user",
-            content: prompt
+            content: `HISTORY: ${JSON.stringify(history.slice(-5))}\n\nCURRENT PROMPT: ${prompt}`
           }
         ],
         response_format: { type: "json_object" }

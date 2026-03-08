@@ -311,12 +311,30 @@ export default function App() {
     if (!sectionEdit.sectionHtml || !generatedCode || isLoading) return;
 
     setIsLoading(true);
+    setCurrentAgent('analyst');
     try {
       const history = messages.map(m => ({
         role: m.role,
         parts: [{ text: m.content }]
       }));
 
+      // 1. Analyst Phase for Section Update
+      const review = await analystReview(`MISE À JOUR DE SECTION (${sectionEdit.selector}) : ${sectionPrompt}`, history);
+      if (review.needsClarification) {
+        const analystMessage: Message = {
+          role: 'model',
+          content: `[Analyste] Avant de modifier cette section (${sectionEdit.selector}), j'ai besoin de précisions :\n\n${review.questions.map((q: string, i: number) => `${i + 1}. ${q}`).join('\n')}`
+        };
+        const updatedMessages = [...messages, analystMessage];
+        setMessages(updatedMessages);
+        setIsLoading(false);
+        setCurrentAgent(null);
+        await saveConversation(updatedMessages);
+        return;
+      }
+
+      // 2. Engineer Phase
+      setCurrentAgent('engineer');
       const result = await updateSection(
         sectionPrompt,
         sectionEdit.sectionHtml,
@@ -584,11 +602,15 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
       }));
 
       // 1. Analyst Phase (Groq)
+      setCurrentAgent('analyst');
+      // Add a small artificial delay to make the Analyst's work visible
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
       const review = await analystReview(userMessage, history);
       if (review.needsClarification) {
         const analystMessage: Message = {
           role: 'model',
-          content: `[Analyste] Bonjour ! Pour m'assurer que l'Architecte construise exactement ce que vous voulez, j'ai quelques questions :\n\n${review.questions.map((q: string, i: number) => `${i + 1}. ${q}`).join('\n')}`
+          content: `[Analyste] Bonjour ! Je suis l'Analyste. Pour m'assurer que l'Architecte construise exactement le chef-d'œuvre que vous imaginez, j'ai besoin de quelques précisions :\n\n${review.questions.map((q: string, i: number) => `${i + 1}. ${q}`).join('\n')}`
         };
         const updatedMessages = [...newMessages, analystMessage];
         setMessages(updatedMessages);
