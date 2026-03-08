@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Zap, Send, Loader2, ImagePlus, X, Image as ImageIcon, Copy, ShoppingBag, Video } from 'lucide-react';
+import { Zap, Send, Loader2, ImagePlus, X, Image as ImageIcon, Copy, ShoppingBag, Video, Search, Layout, CheckCircle } from 'lucide-react';
 import { Message } from '../types';
 
 interface ChatInterfaceProps {
@@ -10,6 +10,7 @@ interface ChatInterfaceProps {
   handleSend: () => void;
   onAbort?: () => void;
   isLoading: boolean;
+  currentAgent?: 'analyst' | 'engineer' | 'critic' | null;
   chatEndRef: React.RefObject<HTMLDivElement | null>;
   logoUrl: string;
   selectedImages: string[];
@@ -28,6 +29,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   handleSend,
   onAbort,
   isLoading,
+  currentAgent,
   chatEndRef,
   logoUrl,
   selectedImages,
@@ -150,20 +152,75 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         ))}
         {isLoading && (
           <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="flex items-center justify-between gap-2 lg:gap-3 text-orange-primary/60 text-[8px] lg:text-[10px] font-bold uppercase tracking-widest"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-4"
           >
-            <div className="flex items-center gap-2 lg:gap-3">
-              <Loader2 size={12} className="animate-spin" />
-              <span>Architecting your vision...</span>
+            <div className="flex justify-center gap-4 lg:gap-8 py-4">
+              {[
+                { icon: Search, label: 'Analyst', color: 'bg-blue-400', glow: 'shadow-blue-500/40', text: 'Analyzing...', role: 'analyst' },
+                { icon: Layout, label: 'Architect', color: 'bg-orange-primary', glow: 'shadow-orange-primary/40', text: 'Building...', role: 'engineer' },
+                { icon: CheckCircle, label: 'Critic', color: 'bg-emerald-400', glow: 'shadow-emerald-500/40', text: 'Verifying...', role: 'critic' }
+              ].map((avatar, i) => (
+                <div key={i} className={`flex flex-col items-center gap-2 transition-all duration-500 ${currentAgent && currentAgent !== avatar.role ? 'opacity-30 scale-90 grayscale' : 'opacity-100 scale-100'}`}>
+                  <motion.div
+                    animate={currentAgent === avatar.role ? { 
+                      y: [0, -15, 0],
+                      scale: [1, 1.1, 1],
+                      boxShadow: [
+                        "0 0 20px rgba(255,107,0,0.2)",
+                        "0 0 40px rgba(255,107,0,0.4)",
+                        "0 0 20px rgba(255,107,0,0.2)"
+                      ]
+                    } : {
+                      y: [0, -5, 0],
+                      scale: [1, 1, 1],
+                    }}
+                    transition={{ 
+                      duration: 2, 
+                      repeat: Infinity, 
+                      delay: i * 0.4,
+                      ease: "easeInOut"
+                    }}
+                    className={`w-14 h-16 lg:w-20 lg:h-24 rounded-[3rem] lg:rounded-[4rem] ${avatar.color} ${avatar.glow} shadow-2xl flex items-center justify-center relative overflow-hidden border-2 border-white/20`}
+                  >
+                    {/* Egg face details */}
+                    <div className="absolute top-1/3 flex gap-2 lg:gap-3">
+                      <div className="w-1 h-1 lg:w-1.5 lg:h-1.5 bg-black/80 rounded-full animate-bounce" />
+                      <div className="w-1 h-1 lg:w-1.5 lg:h-1.5 bg-black/80 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                    </div>
+                    <div className="absolute top-[45%] w-2 h-1 lg:w-3 lg:h-1.5 bg-black/20 rounded-full" />
+                    
+                    <avatar.icon size={24} className="lg:w-8 lg:h-8 text-white/90 mt-6 lg:mt-8" />
+                    
+                    {/* Glossy effect */}
+                    <div className="absolute top-2 left-4 w-4 h-8 bg-white/20 rounded-full blur-sm -rotate-12" />
+                  </motion.div>
+                  <span className="text-[8px] lg:text-[10px] font-black uppercase tracking-tighter text-white/60">{avatar.label}</span>
+                </div>
+              ))}
             </div>
-            <button 
-              onClick={onAbort}
-              className="text-[8px] lg:text-[9px] bg-white/5 hover:bg-white/10 px-2 py-1 rounded-md transition-colors border border-white/5"
-            >
-              Annuler
-            </button>
+
+            <div className="flex items-center justify-between gap-2 lg:gap-3 text-orange-primary/60 text-[8px] lg:text-[10px] font-bold uppercase tracking-widest bg-[#1A1A1A]/50 p-3 rounded-xl border border-white/5">
+              <div className="flex items-center gap-2 lg:gap-3">
+                <Loader2 size={12} className="animate-spin" />
+                <motion.span
+                  animate={{ opacity: [0.4, 1, 0.4] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                >
+                  {currentAgent === 'analyst' && "L'Analyste vérifie votre demande..."}
+                  {currentAgent === 'engineer' && "L'Architecte construit votre site..."}
+                  {currentAgent === 'critic' && "Le Critique vérifie la qualité..."}
+                  {!currentAgent && "Intelligence Collaborative en action..."}
+                </motion.span>
+              </div>
+              <button 
+                onClick={onAbort}
+                className="text-[8px] lg:text-[9px] bg-white/5 hover:bg-white/10 px-2 py-1 rounded-md transition-colors border border-white/5"
+              >
+                Annuler
+              </button>
+            </div>
           </motion.div>
         )}
         <div ref={chatEndRef} />

@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { generateWebsite, generateTitle, updateSection, convertToReact, improveText } from './services/geminiService';
+import { analystReview, criticReview } from './services/multiAgentService';
 import { Message, ViewMode, Conversation, StyleConfig, SectionEditState } from './types';
 import { ChatInterface } from './components/ChatInterface';
 import { Preview } from './components/Preview';
@@ -46,6 +47,7 @@ export default function App() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [currentAgent, setCurrentAgent] = useState<'analyst' | 'engineer' | 'critic' | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('preview');
   const [generatedCode, setGeneratedCode] = useState<string>('');
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
@@ -547,6 +549,7 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
     const controller = new AbortController();
     setAbortController(controller);
     setIsLoading(true);
+    setCurrentAgent('analyst');
 
     try {
       const history = await Promise.all(newMessages.map(async (m) => {
@@ -580,6 +583,24 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
         };
       }));
 
+      // 1. Analyst Phase (Groq)
+      const review = await analystReview(userMessage, history);
+      if (review.needsClarification) {
+        const analystMessage: Message = {
+          role: 'model',
+          content: `[Analyste] Bonjour ! Pour m'assurer que l'Architecte construise exactement ce que vous voulez, j'ai quelques questions :\n\n${review.questions.map((q: string, i: number) => `${i + 1}. ${q}`).join('\n')}`
+        };
+        const updatedMessages = [...newMessages, analystMessage];
+        setMessages(updatedMessages);
+        setIsLoading(false);
+        setCurrentAgent(null);
+        await saveConversation(updatedMessages);
+        return;
+      }
+
+      // 2. Engineer Phase (Gemini)
+      setCurrentAgent('engineer');
+      
       // Prepare current images for API if exists
       let imageParts: any[] = [];
       if (currentImages.length > 0) {
@@ -619,12 +640,27 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
         enrichedUserMessage += "\n\nReference Images (URLs):\n" + urls.join('\n');
       }
 
-      const result = await generateWebsite(
+      let result = await generateWebsite(
         enrichedUserMessage, 
         history.slice(0, -1), 
         imageParts.length > 0 ? imageParts : undefined,
         videoParts.length > 0 ? videoParts : undefined
       );
+
+      // 3. Critic Phase (OpenRouter)
+      setCurrentAgent('critic');
+      const critic = await criticReview(enrichedUserMessage, result.preview_code);
+      
+      if (!critic.approved) {
+        // Re-generate with feedback
+        setCurrentAgent('engineer');
+        result = await generateWebsite(
+          `${enrichedUserMessage}\n\nFEEDBACK DU CRITIQUE (À CORRIGER) :\n${critic.feedback}`,
+          history.slice(0, -1),
+          imageParts.length > 0 ? imageParts : undefined,
+          videoParts.length > 0 ? videoParts : undefined
+        );
+      }
       
       const updatedMessages: Message[] = [...newMessages, { 
         role: 'model', 
@@ -1025,6 +1061,7 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
             handleSend={handleSend}
             onAbort={handleAbort}
             isLoading={isLoading}
+            currentAgent={currentAgent}
             chatEndRef={chatEndRef}
             logoUrl={LOGO_URL}
             selectedImages={selectedImages}
@@ -1079,6 +1116,7 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
             onClose={() => setSectionEdit({ isActive: false })}
             onUpdate={handleSectionUpdate}
             isLoading={isLoading}
+            currentAgent={currentAgent}
             onOpenImageSearch={() => {
               setImageSearchContext('section');
               setIsImageSearchOpen(true);
