@@ -914,11 +914,6 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
             </div>
           </div>
 
-          <div className="hidden xl:flex items-center gap-6 ml-4">
-            {/* Removed Documentation, Community, Gacha and Credits per user request */}
-          </div>
-        </div>
-
         <div className="flex items-center gap-2 lg:gap-8">
           <div className="hidden md:flex bg-[#0D0D0D] p-1.5 rounded-[1.25rem] border border-white/5 shadow-inner">
             <button 
