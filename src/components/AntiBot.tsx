@@ -14,79 +14,80 @@ interface AntiBotProps {
   isOpen: boolean;
 }
 
-// ✅ Ta clé publique (safe à mettre dans le frontend)
-const SITE_KEY = "6LcUaoMsAAAAAOmXCT26H45ajeXUhgADGBktXb9f";
-
-// ✅ URL de ta Netlify Function
+const SITE_KEY  = "6LcUaoMsAAAAAOmXCT26H45ajeXUhgADGBktXb9f";
 const VERIFY_URL = "/.netlify/functions/verify-captcha";
 
 export const AntiBot: React.FC<AntiBotProps> = ({ onVerify, isOpen }) => {
   const [isVerified, setIsVerified]   = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError]             = useState<string | null>(null);
-  const [scriptReady, setScriptReady] = useState(false);
+  const [widgetReady, setWidgetReady] = useState(false); // ← widget rendu = prêt
 
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef  = useRef<number | null>(null);
+  const renderedRef  = useRef(false); // évite double-render en StrictMode
 
-  // ── 1. Charger le script reCAPTCHA v2 une seule fois ──
+  // ── Rendre le widget dès que le modal est ouvert ──
   useEffect(() => {
-    if (window.grecaptcha) {
-      setScriptReady(true);
+    if (!isOpen) return;
+
+    const renderWidget = () => {
+      if (renderedRef.current || !containerRef.current) return;
+      renderedRef.current = true;
+
+      try {
+        widgetIdRef.current = window.grecaptcha.render(containerRef.current, {
+          sitekey:            SITE_KEY,
+          theme:              'dark',
+          callback:           handleCaptchaSuccess,
+          'expired-callback': handleCaptchaExpire,
+          'error-callback':   handleCaptchaError,
+        });
+        setWidgetReady(true);
+      } catch (e) {
+        console.error('Erreur rendu reCAPTCHA:', e);
+        setError('Impossible de charger le CAPTCHA.');
+      }
+    };
+
+    // Cas 1 : script déjà chargé et grecaptcha prêt
+    if (window.grecaptcha && window.grecaptcha.render) {
+      window.grecaptcha.ready(renderWidget);
       return;
     }
 
-    if (document.querySelector('script[src*="recaptcha/api.js"]')) {
-      const interval = setInterval(() => {
-        if (window.grecaptcha) {
-          clearInterval(interval);
-          setScriptReady(true);
-        }
-      }, 100);
-      return;
+    // Cas 2 : script en cours de chargement → on attend
+    window.onRecaptchaLoaded = () => {
+      window.grecaptcha.ready(renderWidget);
+    };
+
+    // Cas 3 : script pas encore dans le DOM → on l'injecte
+    if (!document.querySelector('script[src*="recaptcha/api.js"]')) {
+      const script = document.createElement('script');
+      script.src   = `https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoaded&render=explicit`;
+      script.async = true;
+      script.defer = true;
+      document.head.appendChild(script);
     }
+  }, [isOpen]);
 
-    window.onRecaptchaLoaded = () => setScriptReady(true);
-
-    const script = document.createElement('script');
-    script.src = `https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoaded&render=explicit`;
-    script.async = true;
-    script.defer = true;
-    document.head.appendChild(script);
-  }, []);
-
-  // ── 2. Rendre le widget quand le script est prêt et le modal ouvert ──
-  useEffect(() => {
-    if (!isOpen || !scriptReady || !containerRef.current) return;
-    if (widgetIdRef.current !== null) return;
-
-    try {
-      widgetIdRef.current = window.grecaptcha.render(containerRef.current, {
-        sitekey:            SITE_KEY,
-        theme:              'dark',
-        callback:           handleCaptchaSuccess,
-        'expired-callback': handleCaptchaExpire,
-        'error-callback':   handleCaptchaError,
-      });
-    } catch (e) {
-      console.error('Erreur rendu reCAPTCHA:', e);
-      setError('Impossible de charger le CAPTCHA. Vérifie ta connexion.');
-    }
-  }, [isOpen, scriptReady]);
-
-  // ── 3. Reset à chaque fermeture du modal ──
+  // ── Reset quand le modal se ferme ──
   useEffect(() => {
     if (!isOpen) {
       setIsVerified(false);
       setIsVerifying(false);
       setError(null);
-      if (widgetIdRef.current !== null && window.grecaptcha) {
+      setWidgetReady(false);
+      renderedRef.current = false;
+
+      if (widgetIdRef.current !== null && window.grecaptcha?.reset) {
         try { window.grecaptcha.reset(widgetIdRef.current); } catch (_) {}
+        widgetIdRef.current = null;
       }
     }
   }, [isOpen]);
 
-  // ── Callback : l'utilisateur a coché la case ──
+  // ── Callbacks reCAPTCHA ──
   const handleCaptchaSuccess = async (token: string) => {
     setError(null);
     setIsVerifying(true);
@@ -98,8 +99,7 @@ export const AntiBot: React.FC<AntiBotProps> = ({ onVerify, isOpen }) => {
         body:    JSON.stringify({ token }),
       });
 
-      const contentType = response.headers.get('content-type');
-      if (!contentType?.includes('application/json')) {
+      if (!response.headers.get('content-type')?.includes('application/json')) {
         throw new Error('Réponse serveur invalide.');
       }
 
@@ -115,7 +115,7 @@ export const AntiBot: React.FC<AntiBotProps> = ({ onVerify, isOpen }) => {
     } catch (err: any) {
       setIsVerifying(false);
       setError(err.message || 'Une erreur est survenue.');
-      if (widgetIdRef.current !== null && window.grecaptcha) {
+      if (widgetIdRef.current !== null && window.grecaptcha?.reset) {
         window.grecaptcha.reset(widgetIdRef.current);
       }
     }
@@ -127,7 +127,7 @@ export const AntiBot: React.FC<AntiBotProps> = ({ onVerify, isOpen }) => {
   };
 
   const handleCaptchaError = () => {
-    setError('Erreur reCAPTCHA. Vérifie ta connexion.');
+    setError('Erreur reCAPTCHA. Vérifie ta connexion internet.');
     setIsVerifying(false);
   };
 
@@ -141,18 +141,15 @@ export const AntiBot: React.FC<AntiBotProps> = ({ onVerify, isOpen }) => {
         transition={{ type: 'spring', stiffness: 300, damping: 25 }}
         className="w-full max-w-sm bg-[#0D0D0D] border border-white/10 rounded-[2.5rem] p-10 space-y-10 shadow-[0_0_100px_rgba(255,107,0,0.1)] relative overflow-hidden"
       >
-        {/* Ligne décorative */}
+        {/* Ligne décorative top */}
         <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-orange-500 to-transparent opacity-50" />
 
         {/* ── Header ── */}
         <div className="flex flex-col items-center text-center space-y-6">
           <motion.div
             animate={
-              isVerifying
-                ? { rotate: 360 }
-                : isVerified
-                ? { scale: [1, 1.2, 1] }
-                : {}
+              isVerifying ? { rotate: 360 } :
+              isVerified  ? { scale: [1, 1.2, 1] } : {}
             }
             transition={
               isVerifying
@@ -182,30 +179,32 @@ export const AntiBot: React.FC<AntiBotProps> = ({ onVerify, isOpen }) => {
         </div>
 
         {/* ── Corps ── */}
-        <div className="flex flex-col items-center gap-5">
+        <div className="flex flex-col items-center gap-5 min-h-[80px] justify-center">
 
           {!isVerified && (
             <>
-              {!scriptReady ? (
-                <div className="flex items-center gap-2 text-white/30 text-sm py-4">
+              {/* Spinner UNIQUEMENT si le widget n'est pas encore rendu */}
+              {!widgetReady && !error && (
+                <div className="flex items-center gap-2 text-white/30 text-sm py-2">
                   <motion.div
                     animate={{ rotate: 360 }}
                     transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
                     className="w-4 h-4 border-2 border-white/20 border-t-orange-500 rounded-full"
                   />
-                  Chargement du CAPTCHA…
+                  Chargement…
                 </div>
-              ) : (
-                <motion.div
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 }}
-                >
-                  {/* ✅ Widget Google reCAPTCHA v2 "Je ne suis pas un robot" */}
-                  <div ref={containerRef} />
-                </motion.div>
               )}
 
+              {/* Le widget reCAPTCHA — toujours dans le DOM pour que ref fonctionne */}
+              <motion.div
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: widgetReady ? 1 : 0, y: widgetReady ? 0 : 6 }}
+                transition={{ duration: 0.3 }}
+              >
+                <div ref={containerRef} />
+              </motion.div>
+
+              {/* Spinner vérification backend */}
               {isVerifying && (
                 <motion.div
                   initial={{ opacity: 0 }}
@@ -223,6 +222,7 @@ export const AntiBot: React.FC<AntiBotProps> = ({ onVerify, isOpen }) => {
             </>
           )}
 
+          {/* Succès */}
           {isVerified && (
             <motion.p
               initial={{ opacity: 0, y: 6 }}
@@ -233,6 +233,7 @@ export const AntiBot: React.FC<AntiBotProps> = ({ onVerify, isOpen }) => {
             </motion.p>
           )}
 
+          {/* Erreur */}
           {error && (
             <motion.div
               initial={{ opacity: 0, y: -8 }}
