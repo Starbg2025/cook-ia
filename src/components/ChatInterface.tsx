@@ -20,6 +20,7 @@ interface ChatInterfaceProps {
   onOpenImageSearch?: () => void;
   onCloneSite?: () => void;
   onEcommerceProduct?: () => void;
+  isDark?: boolean;
 }
 
 export const ChatInterface: React.FC<ChatInterfaceProps> = ({
@@ -38,7 +39,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   setSelectedVideos,
   onOpenImageSearch,
   onCloneSite,
-  onEcommerceProduct
+  onEcommerceProduct,
+  isDark = true
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
@@ -92,20 +94,20 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   };
 
   return (
-    <aside className="w-full lg:w-[420px] flex flex-col bg-[#0D0D0D] rounded-3xl lg:rounded-[2.5rem] border border-white/5 overflow-hidden shadow-2xl transition-all duration-500 hover:border-white/10">
-      <div className="p-4 lg:p-8 border-b border-white/5 flex items-center justify-between bg-gradient-to-b from-white/[0.02] to-transparent">
+    <aside className={`w-full lg:w-[420px] flex flex-col ${isDark ? 'bg-[#0D0D0D] border-white/5' : 'bg-white border-slate-200'} rounded-3xl lg:rounded-[2.5rem] border overflow-hidden shadow-2xl transition-all duration-500`}>
+      <div className={`p-4 lg:p-8 border-b ${isDark ? 'border-white/5 bg-gradient-to-b from-white/[0.02] to-transparent' : 'border-slate-100 bg-gradient-to-b from-slate-50 to-transparent'} flex items-center justify-between`}>
         <div className="flex items-center gap-3 lg:gap-4">
-          <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-xl lg:rounded-2xl overflow-hidden border border-white/10 bg-white/5 p-1 lg:p-1.5 shadow-inner">
+          <div className={`w-8 h-8 lg:w-10 lg:h-10 rounded-xl lg:rounded-2xl overflow-hidden border ${isDark ? 'border-white/10 bg-white/5' : 'border-slate-200 bg-slate-50'} p-1 lg:p-1.5 shadow-inner`}>
             <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
           </div>
           <div>
-            <h2 className="text-xs lg:text-sm font-black uppercase tracking-[0.3em] lg:tracking-[0.4em] text-white leading-none mb-0.5 lg:mb-1">COOK IA</h2>
-            <p className="text-[8px] lg:text-[9px] font-medium uppercase tracking-widest text-white/30">Engine v2.5</p>
+            <h2 className={`text-xs lg:text-sm font-black uppercase tracking-[0.3em] lg:tracking-[0.4em] ${isDark ? 'text-white' : 'text-slate-900'} leading-none mb-0.5 lg:mb-1`}>COOK IA</h2>
+            <p className={`text-[8px] lg:text-[9px] font-medium uppercase tracking-widest ${isDark ? 'text-white/30' : 'text-slate-400'}`}>Engine v2.5</p>
           </div>
         </div>
         <div className="flex gap-1 lg:gap-1.5">
           <div className="w-1 h-1 lg:w-1.5 lg:h-1.5 rounded-full bg-orange-primary animate-pulse" />
-          <div className="w-1 h-1 lg:w-1.5 lg:h-1.5 rounded-full bg-white/10" />
+          <div className={`w-1 h-1 lg:w-1.5 lg:h-1.5 rounded-full ${isDark ? 'bg-white/10' : 'bg-slate-200'}`} />
         </div>
       </div>
 
@@ -121,7 +123,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
             {msg.images && msg.images.length > 0 && (
               <div className="mb-2 flex flex-wrap gap-2 max-w-[92%] justify-end">
                 {msg.images.map((img, i) => (
-                  <div key={i} className="w-20 h-20 lg:w-24 lg:h-24 rounded-xl lg:rounded-2xl overflow-hidden border border-white/10 shadow-xl">
+                  <div key={i} className={`w-20 h-20 lg:w-24 lg:h-24 rounded-xl lg:rounded-2xl overflow-hidden border ${isDark ? 'border-white/10' : 'border-slate-200'} shadow-xl`}>
                     <img src={img} alt={`Reference ${i}`} className="w-full h-full object-cover" />
                   </div>
                 ))}
@@ -130,21 +132,21 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
             {msg.videos && msg.videos.length > 0 && (
               <div className="mb-2 flex flex-wrap gap-2 max-w-[92%] justify-end">
                 {msg.videos.map((vid, i) => (
-                  <div key={i} className="w-20 h-20 lg:w-24 lg:h-24 rounded-xl lg:rounded-2xl overflow-hidden border border-white/10 shadow-xl bg-black">
+                  <div key={i} className={`w-20 h-20 lg:w-24 lg:h-24 rounded-xl lg:rounded-2xl overflow-hidden border ${isDark ? 'border-white/10' : 'border-slate-200'} shadow-xl bg-black`}>
                     <video src={vid} className="w-full h-full object-cover" muted />
                   </div>
                 ))}
               </div>
             )}
             {msg.image && (
-              <div className="mb-2 max-w-[80%] rounded-xl lg:rounded-2xl overflow-hidden border border-white/10 shadow-xl">
+              <div className={`mb-2 max-w-[80%] rounded-xl lg:rounded-2xl overflow-hidden border ${isDark ? 'border-white/10' : 'border-slate-200'} shadow-xl`}>
                 <img src={msg.image} alt="Reference" className="w-full h-auto" />
               </div>
             )}
             <div className={`max-w-[92%] p-4 lg:p-5 rounded-2xl lg:rounded-[1.5rem] text-xs lg:text-[13px] leading-relaxed shadow-lg ${
               msg.role === 'user' 
                 ? 'bg-orange-primary text-white font-medium shadow-orange-primary/20' 
-                : 'bg-[#1A1A1A] text-white/90 border border-white/5'
+                : isDark ? 'bg-[#1A1A1A] text-white/90 border border-white/5' : 'bg-slate-50 text-slate-700 border border-slate-100'
             }`}>
               {msg.content}
             </div>
@@ -196,12 +198,12 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                     {/* Glossy effect */}
                     <div className="absolute top-2 left-4 w-4 h-8 bg-white/20 rounded-full blur-sm -rotate-12" />
                   </motion.div>
-                  <span className="text-[8px] lg:text-[10px] font-black uppercase tracking-tighter text-white/60">{avatar.label}</span>
+                  <span className={`text-[8px] lg:text-[10px] font-black uppercase tracking-tighter ${isDark ? 'text-white/60' : 'text-slate-400'}`}>{avatar.label}</span>
                 </div>
               ))}
             </div>
 
-            <div className="flex items-center justify-between gap-2 lg:gap-3 text-orange-primary/60 text-[8px] lg:text-[10px] font-bold uppercase tracking-widest bg-[#1A1A1A]/50 p-3 rounded-xl border border-white/5">
+            <div className={`flex items-center justify-between gap-2 lg:gap-3 ${isDark ? 'text-orange-primary/60 bg-[#1A1A1A]/50 border-white/5' : 'text-orange-600 bg-slate-50 border-slate-100'} text-[8px] lg:text-[10px] font-bold uppercase tracking-widest p-3 rounded-xl border`}>
               <div className="flex items-center gap-2 lg:gap-3">
                 <Loader2 size={12} className="animate-spin" />
                 <motion.span
@@ -216,7 +218,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
               </div>
               <button 
                 onClick={onAbort}
-                className="text-[8px] lg:text-[9px] bg-white/5 hover:bg-white/10 px-2 py-1 rounded-md transition-colors border border-white/5"
+                className={`text-[8px] lg:text-[9px] ${isDark ? 'bg-white/5 hover:bg-white/10 border-white/5' : 'bg-slate-100 hover:bg-slate-200 border-slate-200'} px-2 py-1 rounded-md transition-colors border`}
               >
                 Annuler
               </button>
@@ -226,7 +228,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         <div ref={chatEndRef} />
       </div>
 
-      <div className="p-4 lg:p-8 bg-[#0D0D0D] border-t border-white/5">
+      <div className={`p-4 lg:p-8 ${isDark ? 'bg-[#0D0D0D] border-white/5' : 'bg-white border-slate-100'} border-t`}>
         <AnimatePresence>
           {selectedImages.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-3 lg:mb-4 max-h-32 overflow-y-auto scrollbar-hide p-1">
@@ -236,7 +238,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                   initial={{ opacity: 0, y: 10, scale: 0.95 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                  className="relative w-12 h-12 lg:w-16 lg:h-16 rounded-lg lg:rounded-xl overflow-hidden border border-orange-primary/30 shadow-2xl group shrink-0"
+                  className={`relative w-12 h-12 lg:w-16 lg:h-16 rounded-lg lg:rounded-xl overflow-hidden border ${isDark ? 'border-orange-primary/30' : 'border-orange-primary/50'} shadow-2xl group shrink-0`}
                 >
                   <img src={img} alt={`Selected ${index}`} className="w-full h-full object-cover" />
                   <button 
@@ -257,7 +259,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                   initial={{ opacity: 0, y: 10, scale: 0.95 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                  className="relative w-12 h-12 lg:w-16 lg:h-16 rounded-lg lg:rounded-xl overflow-hidden border border-blue-500/30 shadow-2xl group shrink-0 bg-black"
+                  className={`relative w-12 h-12 lg:w-16 lg:h-16 rounded-lg lg:rounded-xl overflow-hidden border ${isDark ? 'border-blue-500/30' : 'border-blue-500/50'} shadow-2xl group shrink-0 bg-black`}
                 >
                   <video src={vid} className="w-full h-full object-cover" muted />
                   <button 
@@ -278,7 +280,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
             onChange={(e) => setPrompt(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())}
             placeholder="Describe your masterpiece..."
-            className="w-full bg-[#050505] border border-white/5 rounded-2xl lg:rounded-[1.5rem] p-4 lg:p-5 pr-36 lg:pr-48 text-xs lg:text-sm focus:outline-none focus:border-orange-primary/40 transition-all resize-none h-24 lg:h-28 scrollbar-hide placeholder:text-white/10"
+            className={`w-full ${isDark ? 'bg-[#050505] border-white/5 placeholder:text-white/10 text-white' : 'bg-slate-50 border-slate-200 placeholder:text-slate-300 text-slate-900'} border rounded-2xl lg:rounded-[1.5rem] p-4 lg:p-5 pr-36 lg:pr-48 text-xs lg:text-sm focus:outline-none focus:border-orange-primary/40 transition-all resize-none h-24 lg:h-28 scrollbar-hide`}
           />
           <div className="absolute right-3 lg:right-4 bottom-3 lg:bottom-4 flex items-center gap-1.5 lg:gap-2 z-10">
             <input 
@@ -299,35 +301,35 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
             />
             <button 
               onClick={onCloneSite}
-              className="p-2 lg:p-3 text-white/20 hover:text-orange-primary transition-colors"
+              className={`p-2 lg:p-3 ${isDark ? 'text-white/20 hover:text-orange-primary' : 'text-slate-300 hover:text-orange-primary'} transition-colors`}
               title="Clone a website from URL"
             >
               <Copy size={18} />
             </button>
             <button 
               onClick={onEcommerceProduct}
-              className="p-2 lg:p-3 text-white/20 hover:text-orange-primary transition-colors"
+              className={`p-2 lg:p-3 ${isDark ? 'text-white/20 hover:text-orange-primary' : 'text-slate-300 hover:text-orange-primary'} transition-colors`}
               title="Create E-commerce from product URL"
             >
               <ShoppingBag size={18} />
             </button>
             <button 
               onClick={onOpenImageSearch}
-              className="p-2 lg:p-3 text-white/20 hover:text-orange-primary transition-colors"
+              className={`p-2 lg:p-3 ${isDark ? 'text-white/20 hover:text-orange-primary' : 'text-slate-300 hover:text-orange-primary'} transition-colors`}
               title="Search professional photos on Unsplash"
             >
               <ImageIcon size={18} />
             </button>
             <button 
               onClick={() => videoInputRef.current?.click()}
-              className="p-2 lg:p-3 text-white/20 hover:text-blue-500 transition-colors"
+              className={`p-2 lg:p-3 ${isDark ? 'text-white/20 hover:text-blue-500' : 'text-slate-300 hover:text-blue-500'} transition-colors`}
               title="Add reference videos (max 5)"
             >
               <Video size={18} />
             </button>
             <button 
               onClick={() => fileInputRef.current?.click()}
-              className="p-2 lg:p-3 text-white/20 hover:text-orange-primary transition-colors"
+              className={`p-2 lg:p-3 ${isDark ? 'text-white/20 hover:text-orange-primary' : 'text-slate-300 hover:text-orange-primary'} transition-colors`}
               title="Add reference images (max 20)"
             >
               <ImagePlus size={18} />

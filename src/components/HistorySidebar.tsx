@@ -12,6 +12,7 @@ interface HistorySidebarProps {
   onDeleteConversation: (id: string) => void;
   onOpenSettings: (tab?: any) => void;
   user: any;
+  isDark?: boolean;
 }
 
 export const HistorySidebar: React.FC<HistorySidebarProps> = ({
@@ -21,7 +22,8 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = ({
   onNewChat,
   onDeleteConversation,
   onOpenSettings,
-  user
+  user,
+  isDark = true
 }) => {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -62,11 +64,11 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = ({
   const avatarUrl = user?.profile?.avatar_url || user?.user_metadata?.avatar_url;
 
   return (
-    <aside className="w-64 flex flex-col bg-[#0D0D0D] border-r border-white/5 h-full relative">
+    <aside className={`w-64 flex flex-col ${isDark ? 'bg-[#0D0D0D] border-white/5' : 'bg-slate-50 border-slate-200'} border-r h-full relative`}>
       <div className="p-4">
         <button 
           onClick={onNewChat}
-          className="w-full flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-white py-3 rounded-xl border border-white/10 transition-all font-medium text-sm"
+          className={`w-full flex items-center justify-center gap-2 ${isDark ? 'bg-white/5 hover:bg-white/10 text-white border-white/10' : 'bg-white hover:bg-slate-100 text-slate-900 border-slate-200'} py-3 rounded-xl border transition-all font-medium text-sm`}
         >
           <Plus size={18} />
           New Chat
@@ -74,21 +76,23 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = ({
       </div>
 
       <div className="flex-1 overflow-y-auto p-2 space-y-1 scrollbar-hide">
-        <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-white/20 flex items-center gap-2">
+        <div className={`px-3 py-2 text-[10px] font-bold uppercase tracking-widest ${isDark ? 'text-white/20' : 'text-slate-400'} flex items-center gap-2`}>
           <History size={12} />
           Recent Projects
         </div>
         
         {conversations.length === 0 ? (
           <div className="px-4 py-8 text-center">
-            <p className="text-xs text-white/20 italic">No conversations yet</p>
+            <p className={`text-xs ${isDark ? 'text-white/20' : 'text-slate-300'} italic`}>No conversations yet</p>
           </div>
         ) : (
           conversations.map((conv) => (
             <div 
               key={conv.id}
               className={`group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${
-                currentConversationId === conv.id ? 'bg-white/10 text-white' : 'text-white/40 hover:bg-white/5 hover:text-white'
+                currentConversationId === conv.id 
+                  ? (isDark ? 'bg-white/10 text-white' : 'bg-orange-primary/10 text-orange-primary') 
+                  : (isDark ? 'text-white/40 hover:bg-white/5 hover:text-white' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900')
               }`}
               onClick={() => onSelectConversation(conv.id)}
             >
@@ -101,7 +105,7 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = ({
                   e.stopPropagation();
                   onDeleteConversation(conv.id);
                 }}
-                className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-red-500/20 hover:text-red-500 rounded-lg transition-all"
+                className={`opacity-0 group-hover:opacity-100 p-1.5 rounded-lg transition-all ${isDark ? 'hover:bg-red-500/20 text-white/20 hover:text-red-400' : 'hover:bg-red-50 text-slate-300 hover:text-red-500'}`}
               >
                 <Trash2 size={14} />
               </button>
@@ -112,7 +116,7 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = ({
 
       {/* Profile Section */}
       {user && (
-        <div className="p-4 border-t border-white/5">
+        <div className={`p-4 border-t ${isDark ? 'border-white/5' : 'border-slate-200'}`}>
           <div className="relative">
             <AnimatePresence>
               {isProfileMenuOpen && (
@@ -120,15 +124,15 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = ({
                   initial={{ opacity: 0, y: 10, scale: 0.95 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                  className="absolute bottom-full left-0 w-full mb-2 bg-[#1A1A1A] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50"
+                  className={`absolute bottom-full left-0 w-full mb-2 ${isDark ? 'bg-[#1A1A1A] border-white/10' : 'bg-white border-slate-200 shadow-xl'} border rounded-2xl shadow-2xl overflow-hidden z-50`}
                 >
-                  <div className="p-4 border-b border-white/5 flex items-center gap-3">
+                  <div className={`p-4 border-b ${isDark ? 'border-white/5' : 'border-slate-100'} flex items-center gap-3`}>
                     <div className="relative group/avatar">
-                      <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center overflow-hidden border border-white/10">
+                      <div className={`w-10 h-10 rounded-full ${isDark ? 'bg-white/10 border-white/10' : 'bg-slate-100 border-slate-200'} flex items-center justify-center overflow-hidden border`}>
                         {avatarUrl ? (
                           <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                         ) : (
-                          <span className="text-sm font-bold">{userDisplayName.charAt(0).toUpperCase()}</span>
+                          <span className={`text-sm font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{userDisplayName.charAt(0).toUpperCase()}</span>
                         )}
                       </div>
                       <button 
@@ -139,8 +143,8 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = ({
                       </button>
                     </div>
                     <div className="overflow-hidden">
-                      <p className="text-sm font-bold truncate">{userDisplayName}</p>
-                      <p className="text-[10px] text-white/40 truncate">{userHandle}</p>
+                      <p className={`text-sm font-bold truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>{userDisplayName}</p>
+                      <p className={`text-[10px] ${isDark ? 'text-white/40' : 'text-slate-500'} truncate`}>{userHandle}</p>
                     </div>
                   </div>
 
@@ -150,7 +154,7 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = ({
                         onOpenSettings('personalization');
                         setIsProfileMenuOpen(false);
                       }}
-                      className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/5 text-white/70 hover:text-white transition-all text-sm"
+                      className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all text-sm ${isDark ? 'hover:bg-white/5 text-white/70 hover:text-white' : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900'}`}
                     >
                       <Sparkles size={16} />
                       Personnalisation
@@ -160,28 +164,28 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = ({
                         onOpenSettings();
                         setIsProfileMenuOpen(false);
                       }}
-                      className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/5 text-white/70 hover:text-white transition-all text-sm"
+                      className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all text-sm ${isDark ? 'hover:bg-white/5 text-white/70 hover:text-white' : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900'}`}
                     >
                       <Settings size={16} />
                       Paramètres
                     </button>
-                    <div className="h-[1px] bg-white/5 my-1" />
+                    <div className={`h-[1px] ${isDark ? 'bg-white/5' : 'bg-slate-100'} my-1`} />
                     <button 
                       onClick={() => {
                         onOpenSettings('help');
                         setIsProfileMenuOpen(false);
                       }}
-                      className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-white/5 text-white/70 hover:text-white transition-all text-sm"
+                      className={`w-full flex items-center justify-between p-2.5 rounded-xl transition-all text-sm ${isDark ? 'hover:bg-white/5 text-white/70 hover:text-white' : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900'}`}
                     >
                       <div className="flex items-center gap-3">
                         <HelpCircle size={16} />
                         Aide
                       </div>
-                      <ChevronRight size={14} className="text-white/20" />
+                      <ChevronRight size={14} className={isDark ? 'text-white/20' : 'text-slate-300'} />
                     </button>
                     <button 
                       onClick={() => supabase.auth.signOut()}
-                      className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-red-500/10 text-white/70 hover:text-red-500 transition-all text-sm"
+                      className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all text-sm ${isDark ? 'hover:bg-red-500/10 text-white/70 hover:text-red-500' : 'hover:bg-red-50 text-slate-600 hover:text-red-600'}`}
                     >
                       <LogOut size={16} />
                       Se déconnecter
@@ -193,18 +197,18 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = ({
 
             <button 
               onClick={handleAvatarClick}
-              className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-white/5 transition-all group"
+              className={`w-full flex items-center justify-between p-2 rounded-xl transition-all group ${isDark ? 'hover:bg-white/5' : 'hover:bg-slate-100'}`}
             >
               <div className="flex items-center gap-3 overflow-hidden">
-                <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center overflow-hidden border border-white/10 shrink-0">
+                <div className={`w-8 h-8 rounded-full ${isDark ? 'bg-white/10 border-white/10' : 'bg-slate-200 border-slate-300'} flex items-center justify-center overflow-hidden border shrink-0`}>
                   {avatarUrl ? (
                     <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                   ) : (
-                    <span className="text-xs font-bold">{userDisplayName.charAt(0).toUpperCase()}</span>
+                    <span className={`text-xs font-bold ${isDark ? 'text-white' : 'text-slate-700'}`}>{userDisplayName.charAt(0).toUpperCase()}</span>
                   )}
                 </div>
                 <div className="text-left overflow-hidden">
-                  <p className="text-xs font-bold truncate">{userDisplayName}</p>
+                  <p className={`text-xs font-bold truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>{userDisplayName}</p>
                 </div>
               </div>
             </button>

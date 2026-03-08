@@ -16,6 +16,7 @@ interface PreviewProps {
   styleConfig?: StyleConfig;
   sectionEdit?: SectionEditState;
   onSectionSelect?: (section: SectionEditState) => void;
+  isDark?: boolean;
 }
 
 import Prism from 'prismjs';
@@ -36,7 +37,8 @@ export const Preview: React.FC<PreviewProps> = ({
   onDownloadZip,
   styleConfig,
   sectionEdit,
-  onSectionSelect
+  onSectionSelect,
+  isDark = true
 }) => {
   const [isVisualEditing, setIsVisualEditing] = React.useState(false);
   const [isSectionSelectionMode, setIsSectionSelectionMode] = React.useState(false);
@@ -193,17 +195,17 @@ export const Preview: React.FC<PreviewProps> = ({
   }, [isVisualEditing, isSectionSelectionMode, generatedCode, viewMode]);
 
   return (
-    <section className="flex-1 bg-[#141414] rounded-3xl border border-white/5 overflow-hidden flex flex-col shadow-2xl">
+    <section className={`flex-1 ${isDark ? 'bg-[#141414] border-white/5' : 'bg-white border-slate-200'} rounded-3xl border overflow-hidden flex flex-col shadow-2xl`}>
       {/* Browser-like Header */}
-      <div className="h-12 bg-[#1A1A1A] border-b border-white/5 flex items-center px-6 justify-between">
+      <div className={`h-12 ${isDark ? 'bg-[#1A1A1A] border-white/5' : 'bg-slate-50 border-slate-200'} border-b flex items-center px-6 justify-between`}>
         <div className="flex gap-2 w-20">
           <div className="w-3 h-3 rounded-full bg-[#FF5F57] shadow-inner" />
           <div className="w-3 h-3 rounded-full bg-[#FFBD2E] shadow-inner" />
           <div className="w-3 h-3 rounded-full bg-[#28C840] shadow-inner" />
         </div>
         
-        <div className="flex-1 max-w-2xl bg-[#0A0A0A] px-4 py-1.5 rounded-xl border border-white/5 flex items-center justify-center gap-2 mx-4">
-          <span className="text-[11px] font-mono text-white/20 select-none">localhost:3000/preview</span>
+        <div className={`flex-1 max-w-2xl ${isDark ? 'bg-[#0A0A0A] border-white/5' : 'bg-white border-slate-200'} px-4 py-1.5 rounded-xl border flex items-center justify-center gap-2 mx-4`}>
+          <span className={`text-[11px] font-mono ${isDark ? 'text-white/20' : 'text-slate-400'} select-none`}>localhost:3000/preview</span>
           {isVisualEditing && (
             <span className="text-[9px] bg-orange-primary/20 text-orange-primary px-2 py-0.5 rounded-full font-bold uppercase tracking-widest animate-pulse">
               Visual Edit Mode
@@ -216,11 +218,11 @@ export const Preview: React.FC<PreviewProps> = ({
           )}
         </div>
 
-        <div className="flex items-center gap-4 text-white/30 w-auto justify-end">
+        <div className={`flex items-center gap-4 ${isDark ? 'text-white/30' : 'text-slate-400'} w-auto justify-end`}>
           {files.length > 0 && (
             <button 
               onClick={onDownloadZip}
-              className="hover:text-white transition-all p-1 hover:scale-110 active:scale-95 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest"
+              className={`hover:text-orange-primary transition-all p-1 hover:scale-110 active:scale-95 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest`}
               title="Download Project ZIP"
             >
               <Download size={14} />
@@ -229,28 +231,28 @@ export const Preview: React.FC<PreviewProps> = ({
           )}
           <button 
             onClick={() => setIsSectionSelectionMode(!isSectionSelectionMode)}
-            className={`transition-all p-1 hover:scale-110 active:scale-95 ${isSectionSelectionMode ? 'text-blue-400' : 'hover:text-white'}`}
+            className={`transition-all p-1 hover:scale-110 active:scale-95 ${isSectionSelectionMode ? 'text-blue-400' : isDark ? 'hover:text-white' : 'hover:text-slate-900'}`}
             title="Targeted Section Edit"
           >
             <MousePointer2 size={15} />
           </button>
           <button 
             onClick={() => setIsVisualEditing(!isVisualEditing)}
-            className={`transition-all p-1 hover:scale-110 active:scale-95 ${isVisualEditing ? 'text-orange-primary' : 'hover:text-white'}`}
+            className={`transition-all p-1 hover:scale-110 active:scale-95 ${isVisualEditing ? 'text-orange-primary' : isDark ? 'hover:text-white' : 'hover:text-slate-900'}`}
             title={isVisualEditing ? "Disable Visual Edit" : "Enable Visual Edit"}
           >
             <Pencil size={15} />
           </button>
           <button 
             onClick={onRefresh}
-            className="hover:text-white transition-all p-1 hover:scale-110 active:scale-95"
+            className={`transition-all p-1 hover:scale-110 active:scale-95 ${isDark ? 'hover:text-white' : 'hover:text-slate-900'}`}
             title="Refresh Preview"
           >
             <RotateCcw size={15} />
           </button>
           <button 
             onClick={onExpand}
-            className="hover:text-white transition-all p-1 hover:scale-110 active:scale-95"
+            className={`transition-all p-1 hover:scale-110 active:scale-95 ${isDark ? 'hover:text-white' : 'hover:text-slate-900'}`}
             title="Open in New Tab"
           >
             <ExternalLink size={15} />
@@ -258,7 +260,7 @@ export const Preview: React.FC<PreviewProps> = ({
         </div>
       </div>
 
-      <div className="flex-1 relative bg-white overflow-hidden">
+      <div className={`flex-1 relative ${isDark ? 'bg-white' : 'bg-slate-50'} overflow-hidden`}>
         <AnimatePresence mode="wait">
           {viewMode === 'preview' ? (
             <motion.div 
@@ -275,7 +277,7 @@ export const Preview: React.FC<PreviewProps> = ({
                   className="w-full h-full border-none"
                 />
               ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center bg-[#0A0A0A] relative overflow-hidden">
+                <div className={`w-full h-full flex flex-col items-center justify-center ${isDark ? 'bg-[#0A0A0A]' : 'bg-slate-50'} relative overflow-hidden`}>
                   {/* Decorative background elements */}
                   <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-orange-primary/5 rounded-full blur-[100px] animate-pulse" />
                   <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-blue-500/5 rounded-full blur-[100px] animate-pulse delay-700" />
@@ -297,8 +299,8 @@ export const Preview: React.FC<PreviewProps> = ({
                         className="absolute inset-0 bg-orange-primary rounded-full blur-2xl"
                       />
                     </div>
-                    <h3 className="text-xl font-black uppercase tracking-[0.3em] text-white/40 mb-2">COOK IA</h3>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.5em] text-white/10">Ready to architect your vision</p>
+                    <h3 className={`text-xl font-black uppercase tracking-[0.3em] ${isDark ? 'text-white/40' : 'text-slate-300'} mb-2`}>COOK IA</h3>
+                    <p className={`text-[10px] font-bold uppercase tracking-[0.5em] ${isDark ? 'text-white/10' : 'text-slate-200'}`}>Ready to architect your vision</p>
                   </motion.div>
                 </div>
               )}
@@ -309,11 +311,11 @@ export const Preview: React.FC<PreviewProps> = ({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="w-full h-full bg-[#0D0D0D] flex overflow-hidden"
+              className={`w-full h-full ${isDark ? 'bg-[#0D0D0D]' : 'bg-white'} flex overflow-hidden`}
             >
               {/* File Tree Sidebar */}
-              <div className="w-64 border-r border-white/5 bg-[#0A0A0A] flex flex-col">
-                <div className="p-4 border-b border-white/5 flex items-center gap-2 text-white/40 text-[10px] font-bold uppercase tracking-widest">
+              <div className={`w-64 border-r ${isDark ? 'bg-[#0A0A0A] border-white/5' : 'bg-slate-50 border-slate-200'} flex flex-col`}>
+                <div className={`p-4 border-b ${isDark ? 'border-white/5 text-white/40' : 'border-slate-200 text-slate-400'} text-[10px] font-bold uppercase tracking-widest flex items-center gap-2`}>
                   <Folder size={14} />
                   Project Files
                 </div>
@@ -324,8 +326,8 @@ export const Preview: React.FC<PreviewProps> = ({
                       onClick={() => setSelectedFilePath(file.path)}
                       className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs transition-all ${
                         selectedFilePath === file.path 
-                          ? 'bg-white/10 text-white' 
-                          : 'text-white/40 hover:bg-white/5 hover:text-white'
+                          ? 'bg-orange-primary/10 text-orange-primary font-bold' 
+                          : isDark ? 'text-white/40 hover:bg-white/5 hover:text-white' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
                       }`}
                     >
                       <FileCode size={14} className={selectedFilePath === file.path ? 'text-orange-primary' : ''} />
@@ -337,13 +339,13 @@ export const Preview: React.FC<PreviewProps> = ({
 
               {/* Code Editor/Viewer */}
               <div className="flex-1 flex flex-col overflow-hidden">
-                <div className="h-10 bg-[#141414] border-b border-white/5 flex items-center px-4 justify-between">
+                <div className={`h-10 ${isDark ? 'bg-[#141414] border-white/5' : 'bg-slate-50 border-slate-200'} border-b flex items-center px-4 justify-between`}>
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-mono text-white/40">{selectedFilePath}</span>
+                    <span className={`text-[10px] font-mono ${isDark ? 'text-white/40' : 'text-slate-400'}`}>{selectedFilePath}</span>
                   </div>
                 </div>
                 <div className="flex-1 overflow-auto p-6 scrollbar-hide">
-                  <pre className="font-mono text-sm leading-relaxed">
+                  <pre className={`font-mono text-sm leading-relaxed ${isDark ? 'text-white/80' : 'text-slate-700'}`}>
                     <code className={`language-${selectedFilePath?.split('.').pop() || 'markup'}`}>
                       {selectedFile?.content || "<!-- Select a file to view code -->"}
                     </code>

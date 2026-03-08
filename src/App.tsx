@@ -13,7 +13,9 @@ import {
   Copy, 
   Check,
   Loader2,
-  Download
+  Download,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { generateWebsite, generateTitle, updateSection, convertToReact, improveText } from './services/geminiService';
@@ -69,6 +71,7 @@ export default function App() {
   const [isConverting, setIsConverting] = useState(false);
   const [imageSearchContext, setImageSearchContext] = useState<'chat' | 'section'>('chat');
   const [isDeploying, setIsDeploying] = useState(false);
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
 
   const [pendingSend, setPendingSend] = useState<boolean>(false);
   const [styleConfig, setStyleConfig] = useState<StyleConfig>({
@@ -429,16 +432,23 @@ export default function App() {
     }
   };
 
-  const handleConvertToReact = async (framework: 'react' | 'nextjs') => {
+  const handleConvertToReact = async (framework: 'react' | 'nextjs' | 'python' | 'javascript') => {
     if (!generatedCode || isConverting) return;
 
     setIsConverting(true);
     try {
       const result = await convertToReact(generatedCode, framework);
       
+      const frameworkNames = {
+        react: 'React',
+        nextjs: 'Next.js',
+        python: 'Python (Flask)',
+        javascript: 'JavaScript (Modulaire)'
+      };
+
       const updatedMessages: Message[] = [...messages, { 
         role: 'model', 
-        content: `Voici la conversion de votre site en composants ${framework === 'nextjs' ? 'Next.js' : 'React'} avec Tailwind CSS.`,
+        content: `Voici la conversion de votre site en ${frameworkNames[framework]} avec Tailwind CSS.`,
         files: result.files
       }];
       
@@ -446,7 +456,7 @@ export default function App() {
       setViewMode('code');
       await saveConversation(updatedMessages);
     } catch (error) {
-      console.error("Error converting to React:", error);
+      console.error("Error converting code:", error);
       alert("Erreur lors de la conversion.");
     } finally {
       setIsConverting(false);
@@ -891,31 +901,33 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
     }
   };
 
+  const isDark = theme === 'dark';
+
   return (
-    <div className="flex flex-col h-screen bg-[#0A0A0A] text-white overflow-hidden font-sans">
+    <div className={`flex flex-col h-screen ${isDark ? 'bg-[#0A0A0A] text-white' : 'bg-[#F8F9FA] text-slate-900'} overflow-hidden font-sans transition-colors duration-500`}>
       {/* Header */}
-      <header className="flex items-center justify-between px-4 lg:px-10 py-4 lg:py-6 border-b border-white/5 bg-[#0A0A0A]/90 backdrop-blur-xl z-50 sticky top-0">
-        <div className="flex items-center gap-3 lg:gap-6">
+      <header className={`flex items-center justify-between px-4 lg:px-8 py-3 lg:py-4 border-b ${isDark ? 'border-white/5 bg-[#0A0A0A]/90' : 'border-slate-200 bg-white/90'} backdrop-blur-xl z-50 sticky top-0`}>
+        <div className="flex items-center gap-3 lg:gap-5">
           <button 
             onClick={() => setIsHistoryOpen(!isHistoryOpen)}
-            className={`p-2.5 lg:p-3.5 rounded-xl lg:rounded-2xl transition-all duration-300 ${isHistoryOpen ? 'bg-white text-black' : 'bg-[#141414] text-white/40 hover:bg-[#1A1A1A] hover:text-white'} border border-white/5 shadow-2xl group`}
+            className={`p-2 lg:p-3 rounded-xl transition-all duration-300 ${isHistoryOpen ? (isDark ? 'bg-white text-black' : 'bg-slate-900 text-white') : (isDark ? 'bg-[#141414] text-white/40 hover:bg-[#1A1A1A] hover:text-white' : 'bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-900')} border ${isDark ? 'border-white/5' : 'border-slate-200'} shadow-sm group`}
           >
-            <div className="flex flex-col gap-1 w-4 lg:w-5">
-              <div className={`h-[1.5px] lg:h-[2px] transition-all duration-300 ${isHistoryOpen ? 'w-full bg-black' : 'w-full bg-current'}`} />
-              <div className={`h-[1.5px] lg:h-[2px] transition-all duration-300 ${isHistoryOpen ? 'w-2/3 bg-black' : 'w-full bg-current'}`} />
-              <div className={`h-[1.5px] lg:h-[2px] transition-all duration-300 ${isHistoryOpen ? 'w-full bg-black' : 'w-full bg-current'}`} />
+            <div className="flex flex-col gap-1 w-4 lg:w-4.5">
+              <div className={`h-[1.5px] lg:h-[2px] transition-all duration-300 ${isHistoryOpen ? (isDark ? 'bg-black' : 'bg-white') : 'bg-current'}`} />
+              <div className={`h-[1.5px] lg:h-[2px] transition-all duration-300 ${isHistoryOpen ? (isDark ? 'bg-black' : 'bg-white') : 'bg-current'}`} />
+              <div className={`h-[1.5px] lg:h-[2px] transition-all duration-300 ${isHistoryOpen ? (isDark ? 'bg-black' : 'bg-white') : 'bg-current'}`} />
             </div>
           </button>
           
-          <div className="flex items-center gap-2 lg:gap-4 group cursor-pointer">
-            <div className="w-8 h-8 lg:w-12 lg:h-12 bg-[#141414] rounded-lg lg:rounded-[1.25rem] flex items-center justify-center shadow-2xl border border-white/10 overflow-hidden transition-transform group-hover:scale-105">
+          <div className="flex items-center gap-2 lg:gap-3 group cursor-pointer">
+            <div className={`w-8 h-8 lg:w-10 lg:h-10 ${isDark ? 'bg-[#141414] border-white/10' : 'bg-white border-slate-200'} rounded-lg lg:rounded-xl flex items-center justify-center shadow-sm border overflow-hidden transition-transform group-hover:scale-105`}>
               <img src={LOGO_URL} alt="COOK IA Logo" className="w-full h-full object-cover" />
             </div>
             <div className="hidden sm:block">
-              <h1 className="text-lg lg:text-2xl font-black tracking-tighter flex items-center gap-1.5 leading-none mb-0.5 lg:mb-1">
+              <h1 className="text-base lg:text-xl font-black tracking-tighter flex items-center gap-1.5 leading-none mb-0.5">
                 COOK <span className="text-orange-primary">IA</span>
               </h1>
-              <p className="text-[8px] lg:text-[10px] text-white/20 uppercase tracking-[0.2em] lg:tracking-[0.3em] font-bold">Full-Stack Web Development</p>
+              <p className={`text-[7px] lg:text-[9px] ${isDark ? 'text-white/20' : 'text-slate-400'} uppercase tracking-[0.2em] lg:tracking-[0.3em] font-bold`}>Full-Stack Web Development</p>
             </div>
           </div>
 
@@ -924,39 +936,39 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
           </div>
         </div>
 
-        <div className="flex items-center gap-2 lg:gap-8">
-          <div className="hidden md:flex bg-[#0D0D0D] p-1.5 rounded-[1.25rem] border border-white/5 shadow-inner">
+        <div className="flex items-center gap-2 lg:gap-6">
+          <div className={`hidden md:flex ${isDark ? 'bg-[#0D0D0D] border-white/5' : 'bg-slate-100 border-slate-200'} p-1 rounded-xl border shadow-inner`}>
             <button 
               onClick={() => setViewMode('preview')}
-              className={`flex items-center gap-2.5 px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all duration-300 ${viewMode === 'preview' ? 'bg-white text-black shadow-2xl scale-105' : 'text-white/30 hover:text-white'}`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all duration-300 ${viewMode === 'preview' ? (isDark ? 'bg-white text-black shadow-lg' : 'bg-white text-slate-900 shadow-sm') : (isDark ? 'text-white/30 hover:text-white' : 'text-slate-400 hover:text-slate-900')}`}
             >
-              <Eye size={14} />
+              <Eye size={12} />
               Preview
             </button>
             <button 
               onClick={() => setViewMode('code')}
-              className={`flex items-center gap-2.5 px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all duration-300 ${viewMode === 'code' ? 'bg-white text-black shadow-2xl scale-105' : 'text-white/30 hover:text-white'}`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all duration-300 ${viewMode === 'code' ? (isDark ? 'bg-white text-black shadow-lg' : 'bg-white text-slate-900 shadow-sm') : (isDark ? 'text-white/30 hover:text-white' : 'text-slate-400 hover:text-slate-900')}`}
             >
-              <Code2 size={14} />
+              <Code2 size={12} />
               Code
             </button>
           </div>
 
-          <div className="hidden md:block h-10 w-[1px] bg-white/5" />
+          <div className={`hidden md:block h-8 w-[1px] ${isDark ? 'bg-white/5' : 'bg-slate-200'}`} />
           
-          <div className="flex items-center gap-2 lg:gap-6">
+          <div className="flex items-center gap-2 lg:gap-4">
             {user ? (
-              <div className="flex items-center gap-2 lg:gap-4 bg-white/5 pl-1.5 lg:pl-2 pr-3 lg:pr-4 py-1 lg:py-1.5 rounded-xl lg:rounded-2xl border border-white/5">
-                <div className="w-6 h-6 lg:w-8 lg:h-8 rounded-lg lg:rounded-xl bg-orange-primary/20 border border-orange-primary/20 flex items-center justify-center overflow-hidden shadow-inner">
+              <div className={`flex items-center gap-2 lg:gap-3 ${isDark ? 'bg-white/5 border-white/5' : 'bg-slate-100 border-slate-200'} pl-1.5 pr-3 py-1 rounded-xl border`}>
+                <div className="w-6 h-6 rounded-lg bg-orange-primary/20 border border-orange-primary/20 flex items-center justify-center overflow-hidden shadow-inner">
                   {user.user_metadata?.avatar_url ? (
                     <img src={user.user_metadata.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
                   ) : (
-                    <span className="text-[8px] lg:text-[10px] font-black text-orange-primary">{user.email?.charAt(0).toUpperCase()}</span>
+                    <span className="text-[8px] font-black text-orange-primary">{user.email?.charAt(0).toUpperCase()}</span>
                   )}
                 </div>
                 <button 
                   onClick={() => supabase.auth.signOut()}
-                  className="text-white/30 hover:text-white text-[8px] lg:text-[10px] font-black uppercase tracking-widest transition-colors"
+                  className={`${isDark ? 'text-white/30 hover:text-white' : 'text-slate-400 hover:text-slate-900'} text-[8px] font-black uppercase tracking-widest transition-colors`}
                 >
                   Logout
                 </button>
@@ -964,57 +976,103 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
             ) : (
               <button 
                 onClick={() => setIsAuthModalOpen(true)}
-                className="text-white/30 hover:text-white text-[8px] lg:text-[10px] font-black uppercase tracking-widest transition-colors px-3 lg:px-4 py-1.5 lg:py-2 hover:bg-white/5 rounded-lg lg:rounded-xl border border-transparent hover:border-white/5"
+                className={`${isDark ? 'text-white/30 hover:text-white hover:bg-white/5' : 'text-slate-400 hover:text-slate-900 hover:bg-slate-100'} text-[8px] font-black uppercase tracking-widest transition-colors px-3 py-1.5 rounded-lg border border-transparent`}
               >
                 Sign In
               </button>
             )}
 
-            <div className="hidden sm:block h-6 w-[1px] bg-white/5" />
+            <div className={`hidden sm:block h-6 w-[1px] ${isDark ? 'bg-white/5' : 'bg-slate-200'}`} />
 
-            <div className="hidden sm:flex items-center gap-2">
+            <div className="hidden sm:flex items-center gap-1.5">
+              <button 
+                onClick={() => setTheme(isDark ? 'light' : 'dark')}
+                title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
+                className={`transition-all p-2 rounded-lg ${isDark ? 'text-white/30 hover:text-white hover:bg-white/5' : 'text-slate-400 hover:text-slate-900 hover:bg-slate-100'}`}
+              >
+                {isDark ? <Sun size={16} /> : <Moon size={16} />}
+              </button>
               <button 
                 onClick={() => setIsStyleEditorOpen(!isStyleEditorOpen)}
                 title="Style Editor"
-                className={`transition-all p-2 lg:p-2.5 rounded-xl ${isStyleEditorOpen ? 'bg-orange-primary text-white shadow-lg' : 'text-white/30 hover:text-white hover:bg-white/5'}`}
+                className={`transition-all p-2 rounded-lg ${isStyleEditorOpen ? 'bg-orange-primary text-white shadow-lg' : (isDark ? 'text-white/30 hover:text-white hover:bg-white/5' : 'text-slate-400 hover:text-slate-900 hover:bg-slate-100')}`}
               >
-                <Palette size={18} />
+                <Palette size={16} />
+              </button>
+              <button 
+                onClick={() => handleConvertToReact('react')}
+                disabled={!generatedCode || isConverting}
+                title="Convert to React"
+                className={`${isDark ? 'text-white/30 hover:text-white hover:bg-white/5' : 'text-slate-400 hover:text-slate-900 hover:bg-slate-100'} transition-all p-2 rounded-lg disabled:opacity-10 flex items-center gap-1.5`}
+              >
+                {isConverting ? <Loader2 size={14} className="animate-spin" /> : <Code2 size={14} />}
+                <span className="text-[8px] font-bold uppercase hidden xl:inline">React</span>
               </button>
               <button 
                 onClick={() => handleConvertToReact('nextjs')}
                 disabled={!generatedCode || isConverting}
                 title="Convert to Next.js"
-                className="text-white/30 hover:text-white transition-all p-2 lg:p-2.5 hover:bg-white/5 rounded-xl disabled:opacity-10 flex items-center gap-2"
+                className={`${isDark ? 'text-white/30 hover:text-white hover:bg-white/5' : 'text-slate-400 hover:text-slate-900 hover:bg-slate-100'} transition-all p-2 rounded-lg disabled:opacity-10 flex items-center gap-1.5`}
               >
-                {isConverting ? <Loader2 size={18} className="animate-spin" /> : <Braces size={18} />}
+                {isConverting ? <Loader2 size={14} className="animate-spin" /> : <Braces size={14} />}
+                <span className="text-[8px] font-bold uppercase hidden xl:inline">Next</span>
+              </button>
+              <button 
+                onClick={() => handleConvertToReact('python')}
+                disabled={!generatedCode || isConverting}
+                title="Convert to Python (Flask)"
+                className={`${isDark ? 'text-white/30 hover:text-white hover:bg-white/5' : 'text-slate-400 hover:text-slate-900 hover:bg-slate-100'} transition-all p-2 rounded-lg disabled:opacity-10 flex items-center gap-1.5`}
+              >
+                {isConverting ? <Loader2 size={14} className="animate-spin" /> : <div className="text-[9px] font-bold">PY</div>}
+                <span className="text-[8px] font-bold uppercase hidden xl:inline">Python</span>
+              </button>
+              <button 
+                onClick={() => handleConvertToReact('javascript')}
+                disabled={!generatedCode || isConverting}
+                title="Convert to Modular JS"
+                className={`${isDark ? 'text-white/30 hover:text-white hover:bg-white/5' : 'text-slate-400 hover:text-slate-900 hover:bg-slate-100'} transition-all p-2 rounded-lg disabled:opacity-10 flex items-center gap-1.5`}
+              >
+                {isConverting ? <Loader2 size={14} className="animate-spin" /> : <div className="text-[9px] font-bold">JS</div>}
+                <span className="text-[8px] font-bold uppercase hidden xl:inline">JS</span>
               </button>
               <button 
                 onClick={handleNetlifyDeploy}
                 disabled={!generatedCode || isDeploying}
                 title="Deploy to Netlify"
-                className="text-white/30 hover:text-white transition-all p-2 lg:p-2.5 hover:bg-white/5 rounded-xl disabled:opacity-10 flex items-center gap-2"
+                className={`${isDark ? 'text-white/30 hover:text-white hover:bg-white/5' : 'text-slate-400 hover:text-slate-900 hover:bg-slate-100'} transition-all p-2 rounded-lg disabled:opacity-10 flex items-center gap-1.5`}
               >
-                {isDeploying ? <Loader2 size={18} className="animate-spin" /> : <Rocket size={18} />}
+                {isDeploying ? <Loader2 size={14} className="animate-spin" /> : <Rocket size={14} />}
               </button>
               <button 
                 onClick={handleDownload}
                 disabled={!generatedCode}
                 title="Download HTML"
-                className="text-white/30 hover:text-white transition-all p-2 lg:p-2.5 hover:bg-white/5 rounded-xl disabled:opacity-10"
+                className={`${isDark ? 'text-white/30 hover:text-white hover:bg-white/5' : 'text-slate-400 hover:text-slate-900 hover:bg-slate-100'} transition-all p-2 rounded-lg disabled:opacity-10 flex items-center gap-1.5`}
               >
-                <Download size={18} />
+                <Download size={14} />
+                <span className="text-[8px] font-bold uppercase hidden xl:inline">HTML</span>
               </button>
+              {messages.some(m => m.role === 'model' && m.files) && (
+                <button 
+                  onClick={handleDownloadZip}
+                  title="Download Project (ZIP)"
+                  className={`${isDark ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-slate-900 text-white hover:bg-slate-800'} transition-all p-2 rounded-lg flex items-center gap-1.5`}
+                >
+                  <Download size={14} className="text-orange-primary" />
+                  <span className="text-[8px] font-bold uppercase hidden xl:inline">ZIP</span>
+                </button>
+              )}
               <button 
                 onClick={handleGithubClick}
-                className="text-white/30 hover:text-white transition-all p-2 lg:p-2.5 hover:bg-white/5 rounded-xl"
+                className={`${isDark ? 'text-white/30 hover:text-white hover:bg-white/5' : 'text-slate-400 hover:text-slate-900 hover:bg-slate-100'} transition-all p-2 rounded-lg`}
               >
-                <Github size={18} />
+                <Github size={16} />
               </button>
             </div>
             
             <button 
               onClick={() => setIsPublishModalOpen(true)}
-              className="bg-orange-primary hover:bg-orange-600 text-white px-4 lg:px-8 py-2.5 lg:py-3.5 rounded-xl lg:rounded-[1.25rem] font-black text-[10px] lg:text-xs uppercase tracking-widest transition-all shadow-[0_10px_20px_rgba(255,107,0,0.15)] lg:shadow-[0_20px_40px_rgba(255,107,0,0.2)] active:scale-95 hover:-translate-y-0.5"
+              className="bg-orange-primary hover:bg-orange-600 text-white px-4 lg:px-6 py-2 rounded-lg lg:rounded-xl font-black text-[9px] lg:text-[10px] uppercase tracking-widest transition-all shadow-lg active:scale-95 hover:-translate-y-0.5"
             >
               Publish
             </button>
@@ -1023,16 +1081,16 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
       </header>
 
       {/* Mobile Tab Switcher */}
-      <div className="lg:hidden flex border-b border-white/5 bg-[#0A0A0A]">
+      <div className={`lg:hidden flex border-b ${isDark ? 'border-white/5 bg-[#0A0A0A]' : 'border-slate-200 bg-white'}`}>
         <button 
           onClick={() => setActiveMobileTab('chat')}
-          className={`flex-1 py-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all ${activeMobileTab === 'chat' ? 'text-orange-primary border-b-2 border-orange-primary' : 'text-white/20'}`}
+          className={`flex-1 py-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all ${activeMobileTab === 'chat' ? 'text-orange-primary border-b-2 border-orange-primary' : (isDark ? 'text-white/20' : 'text-slate-300')}`}
         >
           Chat
         </button>
         <button 
           onClick={() => setActiveMobileTab('preview')}
-          className={`flex-1 py-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all ${activeMobileTab === 'preview' ? 'text-orange-primary border-b-2 border-orange-primary' : 'text-white/20'}`}
+          className={`flex-1 py-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all ${activeMobileTab === 'preview' ? 'text-orange-primary border-b-2 border-orange-primary' : (isDark ? 'text-white/20' : 'text-slate-300')}`}
         >
           Preview
         </button>
@@ -1074,6 +1132,7 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
                     setIsSettingsModalOpen(true);
                   }}
                   user={user}
+                  isDark={isDark}
                 />
               </motion.div>
             </>
@@ -1101,6 +1160,7 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
             }}
             onCloneSite={handleCloneSite}
             onEcommerceProduct={handleEcommerceProduct}
+            isDark={isDark}
           />
         </div>
         
@@ -1121,6 +1181,7 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
             styleConfig={styleConfig}
             sectionEdit={sectionEdit}
             onSectionSelect={setSectionEdit}
+            isDark={isDark}
           />
         </div>
       </main>
