@@ -27,17 +27,36 @@ export const AntiBot: React.FC<AntiBotProps> = ({ onVerify, isOpen }) => {
     setError(null);
     
     try {
+      console.log("Starting reCAPTCHA verification...");
       // 1. Get reCAPTCHA token
       const token = await new Promise<string>((resolve, reject) => {
-        if (!window.grecaptcha) {
-          reject(new Error("reCAPTCHA not loaded"));
-          return;
-        }
-        window.grecaptcha.ready(() => {
-          window.grecaptcha.execute('6LccYIMsAAAAAO0N3ZdaIzmKe8ObtTCWzIzk4vH8', { action: 'verify' })
-            .then(resolve)
-            .catch(reject);
-        });
+        // Wait up to 5 seconds for grecaptcha to be available
+        let attempts = 0;
+        const checkInterval = setInterval(() => {
+          console.log(`Checking reCAPTCHA availability (attempt ${attempts})...`);
+          if (window.grecaptcha && window.grecaptcha.ready) {
+            console.log("reCAPTCHA is available and ready.");
+            clearInterval(checkInterval);
+            window.grecaptcha.ready(() => {
+              window.grecaptcha.execute('6LccYIMsAAAAAO0N3ZdaIzmKe8ObtTCWzIzk4vH8', { action: 'verify' })
+                .then((t: string) => {
+                  console.log("reCAPTCHA token obtained.");
+                  resolve(t);
+                })
+                .catch((err: any) => {
+                  console.error("reCAPTCHA execute error:", err);
+                  reject(err);
+                });
+            });
+          } else {
+            attempts++;
+            if (attempts > 50) { // 5 seconds
+              console.error("reCAPTCHA failed to load after 5 seconds.");
+              clearInterval(checkInterval);
+              reject(new Error("reCAPTCHA n'a pas pu être chargé. Vérifiez votre connexion ou désactivez votre bloqueur de publicité."));
+            }
+          }
+        }, 100);
       });
 
       // 2. Verify with backend
