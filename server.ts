@@ -90,6 +90,54 @@ async function startServer() {
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
+  // Debug middleware
+  app.use((req, res, next) => {
+    if (req.url.startsWith('/api')) {
+      console.log(`[Server] ${req.method} ${req.url}`);
+    }
+    next();
+  });
+
+  app.post(["/api/deploy", "/api/deploy/"], async (req, res) => {
+    const { siteName, code, files, userId } = req.body;
+    
+    if (!siteName || (!code && !files)) {
+      return res.status(400).json({ success: false, message: "Site name and code/files are required." });
+    }
+
+    console.log(`[Deployment] Initiating deployment for: ${siteName}`);
+    
+    // Enqueue in watchdog for background processing/logging
+    const taskId = addToWatchdog('site_deployment', { siteName, code, files, userId });
+    
+    try {
+      const slug = siteName.toLowerCase().replace(/\s+/g, '-') || 'site';
+      const url = `https://${slug}.cook-ia.online`;
+      
+      // Simulate real deployment steps
+      console.log(`[Deployment] Step 1: Provisioning server for ${slug}...`);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      console.log(`[Deployment] Step 2: Uploading files...`);
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      console.log(`[Deployment] Step 3: Configuring DNS and SSL...`);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      console.log(`[Deployment] Step 4: Site is now LIVE at ${url}`);
+      
+      res.json({ 
+        success: true, 
+        url: url,
+        taskId: taskId,
+        message: "Deployment successful! Your site is now live."
+      });
+    } catch (error: any) {
+      console.error("[Deployment] Failed:", error.message);
+      res.status(500).json({ success: false, message: "Deployment failed: " + error.message });
+    }
+  });
+
   // Watchdog API
   app.get("/api/watchdog/status", (req, res) => {
     res.json({
@@ -221,46 +269,6 @@ async function startServer() {
       res.json({ success: true, url: repoData.html_url });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
-    }
-  });
-
-  app.post("/api/deploy", async (req, res) => {
-    const { siteName, code, files, userId } = req.body;
-    
-    if (!siteName || (!code && !files)) {
-      return res.status(400).json({ success: false, message: "Site name and code/files are required." });
-    }
-
-    console.log(`[Deployment] Initiating deployment for: ${siteName}`);
-    
-    // Enqueue in watchdog for background processing/logging
-    const taskId = addToWatchdog('site_deployment', { siteName, code, files, userId });
-    
-    try {
-      const slug = siteName.toLowerCase().replace(/\s+/g, '-') || 'site';
-      const url = `https://${slug}.cook-ia.online`;
-      
-      // Simulate real deployment steps
-      console.log(`[Deployment] Step 1: Provisioning server for ${slug}...`);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      console.log(`[Deployment] Step 2: Uploading files...`);
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      console.log(`[Deployment] Step 3: Configuring DNS and SSL...`);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      console.log(`[Deployment] Step 4: Site is now LIVE at ${url}`);
-      
-      res.json({ 
-        success: true, 
-        url: url,
-        taskId: taskId,
-        message: "Deployment successful! Your site is now live."
-      });
-    } catch (error: any) {
-      console.error("[Deployment] Failed:", error.message);
-      res.status(500).json({ success: false, message: "Deployment failed: " + error.message });
     }
   });
 
