@@ -15,7 +15,7 @@ interface AntiBotProps {
 }
 
 // ✅ Ta clé publique (safe à mettre dans le frontend)
-const SITE_KEY = "6LdTZoMsAAAAADwDW39iCQPo7Szlz1aelljqmvHa";
+const SITE_KEY = "6LcUaoMsAAAAAOmXCT26H45ajeXUhgADGBktXb9f";
 
 // ✅ URL de ta Netlify Function
 const VERIFY_URL = "/.netlify/functions/verify-captcha";
