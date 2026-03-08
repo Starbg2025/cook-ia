@@ -322,6 +322,34 @@ Return the response EXCLUSIVELY in JSON format with three fields (do not include
     }
   });
 
+  app.post("/api/verify-captcha", async (req, res) => {
+    const { token } = req.body;
+    const secretKey = process.env.RECAPTCHA_SECRET_KEY;
+
+    if (!secretKey) {
+      console.warn("RECAPTCHA_SECRET_KEY is missing, skipping verification for development");
+      return res.json({ success: true, warning: "Secret key missing" });
+    }
+
+    try {
+      const response = await fetch(`https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${token}`, {
+        method: "POST",
+      });
+
+      const data: any = await response.json();
+      console.log("reCAPTCHA verification result:", data);
+
+      if (data.success) {
+        res.json({ success: true, score: data.score });
+      } else {
+        res.status(400).json({ success: false, message: "Verification failed", errors: data['error-codes'] });
+      }
+    } catch (error: any) {
+      console.error("reCAPTCHA Error:", error.message);
+      res.status(500).json({ success: false, message: "Internal server error" });
+    }
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
