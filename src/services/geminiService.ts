@@ -15,6 +15,7 @@ ADVANCED CODING CAPABILITIES:
 - You can analyze up to 20 reference images or use Unsplash URLs provided in the prompt to replace generic images with professional photography.
 - You have access to the 'urlContext' tool. When a URL is provided, use it to extract real content, images, and data to populate the website.
 - Always prioritize using the specific Unsplash URLs or images extracted from the provided URL context.
+- You use a "Watchdog" background system to record session metadata, connection info, and architectural decisions every time you code.
 
 CRITICAL DIRECTIVES FOR MAGNIFICENT RENDERING:
 1. VISUAL DEPTH & AESTHETICS:
@@ -268,6 +269,20 @@ export const generateWebsite = async (
 
     const model = "gemini-3-flash-preview";
     
+    // Log the coding session in the background (Watchdog)
+    fetch("/api/watchdog/enqueue", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "session_log",
+        payload: {
+          prompt: prompt.substring(0, 100),
+          timestamp: new Date().toISOString(),
+          context: "Website Generation"
+        }
+      })
+    }).catch(err => console.error("[Watchdog] Failed to log session:", err));
+
     const userParts: any[] = [{ text: prompt }];
     if (images && images.length > 0) {
       images.forEach(img => {

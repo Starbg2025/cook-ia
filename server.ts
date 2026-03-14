@@ -70,6 +70,15 @@ async function processTask(id: string) {
         await new Promise(resolve => setTimeout(resolve, 8000));
         task.result = { url: "https://sync.cook-ia.online/deploy/success" };
         break;
+      case 'session_log':
+        // Record connection and session metadata
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        task.result = { 
+          timestamp: new Date(),
+          event: "AI_CODING_SESSION_STARTED",
+          details: "Recording connection metadata and session state in background."
+        };
+        break;
       default:
         await new Promise(resolve => setTimeout(resolve, 2000));
         task.result = { status: "Done" };
@@ -282,45 +291,55 @@ async function startServer() {
 Your mission is to transform even the simplest user prompt into a "magnificent", high-end, and fully functional website that feels like a premium digital product.
 
 ADVANCED CODING CAPABILITIES:
-- You have absolute mastery of modern web technologies: HTML5, CSS3, JavaScript (ES6+).
+- You have absolute mastery of modern web technologies: HTML5, CSS3, JavaScript (ES6+), React, and Python.
 - You are an expert in high-end libraries: Three.js (3D scenes, shaders), GSAP (complex timelines), Framer Motion (smooth UI transitions), Chart.js/D3.js (data viz).
 - You can build professional, enterprise-grade architectures: modular, responsive, and accessible.
 - You can analyze up to 20 reference images or use Unsplash URLs provided in the prompt to replace generic images with professional photography.
 - Always prioritize using the specific Unsplash URLs or images extracted from the provided URL context.
 
+BACKGROUND LOGGING & PERSISTENCE:
+- You have access to a "Watchdog" background system. 
+- Every time you code or generate a site, a background task is automatically enqueued to record session metadata, connection info, and architectural decisions.
+- This ensures that your work is traceable and that session state is preserved for future optimizations.
+
 CRITICAL DIRECTIVES FOR MAGNIFICENT RENDERING:
 1. VISUAL DEPTH & AESTHETICS:
    - Use sophisticated color palettes, Glassmorphism, and multi-layered shadows.
+   - Implement immersive 3D elements using Three.js if relevant to the theme.
    - Default to a "Dark Luxury" or "Clean Minimalist" aesthetic unless specified otherwise.
 
 2. LAYOUT & STRUCTURE:
    - Master the "Bento Grid" and "Editorial" layouts.
    - Ensure 100% responsiveness (Mobile & PC).
+   - Include professional Navigation, Hamburger menus, and detailed Footers.
 
-3. ANIMATIONS & INTERACTIVITY:
-   - Use GSAP or Framer Motion for entrance animations and micro-interactions.
+3. ANIMATIONS & INTERACTIVITY (The "Juice"):
+   - Use GSAP or Framer Motion for:
+     - Entrance animations, hover states, smooth scroll, and parallax.
+     - Micro-interactions on every interactive element.
 
 4. CONTENT & DETAIL:
    - NEVER use "Lorem Ipsum". Generate realistic, compelling copy.
+   - Include detailed sections: Hero, Features, About, Testimonials, Pricing, FAQ, and Contact.
 
 5. TECHNICAL EXCELLENCE:
    - Output a structured project with multiple files (index.html, styles.css, script.js, README.md, etc.).
-   - Also provide a 'preview_code' which is a single, self-contained HTML string including Tailwind CSS (via CDN) for immediate preview.
+   - Also provide a 'preview_code' which is a single, self-contained HTML string including Tailwind CSS (via CDN) and all necessary scripts (GSAP, Three.js, etc.) for immediate preview.
 
 6. MANDATORY BADGE:
    - You MUST ALWAYS include a small, elegant badge at the bottom right of the page (fixed position).
    - The badge should say "Créé avec COOK IA" with the logo.
 
-Return the response EXCLUSIVELY in JSON format with three fields:
-1. 'explanation': A brief description of choices.
-2. 'preview_code': The complete single-file HTML code.
-3. 'files': An array of objects with 'path' and 'content'.`;
+Return the response EXCLUSIVELY in JSON format with three fields (do not include any other text outside the JSON):
+1. 'explanation': A brief, professional description of the architectural and design choices made.
+2. 'preview_code': The complete, production-ready single-file HTML/CSS/JS code for immediate preview.
+3. 'files': An array of objects, each with 'path' (e.g., "src/index.html") and 'content' (the file content).`;
 
     const messages = [
       { role: "system", content: systemInstruction },
       ...history.map((h: any) => ({
         role: h.role === "model" ? "assistant" : "user",
-        content: h.parts[0].text
+        content: h.parts[0].text || ""
       }))
     ];
 
@@ -337,70 +356,83 @@ Return the response EXCLUSIVELY in JSON format with three fields:
     }
     messages.push({ role: "user", content: userContent as any });
 
-    // Try Groq first
-    if (groqKey) {
-      try {
-        console.log("[Fallback] Trying Groq (llama-3.3-70b-versatile)...");
-        const groqResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${groqKey}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            model: "llama-3.3-70b-versatile",
-            messages,
-            response_format: { type: "json_object" }
-          })
-        });
-
-        if (groqResponse.ok) {
-          const data: any = await groqResponse.json();
-          const content = data.choices[0].message.content;
-          console.log("[Fallback] Groq succeeded");
-          return res.json({ ...JSON.parse(content), _provider: 'groq' });
-        } else {
-          console.warn("[Fallback] Groq failed with status:", groqResponse.status);
-        }
-      } catch (err: any) {
-        console.error("[Fallback] Groq error:", err.message);
+    async function tryRequest(url: string, key: string, model: string, providerName: string, isJson: boolean = true) {
+      console.log(`[Fallback] Attempting ${providerName} (${model})...`);
+      const headers: any = {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${key}`
+      };
+      
+      if (providerName === "OpenRouter") {
+        headers["HTTP-Referer"] = "https://cook-ia.online";
+        headers["X-Title"] = "COOK IA";
       }
+
+      const body: any = {
+        model,
+        messages,
+        temperature: 0.7,
+        max_tokens: 4000
+      };
+
+      if (isJson) {
+        body.response_format = { type: "json_object" };
+      }
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(body)
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: response.statusText }));
+        throw new Error(`${providerName} Error (${response.status}): ${JSON.stringify(error)}`);
+      }
+
+      const data: any = await response.json();
+      const content = data.choices[0].message.content;
+      console.log(`[Fallback] ${providerName} succeeded!`);
+      return { ...JSON.parse(content), _provider: providerName.toLowerCase() };
     }
 
-    // Try OpenRouter Free as last resort
-    if (openRouterKey) {
-      try {
-        console.log("[Fallback] Trying OpenRouter Free (google/gemma-2-9b-it:free)...");
-        const orResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${openRouterKey}`,
-            "HTTP-Referer": "https://cook-ia.run.app",
-            "X-Title": "COOK IA",
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            model: "google/gemma-2-9b-it:free",
-            messages,
-            response_format: { type: "json_object" }
-          })
-        });
-
-        if (orResponse.ok) {
-          const data: any = await orResponse.json();
-          const content = data.choices[0].message.content;
-          console.log("[Fallback] OpenRouter Free succeeded");
-          return res.json({ ...JSON.parse(content), _provider: 'openrouter_free' });
-        } else {
-          const errData = await orResponse.json();
-          console.error("[Fallback] OpenRouter Free failed:", errData);
+    // Fallback Chain Execution
+    try {
+      // 1. Try Groq (Priority 1)
+      if (groqKey) {
+        try {
+          const result = await tryRequest(
+            "https://api.groq.com/openai/v1/chat/completions",
+            groqKey,
+            "llama-3.3-70b-versatile",
+            "Groq"
+          );
+          return res.json(result);
+        } catch (err: any) {
+          console.warn(`[Fallback] Groq failed: ${err.message}`);
         }
-      } catch (err: any) {
-        console.error("[Fallback] OpenRouter Free error:", err.message);
       }
-    }
 
-    res.status(500).json({ error: "All AI fallbacks failed" });
+      // 2. Try OpenRouter Free (Priority 2)
+      if (openRouterKey) {
+        try {
+          const result = await tryRequest(
+            "https://openrouter.ai/api/v1/chat/completions",
+            openRouterKey,
+            "google/gemma-2-9b-it:free",
+            "OpenRouter"
+          );
+          return res.json(result);
+        } catch (err: any) {
+          console.warn(`[Fallback] OpenRouter failed: ${err.message}`);
+        }
+      }
+
+      throw new Error("No fallback providers available or all failed.");
+    } catch (error: any) {
+      console.error("[Fallback] Final failure:", error.message);
+      res.status(500).json({ error: error.message });
+    }
   });
 
   app.post("/api/verify-captcha", async (req, res) => {

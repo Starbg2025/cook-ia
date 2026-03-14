@@ -19,11 +19,8 @@ interface PreviewProps {
   isDark?: boolean;
 }
 
-import Prism from 'prismjs';
-import 'prismjs/themes/prism-tomorrow.css';
-import 'prismjs/components/prism-markup';
-import 'prismjs/components/prism-css';
-import 'prismjs/components/prism-javascript';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { tomorrow, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 export const Preview: React.FC<PreviewProps> = ({
   viewMode,
@@ -51,12 +48,6 @@ export const Preview: React.FC<PreviewProps> = ({
   }, [files]);
 
   const selectedFile = files.find(f => f.path === selectedFilePath);
-
-  React.useEffect(() => {
-    if (viewMode === 'code') {
-      Prism.highlightAll();
-    }
-  }, [viewMode, selectedFilePath, selectedFile]);
 
   // Apply Style Overrides
   React.useEffect(() => {
@@ -344,12 +335,25 @@ export const Preview: React.FC<PreviewProps> = ({
                     <span className={`text-[10px] font-mono ${isDark ? 'text-white/40' : 'text-slate-400'}`}>{selectedFilePath}</span>
                   </div>
                 </div>
-                <div className="flex-1 overflow-auto p-6 scrollbar-hide">
-                  <pre className={`font-mono text-sm leading-relaxed ${isDark ? 'text-white/80' : 'text-slate-700'}`}>
-                    <code className={`language-${selectedFilePath?.split('.').pop() || 'markup'}`}>
-                      {selectedFile?.content || "<!-- Select a file to view code -->"}
-                    </code>
-                  </pre>
+                <div className="flex-1 overflow-auto scrollbar-hide">
+                  <SyntaxHighlighter
+                    language={selectedFilePath?.split('.').pop() || 'javascript'}
+                    style={isDark ? tomorrow : oneLight}
+                    customStyle={{
+                      margin: 0,
+                      padding: '24px',
+                      fontSize: '13px',
+                      lineHeight: '1.6',
+                      background: 'transparent',
+                    }}
+                    codeTagProps={{
+                      style: {
+                        fontFamily: 'JetBrains Mono, monospace',
+                      }
+                    }}
+                  >
+                    {selectedFile?.content || "<!-- Select a file to view code -->"}
+                  </SyntaxHighlighter>
                 </div>
               </div>
             </motion.div>
