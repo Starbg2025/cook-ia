@@ -16,8 +16,13 @@ import {
   Info,
   Globe,
   Copy,
-  Check
+  Check,
+  Zap,
+  ChevronRight,
+  LogOut,
+  Loader2
 } from 'lucide-react';
+import { supabase } from '../services/supabaseService';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -26,12 +31,13 @@ interface SettingsModalProps {
   user: any;
   isProjectSettings?: boolean;
   prompts?: string[];
+  conversationsCount?: number;
   isDark?: boolean;
 }
 
 type TabType = 'publish' | 'versions' | 'secrets' | 'integrations' | 'github' | 'general' | 'account' | 'help';
 
-export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialTab = 'publish', user, isProjectSettings = true, prompts = [], isDark = false }) => {
+export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialTab = 'publish', user, isProjectSettings = true, prompts = [], conversationsCount = 0, isDark = false }) => {
   const [activeTab, setActiveTab] = useState<TabType>(initialTab);
   const [accessLevel, setAccessLevel] = useState('Restricted: Only people you specify can access');
   const [isLinkFullscreen, setIsLinkFullscreen] = useState(false);
@@ -39,8 +45,40 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
   const [newSecretKey, setNewSecretKey] = useState('');
   const [newSecretValue, setNewSecretValue] = useState('');
   const [isCopied, setIsCopied] = useState(false);
+  const [supportMessage, setSupportMessage] = useState('');
+  const [isSending, setIsSending] = useState(false);
+  const [sendSuccess, setSendSuccess] = useState(false);
 
   const currentUrl = typeof window !== 'undefined' ? window.location.href : 'https://cook-ia.online';
+
+  const handleSendSupportMessage = async () => {
+    if (!supportMessage.trim()) return;
+    setIsSending(true);
+    try {
+      // Note: We assume a 'support_messages' table exists in Supabase
+      const { error } = await supabase
+        .from('support_messages')
+        .insert([
+          { 
+            user_id: user?.id, 
+            email: user?.email, 
+            message: supportMessage,
+            created_at: new Date().toISOString()
+          }
+        ]);
+      
+      if (error) throw error;
+      
+      setSendSuccess(true);
+      setSupportMessage('');
+      setTimeout(() => setSendSuccess(false), 3000);
+    } catch (err) {
+      console.error('Error sending message:', err);
+      alert("Erreur lors de l'envoi du message. Veuillez réessayer.");
+    } finally {
+      setIsSending(false);
+    }
+  };
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(currentUrl);
@@ -55,7 +93,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
     { id: 'integrations', label: 'Integrations', icon: Layers },
     { id: 'github', label: 'GitHub', icon: Github },
   ] : [
-    { id: 'general', label: 'General', icon: Settings },
+    { id: 'general', label: 'Settings', icon: Settings },
     { id: 'account', label: 'Account', icon: User },
     { id: 'help', label: 'Help', icon: HelpCircle },
   ];
@@ -251,6 +289,138 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
             </div>
           </div>
         );
+      case 'account':
+        return (
+          <div className="space-y-8 p-2">
+            <div className="flex flex-col gap-1">
+              <h3 className={`text-lg font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>Mon Compte</h3>
+              <p className="text-xs text-slate-400">Gérez vos informations personnelles et votre abonnement.</p>
+            </div>
+
+            <div className={`p-6 rounded-3xl border ${isDark ? 'border-white/10 bg-white/5' : 'border-slate-100 bg-slate-50'}`}>
+              <div className="flex items-center gap-6 mb-8">
+                <div className="w-20 h-20 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-2xl overflow-hidden shadow-2xl">
+                  {user?.user_metadata?.avatar_url ? (
+                    <img src={user.user_metadata.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    user?.email?.[0].toUpperCase() || 'U'
+                  )}
+                </div>
+                <div className="flex flex-col gap-1">
+                  <h4 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                    {user?.user_metadata?.username || user?.email?.split('@')[0]}
+                  </h4>
+                  <p className="text-sm text-slate-400">{user?.email}</p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 text-[10px] font-bold uppercase tracking-widest">Plan Gratuit</span>
+                    <span className="px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 text-[10px] font-bold uppercase tracking-widest">Actif</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className={`p-4 rounded-2xl border ${isDark ? 'border-white/5 bg-black/20' : 'border-slate-200 bg-white shadow-sm'}`}>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 block mb-1">Sites créés</span>
+                  <span className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{conversationsCount}</span>
+                </div>
+                <div className={`p-4 rounded-2xl border ${isDark ? 'border-white/5 bg-black/20' : 'border-slate-200 bg-white shadow-sm'}`}>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 block mb-1">Stockage utilisé</span>
+                  <span className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>0 MB</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <button 
+                onClick={async () => {
+                  await supabase.auth.signOut();
+                  window.location.reload();
+                }}
+                className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all border-red-500/10 hover:bg-red-500/5 text-red-500`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-red-500/10">
+                    <LogOut size={18} />
+                  </div>
+                  <span className="text-sm font-bold">Se déconnecter</span>
+                </div>
+              </button>
+            </div>
+          </div>
+        );
+      case 'help':
+        return (
+          <div className="space-y-6 p-2">
+            <div className="flex flex-col gap-1">
+              <h3 className={`text-lg font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>Aide & Support</h3>
+              <p className="text-xs text-slate-400">Besoin d'aide pour utiliser Cook IA ?</p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <button className={`p-6 rounded-3xl border text-left transition-all ${isDark ? 'border-white/10 bg-white/5 hover:bg-white/10' : 'border-slate-100 bg-slate-50 hover:bg-slate-100'}`}>
+                <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center mb-4">
+                  <Globe size={20} />
+                </div>
+                <h4 className={`font-bold mb-1 ${isDark ? 'text-white' : 'text-slate-900'}`}>Documentation</h4>
+                <p className="text-xs text-slate-400">Apprenez à maîtriser toutes les fonctionnalités.</p>
+              </button>
+              
+              <button className={`p-6 rounded-3xl border text-left transition-all ${isDark ? 'border-white/10 bg-white/5 hover:bg-white/10' : 'border-slate-100 bg-slate-50 hover:bg-slate-100'}`}>
+                <div className="w-10 h-10 rounded-xl bg-orange-primary/10 text-orange-primary flex items-center justify-center mb-4">
+                  <Zap size={20} />
+                </div>
+                <h4 className={`font-bold mb-1 ${isDark ? 'text-white' : 'text-slate-900'}`}>Tutoriels</h4>
+                <p className="text-xs text-slate-400">Des guides pas à pas pour vos projets.</p>
+              </button>
+            </div>
+
+            <div className={`p-6 rounded-3xl border ${isDark ? 'border-white/10 bg-white/5' : 'border-slate-100 bg-slate-50'}`}>
+              <h4 className={`font-bold mb-4 ${isDark ? 'text-white' : 'text-slate-900'}`}>Contactez-nous</h4>
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-600">
+                    <User size={14} />
+                  </div>
+                  <div>
+                    <p className={`text-xs font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>Benit Madimba</p>
+                    <p className="text-[10px] text-slate-400">Créateur de Cook IA</p>
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <textarea 
+                    value={supportMessage}
+                    onChange={(e) => setSupportMessage(e.target.value)}
+                    placeholder="Votre message (sera envoyé à Benit via Supabase)..."
+                    className={`w-full p-3 rounded-xl border text-sm focus:outline-none focus:border-blue-500 transition-all min-h-[100px] resize-none ${
+                      isDark ? 'bg-white/5 border-white/10 text-white placeholder:text-white/20' : 'bg-white border-slate-200 text-slate-900 placeholder:text-slate-400'
+                    }`}
+                  />
+                  <button 
+                    onClick={handleSendSupportMessage}
+                    disabled={isSending || !supportMessage.trim()}
+                    className={`w-full py-3 rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+                      sendSuccess 
+                        ? 'bg-green-500 text-white' 
+                        : 'bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50'
+                    }`}
+                  >
+                    {isSending ? (
+                      <Loader2 size={18} className="animate-spin" />
+                    ) : sendSuccess ? (
+                      <>
+                        <Check size={18} />
+                        Message envoyé !
+                      </>
+                    ) : (
+                      'Envoyer un message'
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
       case 'github':
         return (
           <div className="space-y-6 p-2">
@@ -268,7 +438,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
       case 'general':
         return (
           <div className="space-y-6 p-2">
-            <h3 className={`text-lg font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>General Settings</h3>
+            <h3 className={`text-lg font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>Settings</h3>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex flex-col">

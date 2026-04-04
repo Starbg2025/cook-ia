@@ -284,10 +284,6 @@ export const Preview: React.FC<PreviewProps> = ({
                 />
               ) : (
                 <div className={`w-full h-full flex flex-col items-center justify-center ${isDark ? 'bg-[#0A0A0A]' : 'bg-slate-50'} relative overflow-hidden`}>
-                  {/* Decorative background elements */}
-                  <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-orange-primary/5 rounded-full blur-[100px] animate-pulse" />
-                  <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-blue-500/5 rounded-full blur-[100px] animate-pulse delay-700" />
-                  
                   <motion.div
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -360,23 +356,9 @@ export const Preview: React.FC<PreviewProps> = ({
                         </button>
                       </div>
                       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                        <div className="flex items-start gap-3">
-                          <div className="w-6 h-6 rounded-full bg-blue-50 flex items-center justify-center text-blue-500">
-                            <FileSearch size={12} />
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-xs font-medium">Read file: App.tsx</p>
-                            <p className="text-[10px] text-slate-400">1.2s ago</p>
-                          </div>
-                        </div>
-                        <div className="flex items-start gap-3">
-                          <div className="w-6 h-6 rounded-full bg-orange-50 flex items-center justify-center text-orange-500">
-                            <Zap size={12} />
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-xs font-medium">Generated component: Header</p>
-                            <p className="text-[10px] text-slate-400">5.4s ago</p>
-                          </div>
+                        <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+                          <History size={32} className="mb-4 opacity-20" />
+                          <p className="text-xs">No history recorded yet.</p>
                         </div>
                       </div>
                     </motion.div>

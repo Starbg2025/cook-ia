@@ -20,7 +20,7 @@ export const ConfigSidebar: React.FC<ConfigSidebarProps> = ({ isDark }) => {
             <button className={`w-full flex items-center justify-between p-2.5 rounded-lg border ${isDark ? 'bg-[#141414] border-white/10 text-white hover:bg-[#1A1A1A]' : 'bg-slate-50 border-slate-200 text-slate-900 hover:bg-slate-100'} transition-all text-sm`}>
               <div className="flex items-center gap-2">
                 <Zap size={14} className="text-orange-primary" />
-                <span>Gemini 1.5 Pro</span>
+                <span>Cook IA Engine</span>
               </div>
               <ChevronDown size={14} className={isDark ? 'text-white/20' : 'text-slate-400'} />
             </button>

@@ -74,6 +74,14 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = ({
 
       {/* Build Section */}
       <div className="p-4 space-y-1">
+        <button 
+          onClick={onNewChat}
+          className="w-full flex items-center gap-3 px-3 py-3 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 mb-4"
+        >
+          <Plus size={18} />
+          New Chat
+        </button>
+
         <h3 className={`px-3 py-2 text-[11px] font-bold uppercase tracking-widest ${isDark ? 'text-white/20' : 'text-slate-400'}`}>Build</h3>
         {buildItems.map((item) => (
           <button
@@ -127,6 +135,54 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = ({
               </button>
             </div>
           ))
+        )}
+      </div>
+
+      {/* User Profile Section */}
+      <div className={`p-4 border-t ${isDark ? 'border-white/5' : 'border-slate-100'}`}>
+        {user ? (
+          <div className="flex items-center justify-between group">
+            <button 
+              onClick={() => onOpenSettings('account')}
+              className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-all flex-1 ${isDark ? 'hover:bg-white/5' : 'hover:bg-slate-50'}`}
+            >
+              <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-xs shrink-0 overflow-hidden">
+                {user.user_metadata?.avatar_url ? (
+                  <img src={user.user_metadata.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  user.email?.[0].toUpperCase() || 'U'
+                )}
+              </div>
+              <div className="flex flex-col items-start overflow-hidden">
+                <span className={`text-sm font-semibold truncate w-full ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                  {user.user_metadata?.username || user.email?.split('@')[0]}
+                </span>
+                <span className={`text-[10px] truncate w-full ${isDark ? 'text-white/40' : 'text-slate-400'}`}>
+                  {user.email}
+                </span>
+              </div>
+            </button>
+            <button 
+              onClick={async () => {
+                await supabase.auth.signOut();
+                window.location.reload();
+              }}
+              className={`p-2 rounded-lg transition-all ${isDark ? 'text-white/20 hover:text-red-400 hover:bg-red-500/10' : 'text-slate-400 hover:text-red-500 hover:bg-red-50'}`}
+              title="Déconnexion"
+            >
+              <LogOut size={16} />
+            </button>
+          </div>
+        ) : (
+          <button 
+            onClick={() => onOpenSettings('account')}
+            className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all ${isDark ? 'bg-white/5 hover:bg-white/10 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-900'}`}
+          >
+            <div className="w-8 h-8 rounded-full bg-slate-400 flex items-center justify-center text-white shrink-0">
+              <User size={16} />
+            </div>
+            <span className="text-sm font-semibold">Se connecter</span>
+          </button>
         )}
       </div>
 

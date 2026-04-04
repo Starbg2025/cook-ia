@@ -114,15 +114,21 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
               }`}>
                 {msg.role === 'user' ? <User size={12} /> : <Sparkles size={12} />}
               </div>
-              <span className={`text-xs font-bold uppercase tracking-widest ${isDark ? 'text-white/40' : 'text-slate-400'}`}>
-                {msg.role === 'user' ? 'You' : (msg._provider || 'Gemini')}
+              <span className={`text-[10px] font-bold uppercase tracking-[0.2em] ${
+                msg.role === 'user' 
+                  ? (isDark ? 'text-white/40' : 'text-slate-400')
+                  : 'text-orange-primary'
+              }`}>
+                {msg.role === 'user' ? 'You' : (msg._provider || 'Cook IA')}
               </span>
             </div>
 
             <div className="flex flex-col gap-4 pl-9">
               {msg.role === 'model' && (
-                <div className={`text-[10px] ${isDark ? 'text-white/30' : 'text-slate-400'} font-mono`}>
-                  {msg.modelName || 'models/gemini-3-flash-preview'} • Ran for {msg.runTime || 234}s
+                <div className={`text-[9px] px-2 py-0.5 rounded-full border w-fit ${
+                  isDark ? 'text-white/30 border-white/5 bg-white/5' : 'text-slate-400 border-slate-100 bg-slate-50'
+                } font-mono`}>
+                  {msg.modelName || 'cook-ia-engine-v3'}
                 </div>
               )}
 
@@ -162,8 +168,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
               <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600'}`}>
                 <Loader2 size={12} className="animate-spin" />
               </div>
-              <span className={`text-xs font-bold uppercase tracking-widest ${isDark ? 'text-white/40' : 'text-slate-400'}`}>
-                Gemini
+              <span className={`text-[10px] font-bold uppercase tracking-[0.2em] ${isDark ? 'text-white/40' : 'text-slate-400'}`}>
+                Cook IA
               </span>
             </div>
             <div className="pl-9">

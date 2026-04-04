@@ -768,6 +768,13 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
     }
   };
 
+  useEffect(() => {
+    if (pendingSend && prompt.trim()) {
+      handleSend();
+      setPendingSend(false);
+    }
+  }, [pendingSend, prompt]);
+
   const handleDownloadZip = async () => {
     const lastModelMessage = [...messages].reverse().find(m => m.role === 'model' && m.files);
     if (!lastModelMessage?.files) return;
@@ -979,6 +986,17 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
             <Code size={14} />
             Code
           </button>
+          <button 
+            onClick={() => setViewMode('preview')}
+            className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              viewMode === 'preview' 
+                ? (isDark ? 'bg-white/10 text-white shadow-lg' : 'bg-white text-slate-900 shadow-sm') 
+                : (isDark ? 'text-white/40 hover:text-white/60' : 'text-slate-400 hover:text-slate-600')
+            }`}
+          >
+            <Eye size={14} />
+            Preview
+          </button>
         </div>
 
         <div className="flex items-center gap-3">
@@ -991,13 +1009,28 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
 
           <button 
             onClick={() => {
+              if (!user) {
+                setIsAuthModalOpen(true);
+                return;
+              }
               setSettingsTab('account');
               setIsProjectSettings(false);
               setIsSettingsModalOpen(true);
             }}
-            className={`p-2 rounded-lg transition-colors ${isDark ? 'text-white/60 hover:bg-white/5 hover:text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}
+            className={`flex items-center gap-2 p-1 pr-3 rounded-full transition-all ${isDark ? 'hover:bg-white/5 text-white/60 hover:text-white' : 'hover:bg-slate-100 text-slate-600 hover:text-slate-900'}`}
           >
-            <User size={18} />
+            <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-xs overflow-hidden">
+              {user?.user_metadata?.avatar_url ? (
+                <img src={user.user_metadata.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                user?.email?.[0].toUpperCase() || <User size={16} />
+              )}
+            </div>
+            {user && (
+              <span className="text-xs font-semibold hidden sm:inline">
+                {user.user_metadata?.username || user.email?.split('@')[0]}
+              </span>
+            )}
           </button>
           
           <button 
@@ -1031,6 +1064,10 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
               onDeleteConversation={handleDeleteConversation}
               onNewChat={handleNewChat}
               onOpenSettings={(tab) => {
+                if (!user && tab === 'account') {
+                  setIsAuthModalOpen(true);
+                  return;
+                }
                 setSettingsTab(tab || 'general');
                 setIsProjectSettings(false);
                 setIsSettingsModalOpen(true);
@@ -1109,7 +1146,7 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
             </div>
           ) : viewMode === 'chat' ? (
             <div className="flex-1 flex overflow-hidden">
-              <div className="w-1/2 min-w-0">
+              <div className="w-full min-w-0">
                 <ChatInterface 
                   isDark={isDark}
                   messages={messages}
@@ -1135,26 +1172,6 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
                   }}
                   onCloneSite={handleCloneSite}
                   onEcommerceProduct={handleEcommerceProduct}
-                />
-              </div>
-              <div className={`w-1/2 border-l hidden lg:block ${isDark ? 'border-white/5' : 'border-slate-200'}`}>
-                <Preview 
-                  viewMode="preview"
-                  generatedCode={generatedCode}
-                  files={[...messages].reverse().find(m => m.role === 'model' && m.files)?.files || []}
-                  iframeRef={iframeRef}
-                  onRefresh={handleRefresh}
-                  onExpand={handleExpand}
-                  onEdit={() => setViewMode('code')}
-                  onCodeChange={(newCode) => {
-                    skipIframeUpdate.current = true;
-                    setGeneratedCode(newCode);
-                  }}
-                  onDownloadZip={handleDownloadZip}
-                  styleConfig={styleConfig}
-                  sectionEdit={sectionEdit}
-                  onSectionSelect={setSectionEdit}
-                  isDark={isDark}
                 />
               </div>
             </div>
@@ -1435,6 +1452,7 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
         user={user}
         isProjectSettings={isProjectSettings}
         prompts={prompts}
+        conversationsCount={conversations.length}
         isDark={isDark}
       />
     </div>
