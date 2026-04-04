@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Zap, RotateCcw, ExternalLink, Pencil, FileCode, Folder, Download, ChevronRight, ChevronDown, MousePointer2 } from 'lucide-react';
+import { Zap, RotateCcw, ExternalLink, Pencil, FileCode, Folder, Download, ChevronRight, ChevronDown, MousePointer2, FileSearch, History, X } from 'lucide-react';
 import { ViewMode, ProjectFile, StyleConfig, SectionEditState } from '../types';
 
 interface PreviewProps {
@@ -40,6 +40,7 @@ export const Preview: React.FC<PreviewProps> = ({
   const [isVisualEditing, setIsVisualEditing] = React.useState(false);
   const [isSectionSelectionMode, setIsSectionSelectionMode] = React.useState(false);
   const [selectedFilePath, setSelectedFilePath] = React.useState<string | null>(null);
+  const [showActionHistory, setShowActionHistory] = React.useState(false);
 
   React.useEffect(() => {
     if (files.length > 0 && !selectedFilePath) {
@@ -210,6 +211,20 @@ export const Preview: React.FC<PreviewProps> = ({
         </div>
 
         <div className={`flex items-center gap-4 ${isDark ? 'text-white/30' : 'text-slate-400'} w-auto justify-end`}>
+          <button 
+            onClick={() => setShowActionHistory(!showActionHistory)}
+            className={`transition-all p-1 hover:scale-110 active:scale-95 ${showActionHistory ? 'text-blue-500' : isDark ? 'hover:text-white' : 'hover:text-slate-900'}`}
+            title="View Action History"
+          >
+            <History size={15} />
+          </button>
+          <button 
+            className={`hover:text-blue-500 transition-all p-1 hover:scale-110 active:scale-95 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest`}
+            title="Read File"
+          >
+            <FileSearch size={14} />
+            <span className="hidden sm:inline">Read File</span>
+          </button>
           {files.length > 0 && (
             <button 
               onClick={onDownloadZip}
@@ -329,7 +344,45 @@ export const Preview: React.FC<PreviewProps> = ({
               </div>
 
               {/* Code Editor/Viewer */}
-              <div className="flex-1 flex flex-col overflow-hidden">
+              <div className="flex-1 flex flex-col overflow-hidden relative">
+                <AnimatePresence>
+                  {showActionHistory && (
+                    <motion.div 
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      className={`absolute right-4 top-14 bottom-4 w-80 ${isDark ? 'bg-[#1A1A1A] border-white/10' : 'bg-white border-slate-200'} border rounded-2xl shadow-2xl z-10 flex flex-col overflow-hidden`}
+                    >
+                      <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+                        <span className="text-xs font-bold uppercase tracking-widest text-slate-400">Action History</span>
+                        <button onClick={() => setShowActionHistory(false)} className="text-slate-400 hover:text-slate-600">
+                          <X size={14} />
+                        </button>
+                      </div>
+                      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                        <div className="flex items-start gap-3">
+                          <div className="w-6 h-6 rounded-full bg-blue-50 flex items-center justify-center text-blue-500">
+                            <FileSearch size={12} />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-xs font-medium">Read file: App.tsx</p>
+                            <p className="text-[10px] text-slate-400">1.2s ago</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-3">
+                          <div className="w-6 h-6 rounded-full bg-orange-50 flex items-center justify-center text-orange-500">
+                            <Zap size={12} />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-xs font-medium">Generated component: Header</p>
+                            <p className="text-[10px] text-slate-400">5.4s ago</p>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
                 <div className={`h-10 ${isDark ? 'bg-[#141414] border-white/5' : 'bg-slate-50 border-slate-200'} border-b flex items-center px-4 justify-between`}>
                   <div className="flex items-center gap-2">
                     <span className={`text-[10px] font-mono ${isDark ? 'text-white/40' : 'text-slate-400'}`}>{selectedFilePath}</span>

@@ -8,7 +8,6 @@ interface SectionChatProps {
   onClose: () => void;
   onUpdate: (prompt: string) => void;
   isLoading: boolean;
-  currentAgent?: 'analyst' | 'engineer' | 'critic' | null;
   onOpenImageSearch?: () => void;
   onImproveText?: (style: 'professional' | 'creative' | 'sales') => void;
 }
@@ -18,7 +17,6 @@ export const SectionChat: React.FC<SectionChatProps> = ({
   onClose,
   onUpdate,
   isLoading,
-  currentAgent,
   onOpenImageSearch,
   onImproveText
 }) => {
@@ -63,32 +61,9 @@ export const SectionChat: React.FC<SectionChatProps> = ({
 
         <div className="space-y-4">
           {isLoading && (
-            <div className="flex justify-center gap-4 py-2">
-              {[
-                { icon: Search, label: 'Analyst', color: 'bg-blue-400', role: 'analyst' },
-                { icon: Layout, label: 'Architect', color: 'bg-orange-primary', role: 'engineer' },
-                { icon: CheckCircle, label: 'Critic', color: 'bg-emerald-400', role: 'critic' }
-              ].map((avatar, i) => (
-                <div key={i} className={`flex flex-col items-center gap-1 transition-all duration-300 ${currentAgent && currentAgent !== avatar.role ? 'opacity-20 scale-75 grayscale' : 'opacity-100 scale-100'}`}>
-                  <motion.div
-                    animate={currentAgent === avatar.role ? { 
-                      y: [0, -8, 0],
-                      scale: [1, 1.1, 1],
-                    } : {
-                      y: [0, -2, 0],
-                    }}
-                    transition={{ duration: 2, repeat: Infinity, delay: i * 0.4 }}
-                    className={`w-10 h-12 rounded-[2rem] ${avatar.color} border border-white/20 flex items-center justify-center relative overflow-hidden`}
-                  >
-                    <div className="absolute top-1/4 flex gap-1">
-                      <div className="w-0.5 h-0.5 bg-black/80 rounded-full" />
-                      <div className="w-0.5 h-0.5 bg-black/80 rounded-full" />
-                    </div>
-                    <avatar.icon size={12} className="text-white/90 mt-4" />
-                  </motion.div>
-                  <span className="text-[5px] font-black uppercase tracking-tighter text-white/40">{avatar.label}</span>
-                </div>
-              ))}
+            <div className="flex flex-col items-center gap-2 py-4">
+              <Loader2 size={24} className="text-orange-primary animate-spin" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-white/40">Updating section...</span>
             </div>
           )}
           <div className="bg-[#0A0A0A] border border-white/5 rounded-2xl p-4 max-h-32 overflow-hidden opacity-50">

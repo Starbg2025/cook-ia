@@ -16,17 +16,27 @@ export interface ProjectFile {
   content: string;
 }
 
+export interface ActionHistory {
+  type: 'read' | 'thought' | 'shell';
+  content: string;
+  duration?: number;
+}
+
 export interface Message {
   role: 'user' | 'model';
   content: string;
   code?: string;
-  image?: string; // Keep for backward compatibility if needed, but we'll use images
+  image?: string;
   images?: string[];
   videos?: string[];
   files?: ProjectFile[];
+  _provider?: string;
+  actionHistory?: ActionHistory[];
+  modelName?: string;
+  runTime?: number;
 }
 
-export type ViewMode = 'preview' | 'code';
+export type ViewMode = 'preview' | 'code' | 'chat';
 
 export interface WebsiteGenerationResult {
   explanation: string;

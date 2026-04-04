@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Zap, Send, Loader2, ImagePlus, X, Image as ImageIcon, Copy, ShoppingBag, Video, Search, Layout, CheckCircle } from 'lucide-react';
-import { Message } from '../types';
+import { Zap, Send, Loader2, ImagePlus, X, Image as ImageIcon, Copy, ShoppingBag, Video, Search, Layout, CheckCircle, User, Mic, Plus, Sparkles, Flag, ThumbsUp, ThumbsDown, Eye, RotateCcw, ChevronDown, FileText, Clock, Settings, Terminal } from 'lucide-react';
+import { Message, ActionHistory } from '../types';
 
 interface ChatInterfaceProps {
   messages: Message[];
@@ -10,7 +10,6 @@ interface ChatInterfaceProps {
   handleSend: () => void;
   onAbort?: () => void;
   isLoading: boolean;
-  currentAgent?: 'analyst' | 'engineer' | 'critic' | null;
   chatEndRef: React.RefObject<HTMLDivElement | null>;
   logoUrl: string;
   selectedImages: string[];
@@ -20,8 +19,24 @@ interface ChatInterfaceProps {
   onOpenImageSearch?: () => void;
   onCloneSite?: () => void;
   onEcommerceProduct?: () => void;
+  onOpenSettings?: (tab?: any) => void;
   isDark?: boolean;
 }
+
+const ActionHistoryItem: React.FC<{ action: ActionHistory; isDark: boolean }> = ({ action, isDark }) => {
+  const icon = action.type === 'read' ? <FileText size={14} /> : action.type === 'shell' ? <Terminal size={14} /> : <Clock size={14} />;
+  const label = action.type === 'read' ? 'Read file' : action.type === 'shell' ? 'Executed shell command' : 'Thought';
+  
+  return (
+    <div className={`flex items-center gap-2 py-1 px-2 rounded-md ${isDark ? 'hover:bg-white/5' : 'hover:bg-slate-100'} transition-colors cursor-default group`}>
+      <span className={isDark ? 'text-white/40' : 'text-slate-400'}>{icon}</span>
+      <div className="flex flex-col">
+        <span className={`text-xs font-medium ${isDark ? 'text-white/60' : 'text-slate-600'}`}>{label}</span>
+        <span className={`text-[10px] ${isDark ? 'text-white/30' : 'text-slate-400'}`}>{action.content}</span>
+      </div>
+    </div>
+  );
+};
 
 export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   messages,
@@ -30,7 +45,6 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   handleSend,
   onAbort,
   isLoading,
-  currentAgent,
   chatEndRef,
   logoUrl,
   selectedImages,
@@ -40,10 +54,10 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   onOpenImageSearch,
   onCloneSite,
   onEcommerceProduct,
+  onOpenSettings,
   isDark = true
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const videoInputRef = useRef<HTMLInputElement>(null);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -51,10 +65,6 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
     const remainingSlots = 20 - selectedImages.length;
     const filesToProcess = files.slice(0, remainingSlots);
-
-    if (files.length > remainingSlots) {
-      alert(`You can only upload up to 20 images. Adding the first ${remainingSlots} selected.`);
-    }
 
     filesToProcess.forEach(file => {
       const reader = new FileReader();
@@ -65,224 +75,141 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     });
   };
 
-  const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length === 0) return;
-
-    const remainingSlots = 5 - selectedVideos.length;
-    const filesToProcess = files.slice(0, remainingSlots);
-
-    if (files.length > remainingSlots) {
-      alert(`You can only upload up to 5 videos. Adding the first ${remainingSlots} selected.`);
-    }
-
-    filesToProcess.forEach(file => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setSelectedVideos(prev => [...prev, reader.result as string]);
-      };
-      reader.readAsDataURL(file);
-    });
-  };
-
   const removeImage = (index: number) => {
     setSelectedImages(selectedImages.filter((_, i) => i !== index));
   };
 
-  const removeVideo = (index: number) => {
-    setSelectedVideos(selectedVideos.filter((_, i) => i !== index));
-  };
-
   return (
-    <aside className={`w-full lg:w-[420px] flex flex-col ${isDark ? 'bg-[#0D0D0D] border-white/5' : 'bg-white border-slate-200'} rounded-3xl lg:rounded-[2.5rem] border overflow-hidden shadow-2xl transition-all duration-500`}>
-      <div className={`p-4 lg:p-8 border-b ${isDark ? 'border-white/5 bg-gradient-to-b from-white/[0.02] to-transparent' : 'border-slate-100 bg-gradient-to-b from-slate-50 to-transparent'} flex items-center justify-between`}>
-        <div className="flex items-center gap-3 lg:gap-4">
-          <div className={`w-8 h-8 lg:w-10 lg:h-10 rounded-xl lg:rounded-2xl overflow-hidden border ${isDark ? 'border-white/10 bg-white/5' : 'border-slate-200 bg-slate-50'} p-1 lg:p-1.5 shadow-inner`}>
-            <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
-          </div>
-          <div>
-            <h2 className={`text-xs lg:text-sm font-black uppercase tracking-[0.3em] lg:tracking-[0.4em] ${isDark ? 'text-white' : 'text-slate-900'} leading-none mb-0.5 lg:mb-1`}>COOK IA</h2>
-            <p className={`text-[8px] lg:text-[9px] font-medium uppercase tracking-widest ${isDark ? 'text-white/30' : 'text-slate-400'}`}>Engine v2.5</p>
-          </div>
+    <aside className={`flex-1 flex flex-col h-full ${isDark ? 'bg-[#0A0A0A]' : 'bg-white'} overflow-hidden`}>
+      {/* Chat Header */}
+      <div className={`h-14 border-b flex items-center justify-between px-6 shrink-0 ${isDark ? 'border-white/5' : 'border-slate-100'}`}>
+        <div className="flex items-center gap-3">
+          <span className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>Chat</span>
+          <ChevronDown size={14} className="text-slate-400" />
         </div>
-        <div className="flex gap-1 lg:gap-1.5">
-          <div className="w-1 h-1 lg:w-1.5 lg:h-1.5 rounded-full bg-orange-primary animate-pulse" />
-          <div className={`w-1 h-1 lg:w-1.5 lg:h-1.5 rounded-full ${isDark ? 'bg-white/10' : 'bg-slate-200'}`} />
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={() => onOpenSettings?.('publish')}
+            className={`p-2 rounded-lg transition-colors ${isDark ? 'text-white/60 hover:bg-white/5 hover:text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}
+            title="Settings"
+          >
+            <Settings size={18} />
+          </button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 lg:p-8 space-y-6 lg:space-y-8 scrollbar-hide">
+      <div className="flex-1 overflow-y-auto p-4 lg:p-8 space-y-12 scrollbar-hide">
         {messages.map((msg, idx) => (
           <motion.div 
             key={idx}
-            initial={{ opacity: 0, y: 20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
-            className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col gap-4 max-w-4xl mx-auto w-full"
           >
-            {msg.images && msg.images.length > 0 && (
-              <div className="mb-2 flex flex-wrap gap-2 max-w-[92%] justify-end">
-                {msg.images.map((img, i) => (
-                  <div key={i} className={`w-20 h-20 lg:w-24 lg:h-24 rounded-xl lg:rounded-2xl overflow-hidden border ${isDark ? 'border-white/10' : 'border-slate-200'} shadow-xl`}>
-                    <img src={img} alt={`Reference ${i}`} className="w-full h-full object-cover" />
+            <div className="flex items-center gap-3 mb-1">
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${
+                msg.role === 'user' 
+                  ? (isDark ? 'bg-white/10 text-white' : 'bg-slate-100 text-slate-600')
+                  : (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600')
+              }`}>
+                {msg.role === 'user' ? <User size={12} /> : <Sparkles size={12} />}
+              </div>
+              <span className={`text-xs font-bold uppercase tracking-widest ${isDark ? 'text-white/40' : 'text-slate-400'}`}>
+                {msg.role === 'user' ? 'You' : (msg._provider || 'Gemini')}
+              </span>
+            </div>
+
+            <div className="flex flex-col gap-4 pl-9">
+              {msg.role === 'model' && (
+                <div className={`text-[10px] ${isDark ? 'text-white/30' : 'text-slate-400'} font-mono`}>
+                  {msg.modelName || 'models/gemini-3-flash-preview'} • Ran for {msg.runTime || 234}s
+                </div>
+              )}
+
+              {msg.images && msg.images.length > 0 && (
+                <div className="flex flex-wrap gap-3">
+                  {msg.images.map((img, i) => (
+                    <div key={i} className={`group relative w-32 h-32 rounded-2xl overflow-hidden border ${isDark ? 'border-white/10' : 'border-slate-200'} shadow-sm`}>
+                      <img src={img} alt={`Reference ${i}`} className="w-full h-full object-cover" />
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              <div className={`text-sm leading-relaxed ${isDark ? 'text-white/90' : 'text-slate-800'}`}>
+                {msg.content}
+              </div>
+
+              {msg.role === 'model' && (
+                <div className="flex items-center gap-4 mt-4 pt-4 border-t border-white/5">
+                  <div className="flex items-center gap-1">
+                    <button className={`p-1.5 rounded-md ${isDark ? 'text-white/20 hover:text-white hover:bg-white/5' : 'text-slate-400 hover:text-slate-900 hover:bg-slate-100'}`}>
+                      <ThumbsUp size={14} />
+                    </button>
+                    <button className={`p-1.5 rounded-md ${isDark ? 'text-white/20 hover:text-white hover:bg-white/5' : 'text-slate-400 hover:text-slate-900 hover:bg-slate-100'}`}>
+                      <ThumbsDown size={14} />
+                    </button>
                   </div>
-                ))}
-              </div>
-            )}
-            {msg.videos && msg.videos.length > 0 && (
-              <div className="mb-2 flex flex-wrap gap-2 max-w-[92%] justify-end">
-                {msg.videos.map((vid, i) => (
-                  <div key={i} className={`w-20 h-20 lg:w-24 lg:h-24 rounded-xl lg:rounded-2xl overflow-hidden border ${isDark ? 'border-white/10' : 'border-slate-200'} shadow-xl bg-black`}>
-                    <video src={vid} className="w-full h-full object-cover" muted />
-                  </div>
-                ))}
-              </div>
-            )}
-            {msg.image && (
-              <div className={`mb-2 max-w-[80%] rounded-xl lg:rounded-2xl overflow-hidden border ${isDark ? 'border-white/10' : 'border-slate-200'} shadow-xl`}>
-                <img src={msg.image} alt="Reference" className="w-full h-auto" />
-              </div>
-            )}
-            <div className={`max-w-[92%] p-4 lg:p-5 rounded-2xl lg:rounded-[1.5rem] text-xs lg:text-[13px] leading-relaxed shadow-lg ${
-              msg.role === 'user' 
-                ? 'bg-orange-primary text-white font-medium shadow-orange-primary/20' 
-                : isDark ? 'bg-[#1A1A1A] text-white/90 border border-white/5' : 'bg-slate-50 text-slate-700 border border-slate-100'
-            }`}>
-              {msg.content}
+                </div>
+              )}
             </div>
           </motion.div>
         ))}
+        
         {isLoading && (
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-4"
-          >
-            <div className="flex justify-center gap-4 lg:gap-8 py-4">
-              {[
-                { icon: Search, label: 'Analyst', color: 'bg-blue-400', glow: 'shadow-blue-500/40', text: 'Analyzing...', role: 'analyst' },
-                { icon: Layout, label: 'Architect', color: 'bg-orange-primary', glow: 'shadow-orange-primary/40', text: 'Building...', role: 'engineer' },
-                { icon: CheckCircle, label: 'Critic', color: 'bg-emerald-400', glow: 'shadow-emerald-500/40', text: 'Verifying...', role: 'critic' }
-              ].map((avatar, i) => (
-                <div key={i} className={`flex flex-col items-center gap-2 transition-all duration-500 ${currentAgent && currentAgent !== avatar.role ? 'opacity-30 scale-90 grayscale' : 'opacity-100 scale-100'}`}>
-                  <motion.div
-                    animate={currentAgent === avatar.role ? { 
-                      y: [0, -15, 0],
-                      scale: [1, 1.1, 1],
-                      boxShadow: [
-                        "0 0 20px rgba(255,107,0,0.2)",
-                        "0 0 40px rgba(255,107,0,0.4)",
-                        "0 0 20px rgba(255,107,0,0.2)"
-                      ]
-                    } : {
-                      y: [0, -5, 0],
-                      scale: [1, 1, 1],
-                    }}
-                    transition={{ 
-                      duration: 2, 
-                      repeat: Infinity, 
-                      delay: i * 0.4,
-                      ease: "easeInOut"
-                    }}
-                    className={`w-14 h-16 lg:w-20 lg:h-24 rounded-[3rem] lg:rounded-[4rem] ${avatar.color} ${avatar.glow} shadow-2xl flex items-center justify-center relative overflow-hidden border-2 border-white/20`}
-                  >
-                    {/* Egg face details */}
-                    <div className="absolute top-1/3 flex gap-2 lg:gap-3">
-                      <div className="w-1 h-1 lg:w-1.5 lg:h-1.5 bg-black/80 rounded-full animate-bounce" />
-                      <div className="w-1 h-1 lg:w-1.5 lg:h-1.5 bg-black/80 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
-                    </div>
-                    <div className="absolute top-[45%] w-2 h-1 lg:w-3 lg:h-1.5 bg-black/20 rounded-full" />
-                    
-                    <avatar.icon size={24} className="lg:w-8 lg:h-8 text-white/90 mt-6 lg:mt-8" />
-                    
-                    {/* Glossy effect */}
-                    <div className="absolute top-2 left-4 w-4 h-8 bg-white/20 rounded-full blur-sm -rotate-12" />
-                  </motion.div>
-                  <span className={`text-[8px] lg:text-[10px] font-black uppercase tracking-tighter ${isDark ? 'text-white/60' : 'text-slate-400'}`}>{avatar.label}</span>
-                </div>
-              ))}
-            </div>
-
-            <div className={`flex items-center justify-between gap-2 lg:gap-3 ${isDark ? 'text-orange-primary/60 bg-[#1A1A1A]/50 border-white/5' : 'text-orange-600 bg-slate-50 border-slate-100'} text-[8px] lg:text-[10px] font-bold uppercase tracking-widest p-3 rounded-xl border`}>
-              <div className="flex items-center gap-2 lg:gap-3">
+          <div className="flex flex-col gap-4 max-w-4xl mx-auto w-full">
+            <div className="flex items-center gap-3 mb-1">
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600'}`}>
                 <Loader2 size={12} className="animate-spin" />
-                <motion.span
-                  animate={{ opacity: [0.4, 1, 0.4] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                >
-                  {currentAgent === 'analyst' && "L'Analyste vérifie votre demande..."}
-                  {currentAgent === 'engineer' && "L'Architecte construit votre site..."}
-                  {currentAgent === 'critic' && "Le Critique vérifie la qualité..."}
-                  {!currentAgent && "Intelligence Collaborative en action..."}
-                </motion.span>
               </div>
-              <button 
-                onClick={onAbort}
-                className={`text-[8px] lg:text-[9px] ${isDark ? 'bg-white/5 hover:bg-white/10 border-white/5' : 'bg-slate-100 hover:bg-slate-200 border-slate-200'} px-2 py-1 rounded-md transition-colors border`}
-              >
-                Annuler
-              </button>
+              <span className={`text-xs font-bold uppercase tracking-widest ${isDark ? 'text-white/40' : 'text-slate-400'}`}>
+                Gemini
+              </span>
             </div>
-          </motion.div>
+            <div className="pl-9">
+              <div className={`text-sm ${isDark ? 'text-white/40' : 'text-slate-400'} italic animate-pulse`}>
+                Building your site...
+              </div>
+            </div>
+          </div>
         )}
         <div ref={chatEndRef} />
       </div>
 
-      <div className={`p-4 lg:p-8 ${isDark ? 'bg-[#0D0D0D] border-white/5' : 'bg-white border-slate-100'} border-t`}>
-        <AnimatePresence>
+      <div className={`p-4 lg:p-6 ${isDark ? 'bg-[#0A0A0A]' : 'bg-white'}`}>
+        <div className={`max-w-4xl mx-auto relative border ${isDark ? 'border-white/10 bg-[#141414]' : 'border-slate-200 bg-slate-50'} rounded-[24px] transition-all focus-within:border-blue-500/50 shadow-sm`}>
+          
           {selectedImages.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-3 lg:mb-4 max-h-32 overflow-y-auto scrollbar-hide p-1">
-              {selectedImages.map((img, index) => (
-                <motion.div 
-                  key={index}
-                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                  className={`relative w-12 h-12 lg:w-16 lg:h-16 rounded-lg lg:rounded-xl overflow-hidden border ${isDark ? 'border-orange-primary/30' : 'border-orange-primary/50'} shadow-2xl group shrink-0`}
-                >
-                  <img src={img} alt={`Selected ${index}`} className="w-full h-full object-cover" />
+            <div className="flex flex-wrap gap-2 p-3 border-b border-white/5">
+              {selectedImages.map((img, i) => (
+                <div key={i} className="relative group w-16 h-16 rounded-xl overflow-hidden border border-white/10">
+                  <img src={img} alt="Upload" className="w-full h-full object-cover" />
                   <button 
-                    onClick={() => removeImage(index)}
-                    className="absolute top-0.5 right-0.5 p-0.5 bg-black/60 text-white rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => removeImage(i)}
+                    className="absolute top-1 right-1 p-1 bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                   >
-                    <X size={8} />
+                    <X size={10} />
                   </button>
-                </motion.div>
+                </div>
               ))}
             </div>
           )}
-          {selectedVideos.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-3 lg:mb-4 max-h-32 overflow-y-auto scrollbar-hide p-1">
-              {selectedVideos.map((vid, index) => (
-                <motion.div 
-                  key={index}
-                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                  className={`relative w-12 h-12 lg:w-16 lg:h-16 rounded-lg lg:rounded-xl overflow-hidden border ${isDark ? 'border-blue-500/30' : 'border-blue-500/50'} shadow-2xl group shrink-0 bg-black`}
-                >
-                  <video src={vid} className="w-full h-full object-cover" muted />
-                  <button 
-                    onClick={() => removeVideo(index)}
-                    className="absolute top-0.5 right-0.5 p-0.5 bg-black/60 text-white rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <X size={8} />
-                  </button>
-                </motion.div>
-              ))}
-            </div>
-          )}
-        </AnimatePresence>
 
-        <div className="relative group">
           <textarea 
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())}
-            placeholder="Describe your masterpiece..."
-            className={`w-full ${isDark ? 'bg-[#050505] border-white/5 placeholder:text-white/10 text-white' : 'bg-slate-50 border-slate-200 placeholder:text-slate-300 text-slate-900'} border rounded-2xl lg:rounded-[1.5rem] p-4 lg:p-5 pr-36 lg:pr-48 text-xs lg:text-sm focus:outline-none focus:border-orange-primary/40 transition-all resize-none h-24 lg:h-28 scrollbar-hide`}
+            placeholder="Type your prompt here..."
+            className={`w-full bg-transparent p-4 pr-32 text-sm focus:outline-none resize-none h-24 scrollbar-hide ${isDark ? 'text-white placeholder:text-white/20' : 'text-slate-900 placeholder:text-slate-400'}`}
           />
-          <div className="absolute right-3 lg:right-4 bottom-3 lg:bottom-4 flex items-center gap-1.5 lg:gap-2 z-10">
+          
+          <div className="absolute left-3 bottom-3 flex items-center gap-1">
+            <button className={`p-2 rounded-lg ${isDark ? 'text-white/40 hover:text-white hover:bg-white/5' : 'text-slate-400 hover:text-slate-900 hover:bg-slate-100'} transition-all`}>
+              <Layout size={18} />
+            </button>
+            <button className={`p-2 rounded-lg ${isDark ? 'text-white/40 hover:text-white hover:bg-white/5' : 'text-slate-400 hover:text-slate-900 hover:bg-slate-100'} transition-all`}>
+              <Mic size={18} />
+            </button>
             <input 
               type="file"
               ref={fileInputRef}
@@ -291,53 +218,23 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
               multiple
               className="hidden"
             />
-            <input 
-              type="file"
-              ref={videoInputRef}
-              onChange={handleVideoChange}
-              accept="video/*"
-              multiple
-              className="hidden"
-            />
-            <button 
-              onClick={onCloneSite}
-              className={`p-2 lg:p-3 ${isDark ? 'text-white/20 hover:text-orange-primary' : 'text-slate-300 hover:text-orange-primary'} transition-colors`}
-              title="Clone a website from URL"
-            >
-              <Copy size={18} />
-            </button>
-            <button 
-              onClick={onEcommerceProduct}
-              className={`p-2 lg:p-3 ${isDark ? 'text-white/20 hover:text-orange-primary' : 'text-slate-300 hover:text-orange-primary'} transition-colors`}
-              title="Create E-commerce from product URL"
-            >
-              <ShoppingBag size={18} />
-            </button>
-            <button 
-              onClick={onOpenImageSearch}
-              className={`p-2 lg:p-3 ${isDark ? 'text-white/20 hover:text-orange-primary' : 'text-slate-300 hover:text-orange-primary'} transition-colors`}
-              title="Search professional photos on Unsplash"
-            >
-              <ImageIcon size={18} />
-            </button>
-            <button 
-              onClick={() => videoInputRef.current?.click()}
-              className={`p-2 lg:p-3 ${isDark ? 'text-white/20 hover:text-blue-500' : 'text-slate-300 hover:text-blue-500'} transition-colors`}
-              title="Add reference videos (max 5)"
-            >
-              <Video size={18} />
-            </button>
             <button 
               onClick={() => fileInputRef.current?.click()}
-              className={`p-2 lg:p-3 ${isDark ? 'text-white/20 hover:text-orange-primary' : 'text-slate-300 hover:text-orange-primary'} transition-colors`}
-              title="Add reference images (max 20)"
+              className={`p-2 rounded-lg ${isDark ? 'text-white/40 hover:text-white hover:bg-white/5' : 'text-slate-400 hover:text-slate-900 hover:bg-slate-100'} transition-all`}
             >
-              <ImagePlus size={18} />
+              <Plus size={18} />
             </button>
+          </div>
+
+          <div className="absolute right-3 bottom-3">
             <button 
               onClick={handleSend}
-              disabled={isLoading || (!prompt.trim() && selectedImages.length === 0 && selectedVideos.length === 0)}
-              className="p-2.5 lg:p-3 bg-orange-primary text-white rounded-xl lg:rounded-2xl hover:scale-105 active:scale-95 transition-all disabled:opacity-20 disabled:grayscale disabled:cursor-not-allowed shadow-xl shadow-orange-primary/20"
+              disabled={isLoading || !prompt.trim()}
+              className={`p-2 rounded-xl transition-all ${
+                prompt.trim() 
+                  ? 'bg-blue-500 text-white hover:bg-blue-600' 
+                  : (isDark ? 'bg-white/5 text-white/20' : 'bg-slate-100 text-slate-300')
+              }`}
             >
               <Send size={18} />
             </button>

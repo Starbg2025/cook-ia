@@ -15,7 +15,31 @@ import {
   Loader2,
   Download,
   Sun,
-  Moon
+  Moon,
+  Menu,
+  MessageSquare,
+  Code,
+  Settings2,
+  Rocket,
+  Trash2,
+  Plus,
+  History,
+  Settings,
+  HelpCircle,
+  LogOut,
+  ChevronRight,
+  Sparkles,
+  Camera,
+  Search,
+  Layout,
+  CheckCircle,
+  X,
+  Video,
+  ImagePlus,
+  ImageIcon,
+  ShoppingBag,
+  Share2,
+  User
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { generateWebsite, generateTitle, updateSection, convertToReact, improveText } from './services/geminiService';
@@ -34,7 +58,7 @@ import { SettingsModal } from './components/SettingsModal';
 import { supabase } from './services/supabaseService';
 import { deployToNetlify } from './services/netlifyService';
 import JSZip from 'jszip';
-import { Palette, Rocket, Braces } from 'lucide-react';
+import { Palette, Braces } from 'lucide-react';
 
 const LOGO_URL = "https://i.ibb.co/mC3M8SSN/logo.png"; // Note: I used a direct link format, you may need to check the exact direct link on ImgBB
 
@@ -43,14 +67,13 @@ export default function App() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'model',
-      content: "COOK IA, créé par Benit Madimba, est prêt à concevoir votre prochaine plateforme web ultra-moderne. Que souhaitez-vous construire aujourd'hui ?"
+      content: "Cook IA, créé par Benit Madimba, est prêt à concevoir votre prochaine plateforme web ultra-moderne. Que souhaitez-vous construire aujourd'hui ?"
     }
   ]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [currentAgent, setCurrentAgent] = useState<'analyst' | 'engineer' | 'critic' | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>('preview');
+  const [viewMode, setViewMode] = useState<ViewMode | 'your-apps' | 'faq'>('chat');
   const [generatedCode, setGeneratedCode] = useState<string>('');
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
   const [isGithubModalOpen, setIsGithubModalOpen] = useState(false);
@@ -61,7 +84,7 @@ export default function App() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [siteName, setSiteName] = useState('');
   const [isCopied, setIsCopied] = useState(false);
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(true);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isStyleEditorOpen, setIsStyleEditorOpen] = useState(false);
@@ -71,8 +94,9 @@ export default function App() {
   const [isConverting, setIsConverting] = useState(false);
   const [imageSearchContext, setImageSearchContext] = useState<'chat' | 'section'>('chat');
   const [isDeploying, setIsDeploying] = useState(false);
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
-
+  const [theme, setTheme] = useState<'dark' | 'light'>('light');
+  const [isProjectSettings, setIsProjectSettings] = useState(true);
+  const [prompts, setPrompts] = useState<string[]>([]);
   const [pendingSend, setPendingSend] = useState<boolean>(false);
   const [styleConfig, setStyleConfig] = useState<StyleConfig>({
     primaryColor: '#FF6B00',
@@ -80,7 +104,7 @@ export default function App() {
     borderRadius: '1rem'
   });
   const [sectionEdit, setSectionEdit] = useState<SectionEditState>({ isActive: false });
-  const [settingsTab, setSettingsTab] = useState<any>('general');
+  const [settingsTab, setSettingsTab] = useState<any>('publish');
   const [user, setUser] = useState<any>(null);
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [selectedVideos, setSelectedVideos] = useState<string[]>([]);
@@ -91,6 +115,18 @@ export default function App() {
   const skipIframeUpdate = useRef(false);
 
   const [activeMobileTab, setActiveMobileTab] = useState<'chat' | 'preview'>('chat');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showAnnouncement, setShowAnnouncement] = useState(true);
+
+  const isDark = theme === 'dark';
+
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDark]);
 
   useEffect(() => {
     loadConversations();
@@ -314,7 +350,6 @@ export default function App() {
     if (!sectionEdit.sectionHtml || !generatedCode || isLoading) return;
 
     setIsLoading(true);
-    setCurrentAgent('analyst');
     try {
       const history = messages.map(m => ({
         role: m.role,
@@ -331,13 +366,11 @@ export default function App() {
         const updatedMessages = [...messages, analystMessage];
         setMessages(updatedMessages);
         setIsLoading(false);
-        setCurrentAgent(null);
         await saveConversation(updatedMessages);
         return;
       }
 
       // 2. Engineer Phase
-      setCurrentAgent('engineer');
       const result = await updateSection(
         sectionPrompt,
         sectionEdit.sectionHtml,
@@ -559,6 +592,7 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
     setPendingSend(false);
 
     const userMessage = prompt;
+    setPrompts(prev => [userMessage, ...prev]);
     const currentImages = [...selectedImages];
     const currentVideos = [...selectedVideos];
     setPrompt('');
@@ -575,7 +609,6 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
     const controller = new AbortController();
     setAbortController(controller);
     setIsLoading(true);
-    setCurrentAgent('analyst');
 
     try {
       const history = await Promise.all(newMessages.map(async (m) => {
@@ -610,10 +643,6 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
       }));
 
       // 1. Analyst Phase (Groq)
-      setCurrentAgent('analyst');
-      // Add a small artificial delay to make the Analyst's work visible
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
       const review = await analystReview(userMessage, history);
       if (review.needsClarification) {
         const analystMessage: Message = {
@@ -623,13 +652,11 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
         const updatedMessages = [...newMessages, analystMessage];
         setMessages(updatedMessages);
         setIsLoading(false);
-        setCurrentAgent(null);
         await saveConversation(updatedMessages);
         return;
       }
 
       // 2. Engineer Phase (Gemini)
-      setCurrentAgent('engineer');
       
       // Prepare current images for API if exists
       let imageParts: any[] = [];
@@ -678,12 +705,10 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
       );
 
       // 3. Critic Phase (OpenRouter)
-      setCurrentAgent('critic');
       const critic = await criticReview(enrichedUserMessage, result.preview_code);
       
       if (!critic.approved) {
         // Re-generate with feedback
-        setCurrentAgent('engineer');
         result = await generateWebsite(
           `${enrichedUserMessage}\n\nFEEDBACK DU CRITIQUE (À CORRIGER) :\n${critic.feedback}`,
           history.slice(0, -1),
@@ -694,11 +719,10 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
       
       const updatedMessages: Message[] = [...newMessages, { 
         role: 'model', 
-        content: result._provider === 'claude' 
-          ? `[Claude 3.5 Sonnet Fallback] ${result.explanation}` 
-          : result.explanation,
+        content: result.explanation,
         code: result.preview_code,
-        files: result.files
+        files: result.files,
+        _provider: result._provider
       }];
       setMessages(updatedMessages);
       setGeneratedCode(result.preview_code);
@@ -901,290 +925,261 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
     }
   };
 
-  const isDark = theme === 'dark';
-
   return (
     <div className={`flex flex-col h-screen ${isDark ? 'bg-[#0A0A0A] text-white' : 'bg-[#F8F9FA] text-slate-900'} overflow-hidden font-sans transition-colors duration-500`}>
+      {showAnnouncement && (
+        <div className="bg-blue-600 text-white px-4 py-2 flex items-center justify-between text-sm font-medium shrink-0 z-[60]">
+          <div className="flex items-center gap-2">
+            <Sparkles size={16} />
+            <span>Nouvelle mise à jour ! Les erreurs seront bientôt corrigées.</span>
+          </div>
+          <button onClick={() => setShowAnnouncement(false)} className="hover:bg-white/10 p-1 rounded transition-colors">
+            <X size={16} />
+          </button>
+        </div>
+      )}
       {/* Header */}
-      <header className={`flex items-center justify-between px-4 lg:px-8 py-3 lg:py-4 border-b ${isDark ? 'border-white/5 bg-[#0A0A0A]/90' : 'border-slate-200 bg-white/90'} backdrop-blur-xl z-50 sticky top-0`}>
-        <div className="flex items-center gap-3 lg:gap-5">
+      <header className={`h-14 border-b flex items-center justify-between px-4 shrink-0 z-50 ${isDark ? 'bg-[#0A0A0A] border-white/5' : 'bg-white border-slate-200'}`}>
+        <div className="flex items-center gap-4">
           <button 
             onClick={() => setIsHistoryOpen(!isHistoryOpen)}
-            className={`p-2 lg:p-3 rounded-xl transition-all duration-300 ${isHistoryOpen ? (isDark ? 'bg-white text-black' : 'bg-slate-900 text-white') : (isDark ? 'bg-[#141414] text-white/40 hover:bg-[#1A1A1A] hover:text-white' : 'bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-900')} border ${isDark ? 'border-white/5' : 'border-slate-200'} shadow-sm group`}
+            className={`p-2 rounded-lg transition-colors ${isDark ? 'text-white/60 hover:bg-white/5 hover:text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}
           >
-            <div className="flex flex-col gap-1 w-4 lg:w-4.5">
-              <div className={`h-[1.5px] lg:h-[2px] transition-all duration-300 ${isHistoryOpen ? (isDark ? 'bg-black' : 'bg-white') : 'bg-current'}`} />
-              <div className={`h-[1.5px] lg:h-[2px] transition-all duration-300 ${isHistoryOpen ? (isDark ? 'bg-black' : 'bg-white') : 'bg-current'}`} />
-              <div className={`h-[1.5px] lg:h-[2px] transition-all duration-300 ${isHistoryOpen ? (isDark ? 'bg-black' : 'bg-white') : 'bg-current'}`} />
-            </div>
+            <Menu size={20} />
           </button>
-          
-          <div className="flex items-center gap-2 lg:gap-3 group cursor-pointer">
-            <div className={`w-8 h-8 lg:w-10 lg:h-10 ${isDark ? 'bg-[#141414] border-white/10' : 'bg-white border-slate-200'} rounded-lg lg:rounded-xl flex items-center justify-center shadow-sm border overflow-hidden transition-transform group-hover:scale-105`}>
-              <img src={LOGO_URL} alt="COOK IA Logo" className="w-full h-full object-cover" />
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 bg-orange-primary rounded-md flex items-center justify-center">
+              <Zap size={14} className="text-white" />
             </div>
-            <div className="hidden sm:block">
-              <h1 className="text-base lg:text-xl font-black tracking-tighter flex items-center gap-1.5 leading-none mb-0.5">
-                COOK <span className="text-orange-primary">IA</span>
-              </h1>
-              <p className={`text-[7px] lg:text-[9px] ${isDark ? 'text-white/20' : 'text-slate-400'} uppercase tracking-[0.2em] lg:tracking-[0.3em] font-bold`}>Full-Stack Web Development</p>
-            </div>
-          </div>
-
-          <div className="hidden xl:flex items-center gap-6 ml-4">
-            {/* Removed Documentation, Community, Gacha and Credits per user request */}
+            <span className={`font-bold text-sm tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>COOK IA</span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 lg:gap-6">
-          <div className={`hidden md:flex ${isDark ? 'bg-[#0D0D0D] border-white/5' : 'bg-slate-100 border-slate-200'} p-1 rounded-xl border shadow-inner`}>
-            <button 
-              onClick={() => setViewMode('preview')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all duration-300 ${viewMode === 'preview' ? (isDark ? 'bg-white text-black shadow-lg' : 'bg-white text-slate-900 shadow-sm') : (isDark ? 'text-white/30 hover:text-white' : 'text-slate-400 hover:text-slate-900')}`}
-            >
-              <Eye size={12} />
-              Preview
-            </button>
-            <button 
-              onClick={() => setViewMode('code')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all duration-300 ${viewMode === 'code' ? (isDark ? 'bg-white text-black shadow-lg' : 'bg-white text-slate-900 shadow-sm') : (isDark ? 'text-white/30 hover:text-white' : 'text-slate-400 hover:text-slate-900')}`}
-            >
-              <Code2 size={12} />
-              Code
-            </button>
-          </div>
+        {/* View Mode Switcher */}
+        <div className={`flex items-center p-1 rounded-xl border ${isDark ? 'bg-[#141414] border-white/5' : 'bg-slate-50 border-slate-200'}`}>
+          <button 
+            onClick={() => setViewMode('chat')}
+            className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              viewMode === 'chat' 
+                ? (isDark ? 'bg-white/10 text-white shadow-lg' : 'bg-white text-slate-900 shadow-sm') 
+                : (isDark ? 'text-white/40 hover:text-white/60' : 'text-slate-400 hover:text-slate-600')
+            }`}
+          >
+            <MessageSquare size={14} />
+            Chat
+          </button>
+          <button 
+            onClick={() => setViewMode('code')}
+            className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              viewMode === 'code' 
+                ? (isDark ? 'bg-white/10 text-white shadow-lg' : 'bg-white text-slate-900 shadow-sm') 
+                : (isDark ? 'text-white/40 hover:text-white/60' : 'text-slate-400 hover:text-slate-600')
+            }`}
+          >
+            <Code size={14} />
+            Code
+          </button>
+        </div>
 
-          <div className={`hidden md:block h-8 w-[1px] ${isDark ? 'bg-white/5' : 'bg-slate-200'}`} />
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => setTheme(isDark ? 'light' : 'dark')}
+            className={`p-2 rounded-lg transition-colors ${isDark ? 'text-white/60 hover:bg-white/5 hover:text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}
+          >
+            {isDark ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+
+          <button 
+            onClick={() => {
+              setSettingsTab('account');
+              setIsProjectSettings(false);
+              setIsSettingsModalOpen(true);
+            }}
+            className={`p-2 rounded-lg transition-colors ${isDark ? 'text-white/60 hover:bg-white/5 hover:text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}
+          >
+            <User size={18} />
+          </button>
           
-          <div className="flex items-center gap-2 lg:gap-4">
-            {user ? (
-              <div className={`flex items-center gap-2 lg:gap-3 ${isDark ? 'bg-white/5 border-white/5' : 'bg-slate-100 border-slate-200'} pl-1.5 pr-3 py-1 rounded-xl border`}>
-                <div className="w-6 h-6 rounded-lg bg-orange-primary/20 border border-orange-primary/20 flex items-center justify-center overflow-hidden shadow-inner">
-                  {user.user_metadata?.avatar_url ? (
-                    <img src={user.user_metadata.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="text-[8px] font-black text-orange-primary">{user.email?.charAt(0).toUpperCase()}</span>
-                  )}
-                </div>
-                <button 
-                  onClick={() => supabase.auth.signOut()}
-                  className={`${isDark ? 'text-white/30 hover:text-white' : 'text-slate-400 hover:text-slate-900'} text-[8px] font-black uppercase tracking-widest transition-colors`}
-                >
-                  Logout
-                </button>
-              </div>
-            ) : (
-              <button 
-                onClick={() => setIsAuthModalOpen(true)}
-                className={`${isDark ? 'text-white/30 hover:text-white hover:bg-white/5' : 'text-slate-400 hover:text-slate-900 hover:bg-slate-100'} text-[8px] font-black uppercase tracking-widest transition-colors px-3 py-1.5 rounded-lg border border-transparent`}
-              >
-                Sign In
-              </button>
-            )}
-
-            <div className={`hidden sm:block h-6 w-[1px] ${isDark ? 'bg-white/5' : 'bg-slate-200'}`} />
-
-            <div className="hidden sm:flex items-center gap-1.5">
-              <button 
-                onClick={() => setTheme(isDark ? 'light' : 'dark')}
-                title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
-                className={`transition-all p-2 rounded-lg ${isDark ? 'text-white/30 hover:text-white hover:bg-white/5' : 'text-slate-400 hover:text-slate-900 hover:bg-slate-100'}`}
-              >
-                {isDark ? <Sun size={16} /> : <Moon size={16} />}
-              </button>
-              <button 
-                onClick={() => setIsStyleEditorOpen(!isStyleEditorOpen)}
-                title="Style Editor"
-                className={`transition-all p-2 rounded-lg ${isStyleEditorOpen ? 'bg-orange-primary text-white shadow-lg' : (isDark ? 'text-white/30 hover:text-white hover:bg-white/5' : 'text-slate-400 hover:text-slate-900 hover:bg-slate-100')}`}
-              >
-                <Palette size={16} />
-              </button>
-              <button 
-                onClick={() => handleConvertToReact('react')}
-                disabled={!generatedCode || isConverting}
-                title="Convert to React"
-                className={`${isDark ? 'text-white/30 hover:text-white hover:bg-white/5' : 'text-slate-400 hover:text-slate-900 hover:bg-slate-100'} transition-all p-2 rounded-lg disabled:opacity-10 flex items-center gap-1.5`}
-              >
-                {isConverting ? <Loader2 size={14} className="animate-spin" /> : <Code2 size={14} />}
-                <span className="text-[8px] font-bold uppercase hidden xl:inline">React</span>
-              </button>
-              <button 
-                onClick={() => handleConvertToReact('nextjs')}
-                disabled={!generatedCode || isConverting}
-                title="Convert to Next.js"
-                className={`${isDark ? 'text-white/30 hover:text-white hover:bg-white/5' : 'text-slate-400 hover:text-slate-900 hover:bg-slate-100'} transition-all p-2 rounded-lg disabled:opacity-10 flex items-center gap-1.5`}
-              >
-                {isConverting ? <Loader2 size={14} className="animate-spin" /> : <Braces size={14} />}
-                <span className="text-[8px] font-bold uppercase hidden xl:inline">Next</span>
-              </button>
-              <button 
-                onClick={() => handleConvertToReact('python')}
-                disabled={!generatedCode || isConverting}
-                title="Convert to Python (Flask)"
-                className={`${isDark ? 'text-white/30 hover:text-white hover:bg-white/5' : 'text-slate-400 hover:text-slate-900 hover:bg-slate-100'} transition-all p-2 rounded-lg disabled:opacity-10 flex items-center gap-1.5`}
-              >
-                {isConverting ? <Loader2 size={14} className="animate-spin" /> : <div className="text-[9px] font-bold">PY</div>}
-                <span className="text-[8px] font-bold uppercase hidden xl:inline">Python</span>
-              </button>
-              <button 
-                onClick={() => handleConvertToReact('javascript')}
-                disabled={!generatedCode || isConverting}
-                title="Convert to Modular JS"
-                className={`${isDark ? 'text-white/30 hover:text-white hover:bg-white/5' : 'text-slate-400 hover:text-slate-900 hover:bg-slate-100'} transition-all p-2 rounded-lg disabled:opacity-10 flex items-center gap-1.5`}
-              >
-                {isConverting ? <Loader2 size={14} className="animate-spin" /> : <div className="text-[9px] font-bold">JS</div>}
-                <span className="text-[8px] font-bold uppercase hidden xl:inline">JS</span>
-              </button>
-              <button 
-                onClick={handleNetlifyDeploy}
-                disabled={!generatedCode || isDeploying}
-                title="Deploy to Netlify"
-                className={`${isDark ? 'text-white/30 hover:text-white hover:bg-white/5' : 'text-slate-400 hover:text-slate-900 hover:bg-slate-100'} transition-all p-2 rounded-lg disabled:opacity-10 flex items-center gap-1.5`}
-              >
-                {isDeploying ? <Loader2 size={14} className="animate-spin" /> : <Rocket size={14} />}
-              </button>
-              <button 
-                onClick={handleDownload}
-                disabled={!generatedCode}
-                title="Download HTML"
-                className={`${isDark ? 'text-white/30 hover:text-white hover:bg-white/5' : 'text-slate-400 hover:text-slate-900 hover:bg-slate-100'} transition-all p-2 rounded-lg disabled:opacity-10 flex items-center gap-1.5`}
-              >
-                <Download size={14} />
-                <span className="text-[8px] font-bold uppercase hidden xl:inline">HTML</span>
-              </button>
-              {messages.some(m => m.role === 'model' && m.files) && (
-                <button 
-                  onClick={handleDownloadZip}
-                  title="Download Project (ZIP)"
-                  className={`${isDark ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-slate-900 text-white hover:bg-slate-800'} transition-all p-2 rounded-lg flex items-center gap-1.5`}
-                >
-                  <Download size={14} className="text-orange-primary" />
-                  <span className="text-[8px] font-bold uppercase hidden xl:inline">ZIP</span>
-                </button>
-              )}
-              <button 
-                onClick={handleGithubClick}
-                className={`${isDark ? 'text-white/30 hover:text-white hover:bg-white/5' : 'text-slate-400 hover:text-slate-900 hover:bg-slate-100'} transition-all p-2 rounded-lg`}
-              >
-                <Github size={16} />
-              </button>
-            </div>
-            
-            <button 
-              onClick={() => setIsPublishModalOpen(true)}
-              className="bg-orange-primary hover:bg-orange-600 text-white px-4 lg:px-6 py-2 rounded-lg lg:rounded-xl font-black text-[9px] lg:text-[10px] uppercase tracking-widest transition-all shadow-lg active:scale-95 hover:-translate-y-0.5"
-            >
-              Publish
-            </button>
-          </div>
+          <button 
+            onClick={() => {
+              setSettingsTab('publish');
+              setIsProjectSettings(true);
+              setIsSettingsModalOpen(true);
+            }}
+            className="px-4 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 flex items-center gap-2"
+          >
+            <Share2 size={14} />
+            Share
+          </button>
         </div>
       </header>
 
-      {/* Mobile Tab Switcher */}
-      <div className={`lg:hidden flex border-b ${isDark ? 'border-white/5 bg-[#0A0A0A]' : 'border-slate-200 bg-white'}`}>
-        <button 
-          onClick={() => setActiveMobileTab('chat')}
-          className={`flex-1 py-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all ${activeMobileTab === 'chat' ? 'text-orange-primary border-b-2 border-orange-primary' : (isDark ? 'text-white/20' : 'text-slate-300')}`}
+      {/* Main Layout */}
+      <div className="flex-1 flex overflow-hidden relative">
+        {/* History Sidebar */}
+        <motion.div 
+          initial={false}
+          animate={{ width: isHistoryOpen ? 260 : 0, opacity: isHistoryOpen ? 1 : 0 }}
+          className="overflow-hidden shrink-0"
         >
-          Chat
-        </button>
-        <button 
-          onClick={() => setActiveMobileTab('preview')}
-          className={`flex-1 py-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all ${activeMobileTab === 'preview' ? 'text-orange-primary border-b-2 border-orange-primary' : (isDark ? 'text-white/20' : 'text-slate-300')}`}
-        >
-          Preview
-        </button>
-      </div>
+          <div className="w-[260px] h-full">
+            <HistorySidebar 
+              isDark={isDark}
+              conversations={conversations}
+              currentConversationId={currentConversationId}
+              onSelectConversation={handleSelectConversation}
+              onDeleteConversation={handleDeleteConversation}
+              onNewChat={handleNewChat}
+              onOpenSettings={(tab) => {
+                setSettingsTab(tab || 'general');
+                setIsProjectSettings(false);
+                setIsSettingsModalOpen(true);
+              }}
+              onSelectView={(view) => setViewMode(view as any)}
+              currentView={viewMode}
+              user={user}
+            />
+          </div>
+        </motion.div>
 
-      <main className="flex flex-1 overflow-hidden p-2 lg:p-4 gap-2 lg:gap-4 relative">
-        <AnimatePresence>
-          {isHistoryOpen && (
-            <>
-              {/* Mobile Overlay */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setIsHistoryOpen(false)}
-                className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[60]"
-              />
-              <motion.div
-                initial={{ width: 0, opacity: 0, x: -20 }}
-                animate={{ width: 280, opacity: 1, x: 0 }}
-                exit={{ width: 0, opacity: 0, x: -20 }}
-                transition={{ type: 'spring', damping: 25, stiffness: 120 }}
-                className="absolute lg:relative left-0 top-0 bottom-0 z-[70] lg:z-0 h-full overflow-hidden bg-[#0D0D0D] lg:bg-transparent"
-              >
-                <HistorySidebar 
-                  conversations={conversations}
-                  currentConversationId={currentConversationId}
-                  onSelectConversation={(id) => {
-                    handleSelectConversation(id);
-                    if (window.innerWidth < 1024) setIsHistoryOpen(false);
+        {/* Content Area */}
+        <main className="flex-1 flex flex-col min-w-0 relative">
+          {viewMode === 'your-apps' ? (
+            <div className={`flex-1 flex flex-col items-center justify-center p-8 ${isDark ? 'bg-[#0A0A0A] text-white' : 'bg-white text-slate-900'}`}>
+              <h2 className="text-3xl font-bold mb-4">Your Apps</h2>
+              <p className="text-slate-500 mb-8 text-center max-w-md">Toutes les applications que vous avez conçues avec Cook IA.</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-6xl">
+                {conversations.map(conv => (
+                  <div key={conv.id} className={`p-4 rounded-2xl border ${isDark ? 'border-white/10 bg-white/5' : 'border-slate-200 bg-slate-50'} cursor-pointer hover:border-blue-500 transition-all`} onClick={() => {
+                    setCurrentConversationId(conv.id);
+                    setMessages(conv.messages);
+                    setViewMode('chat');
+                  }}>
+                    <div className="aspect-video rounded-xl bg-slate-200 mb-4 overflow-hidden flex items-center justify-center p-4">
+                      <img src={LOGO_URL} alt={conv.title} className="w-24 h-24 object-contain opacity-50" />
+                    </div>
+                    <h3 className="font-semibold truncate">{conv.title}</h3>
+                    <p className="text-xs text-slate-500">{new Date(conv.created_at).toLocaleDateString()}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : viewMode === 'faq' ? (
+            <div className={`flex-1 flex flex-col items-center p-8 overflow-y-auto ${isDark ? 'bg-[#0A0A0A] text-white' : 'bg-white text-slate-900'}`}>
+              <div className="max-w-3xl w-full">
+                <h2 className="text-3xl font-bold mb-8 text-center">FAQ & Informations</h2>
+                
+                <div className="relative mb-12">
+                  <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input 
+                    type="text"
+                    placeholder="Rechercher dans la FAQ..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className={`w-full pl-12 pr-4 py-4 rounded-2xl border text-lg focus:outline-none focus:border-blue-500 transition-all ${
+                      isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
+                    }`}
+                  />
+                </div>
+
+                <div className="space-y-6">
+                  {[
+                    { q: "Qu'est-ce que Cook IA ?", a: "Cook IA est une plateforme de création d'applications web ultra-moderne pilotée par l'intelligence artificielle, créée par Benit Madimba." },
+                    { q: "Comment créer un site 3D ?", a: "Il suffit de demander explicitement à Cook IA de \"créer un site web 3D\". Par défaut, il crée des sites 2D performants." },
+                    { q: "Puis-je cloner un site web ?", a: "Oui, utilisez l'option 'Clone site' dans le menu pour reproduire un site existant à partir de son URL." },
+                    { q: "Comment créer un site e-commerce ?", a: "Vous pouvez demander à Cook IA de créer un site e-commerce, ou utiliser l'option 'E-commerce' pour générer un site à partir d'un lien produit." },
+                    { q: "Mes données sont-elles sécurisées ?", a: "Oui, vos clés API et secrets sont stockés de manière privée et ne sont jamais exposés publiquement." },
+                    { q: "Puis-je collaborer en temps réel ?", a: "Oui, via l'onglet Share dans les paramètres, vous pouvez donner accès à d'autres personnes pour modifier votre projet en temps réel." }
+                  ].filter(item => 
+                    item.q.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                    item.a.toLowerCase().includes(searchQuery.toLowerCase())
+                  ).map((item, i) => (
+                    <motion.div 
+                      key={i}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className={`p-6 rounded-2xl border ${isDark ? 'border-white/10 bg-white/5' : 'border-slate-200 bg-slate-50'}`}
+                    >
+                      <h3 className="font-bold mb-2">{item.q}</h3>
+                      <p className="text-sm text-slate-500">{item.a}</p>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : viewMode === 'chat' ? (
+            <div className="flex-1 flex overflow-hidden">
+              <div className="w-1/2 min-w-0">
+                <ChatInterface 
+                  isDark={isDark}
+                  messages={messages}
+                  isLoading={isLoading}
+                  prompt={prompt}
+                  setPrompt={setPrompt}
+                  handleSend={handleSend}
+                  onAbort={handleAbort}
+                  chatEndRef={chatEndRef}
+                  logoUrl={LOGO_URL}
+                  selectedImages={selectedImages}
+                  setSelectedImages={setSelectedImages}
+                  selectedVideos={selectedVideos}
+                  setSelectedVideos={setSelectedVideos}
+                  onOpenImageSearch={() => {
+                    setImageSearchContext('chat');
+                    setIsImageSearchOpen(true);
                   }}
-                  onNewChat={() => {
-                    handleNewChat();
-                    if (window.innerWidth < 1024) setIsHistoryOpen(false);
-                  }}
-                  onDeleteConversation={handleDeleteConversation}
                   onOpenSettings={(tab) => {
-                    setSettingsTab(tab || 'general');
+                    setSettingsTab(tab || 'publish');
+                    setIsProjectSettings(true);
                     setIsSettingsModalOpen(true);
                   }}
-                  user={user}
+                  onCloneSite={handleCloneSite}
+                  onEcommerceProduct={handleEcommerceProduct}
+                />
+              </div>
+              <div className={`w-1/2 border-l hidden lg:block ${isDark ? 'border-white/5' : 'border-slate-200'}`}>
+                <Preview 
+                  viewMode="preview"
+                  generatedCode={generatedCode}
+                  files={[...messages].reverse().find(m => m.role === 'model' && m.files)?.files || []}
+                  iframeRef={iframeRef}
+                  onRefresh={handleRefresh}
+                  onExpand={handleExpand}
+                  onEdit={() => setViewMode('code')}
+                  onCodeChange={(newCode) => {
+                    skipIframeUpdate.current = true;
+                    setGeneratedCode(newCode);
+                  }}
+                  onDownloadZip={handleDownloadZip}
+                  styleConfig={styleConfig}
+                  sectionEdit={sectionEdit}
+                  onSectionSelect={setSectionEdit}
                   isDark={isDark}
                 />
-              </motion.div>
-            </>
+              </div>
+            </div>
+          ) : (
+            <Preview 
+              viewMode={viewMode}
+              generatedCode={generatedCode}
+              files={[...messages].reverse().find(m => m.role === 'model' && m.files)?.files || []}
+              iframeRef={iframeRef}
+              onRefresh={handleRefresh}
+              onExpand={handleExpand}
+              onEdit={() => setViewMode('code')}
+              onCodeChange={(newCode) => {
+                skipIframeUpdate.current = true;
+                setGeneratedCode(newCode);
+              }}
+              onDownloadZip={handleDownloadZip}
+              styleConfig={styleConfig}
+              sectionEdit={sectionEdit}
+              onSectionSelect={setSectionEdit}
+              isDark={isDark}
+            />
           )}
-        </AnimatePresence>
-
-        <div className={`flex-1 flex gap-2 lg:gap-4 h-full overflow-hidden ${activeMobileTab === 'chat' ? 'flex' : 'hidden lg:flex'}`}>
-          <ChatInterface 
-            messages={messages}
-            prompt={prompt}
-            setPrompt={setPrompt}
-            handleSend={handleSend}
-            onAbort={handleAbort}
-            isLoading={isLoading}
-            currentAgent={currentAgent}
-            chatEndRef={chatEndRef}
-            logoUrl={LOGO_URL}
-            selectedImages={selectedImages}
-            setSelectedImages={setSelectedImages}
-            selectedVideos={selectedVideos}
-            setSelectedVideos={setSelectedVideos}
-            onOpenImageSearch={() => {
-              setImageSearchContext('chat');
-              setIsImageSearchOpen(true);
-            }}
-            onCloneSite={handleCloneSite}
-            onEcommerceProduct={handleEcommerceProduct}
-            isDark={isDark}
-          />
-        </div>
-        
-        <div className={`flex-1 flex h-full overflow-hidden ${activeMobileTab === 'preview' ? 'flex' : 'hidden lg:flex'}`}>
-          <Preview 
-            viewMode={viewMode}
-            generatedCode={generatedCode}
-            files={[...messages].reverse().find(m => m.role === 'model' && m.files)?.files || []}
-            iframeRef={iframeRef}
-            onRefresh={handleRefresh}
-            onExpand={handleExpand}
-            onEdit={() => setViewMode('code')}
-            onCodeChange={(newCode) => {
-              skipIframeUpdate.current = true;
-              setGeneratedCode(newCode);
-            }}
-            onDownloadZip={handleDownloadZip}
-            styleConfig={styleConfig}
-            sectionEdit={sectionEdit}
-            onSectionSelect={setSectionEdit}
-            isDark={isDark}
-          />
-        </div>
-      </main>
+        </main>
+      </div>
 
       <AnimatePresence>
         {isStyleEditorOpen && (
@@ -1204,7 +1199,6 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
             onClose={() => setSectionEdit({ isActive: false })}
             onUpdate={handleSectionUpdate}
             isLoading={isLoading}
-            currentAgent={currentAgent}
             onOpenImageSearch={() => {
               setImageSearchContext('section');
               setIsImageSearchOpen(true);
@@ -1439,6 +1433,9 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
         onClose={() => setIsSettingsModalOpen(false)}
         initialTab={settingsTab}
         user={user}
+        isProjectSettings={isProjectSettings}
+        prompts={prompts}
+        isDark={isDark}
       />
     </div>
   );

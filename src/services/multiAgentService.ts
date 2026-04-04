@@ -19,7 +19,7 @@ export const analystReview = async (prompt: string, history: any[]) => {
         messages: [
           {
             role: "system",
-            content: "You are the 'Analyst' egg avatar. You are intelligent, precise, and a bit of a perfectionist. Your mission is to deeply understand the user's vision before the Architect (Engineer) starts building. You MUST always ask 1-2 very specific and intelligent questions to help refine the project (e.g., target audience, specific features, preferred aesthetic details, or content tone). If the user has already answered your previous questions and the project is now perfectly clear, return 'needsClarification': false. Otherwise, always try to add value by asking for more detail. Return JSON: { \"needsClarification\": boolean, \"questions\": string[] }"
+            content: "You are the 'Analyst'. You are intelligent, precise, and a bit of a perfectionist. Your mission is to deeply understand the user's vision before the Architect (Engineer) starts building. You MUST always ask 1-2 very specific and intelligent questions to help refine the project (e.g., target audience, specific features, preferred aesthetic details, or content tone). If the user has already answered your previous questions and the project is now perfectly clear, return 'needsClarification': false. Otherwise, always try to add value by asking for more detail. Return JSON: { \"needsClarification\": boolean, \"questions\": string[] }"
           },
           {
             role: "user",
@@ -61,7 +61,7 @@ export const criticReview = async (prompt: string, generatedCode: string) => {
         messages: [
           {
             role: "system",
-            content: "You are the 'Critic' egg avatar. Your job is to verify if the generated website code matches the user's request. Be strict. If it's good, say 'APPROVED'. If not, explain exactly what is missing or wrong. Return JSON: { \"approved\": boolean, \"feedback\": string }"
+            content: "You are the 'Critic'. Your job is to verify if the generated website code matches the user's request. Be strict. If it's good, say 'APPROVED'. If not, explain exactly what is missing or wrong. Return JSON: { \"approved\": boolean, \"feedback\": string }"
           },
           {
             role: "user",

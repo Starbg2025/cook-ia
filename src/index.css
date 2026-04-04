@@ -1,10 +1,20 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Google+Sans:wght@400;500;700&display=swap');
 @import "tailwindcss";
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-google: "Google Sans", "Inter", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
-  --font-serif: "Playfair Display", serif;
+  
+  --color-google-blue: #1a73e8;
+  --color-google-blue-hover: #1557b0;
+  --color-google-gray-50: #f8f9fa;
+  --color-google-gray-100: #f1f3f4;
+  --color-google-gray-200: #e8eaed;
+  --color-google-gray-300: #dadce0;
+  --color-google-gray-700: #3c4043;
+  --color-google-gray-800: #202124;
+  --color-google-gray-900: #171717;
   
   --color-orange-primary: #FF6B00;
   --color-bg-dark: #0A0A0A;
@@ -16,6 +26,11 @@ body {
   background-color: var(--color-bg-dark);
   color: #FFFFFF;
   font-family: var(--font-sans);
+  overflow: hidden;
+}
+
+.google-sans {
+  font-family: var(--font-google);
 }
 
 .glass {
@@ -30,4 +45,10 @@ body {
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+@layer base {
+  button {
+    @apply cursor-pointer;
+  }
 }
