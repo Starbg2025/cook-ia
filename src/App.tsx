@@ -38,7 +38,6 @@ import {
   ImagePlus,
   ImageIcon,
   ShoppingBag,
-  Share2,
   User
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -644,10 +643,25 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
 
       // 1. Analyst Phase (Groq)
       const review = await analystReview(userMessage, history);
+      
+      if (review.isTechnicalQuestion && review.answer) {
+        const technicalMessage: Message = {
+          role: 'model',
+          content: `[Expert Technique] ${review.answer}`,
+          _provider: 'Groq'
+        };
+        const updatedMessages = [...newMessages, technicalMessage];
+        setMessages(updatedMessages);
+        setIsLoading(false);
+        await saveConversation(updatedMessages);
+        return;
+      }
+
       if (review.needsClarification) {
         const analystMessage: Message = {
           role: 'model',
-          content: `[Analyste] Bonjour ! Je suis l'Analyste. Pour m'assurer que l'Architecte construise exactement le chef-d'œuvre que vous imaginez, j'ai besoin de quelques précisions :\n\n${review.questions.map((q: string, i: number) => `${i + 1}. ${q}`).join('\n')}`
+          content: `[Analyste] Bonjour ! Je suis l'Analyste. Pour m'assurer que l'Architecte construise exactement le chef-d'œuvre que vous imaginez, j'ai besoin de quelques précisions :\n\n${review.questions.map((q: string, i: number) => `${i + 1}. ${q}`).join('\n')}`,
+          _provider: 'Groq'
         };
         const updatedMessages = [...newMessages, analystMessage];
         setMessages(updatedMessages);
@@ -728,16 +742,6 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
       setGeneratedCode(result.preview_code);
       setViewMode('preview');
       
-      // Enqueue invisible background task (Watchdog Architecture)
-      fetch('/api/watchdog/enqueue', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          type: 'site_optimization', 
-          payload: { siteName: siteName || 'untitled', codeLength: result.preview_code.length } 
-        })
-      }).catch(err => console.error("Watchdog enqueue failed:", err));
-
       // Save to Supabase
       await saveConversation(updatedMessages);
     } catch (error: any) {
@@ -1008,41 +1012,11 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
           </button>
 
           <button 
-            onClick={() => {
-              if (!user) {
-                setIsAuthModalOpen(true);
-                return;
-              }
-              setSettingsTab('account');
-              setIsProjectSettings(false);
-              setIsSettingsModalOpen(true);
-            }}
-            className={`flex items-center gap-2 p-1 pr-3 rounded-full transition-all ${isDark ? 'hover:bg-white/5 text-white/60 hover:text-white' : 'hover:bg-slate-100 text-slate-600 hover:text-slate-900'}`}
+            onClick={handleGithubClick}
+            className="px-4 py-1.5 bg-white text-black rounded-lg text-xs font-bold hover:bg-white/90 transition-all shadow-lg flex items-center gap-2"
           >
-            <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-xs overflow-hidden">
-              {user?.user_metadata?.avatar_url ? (
-                <img src={user.user_metadata.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
-              ) : (
-                user?.email?.[0].toUpperCase() || <User size={16} />
-              )}
-            </div>
-            {user && (
-              <span className="text-xs font-semibold hidden sm:inline">
-                {user.user_metadata?.username || user.email?.split('@')[0]}
-              </span>
-            )}
-          </button>
-          
-          <button 
-            onClick={() => {
-              setSettingsTab('publish');
-              setIsProjectSettings(true);
-              setIsSettingsModalOpen(true);
-            }}
-            className="px-4 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 flex items-center gap-2"
-          >
-            <Share2 size={14} />
-            Share
+            <Github size={14} />
+            GitHub
           </button>
         </div>
       </header>
@@ -1073,6 +1047,8 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
                 setIsSettingsModalOpen(true);
               }}
               onSelectView={(view) => setViewMode(view as any)}
+              onCloneSite={handleCloneSite}
+              onEcommerceProduct={handleEcommerceProduct}
               currentView={viewMode}
               user={user}
             />

@@ -19,7 +19,23 @@ export const analystReview = async (prompt: string, history: any[]) => {
         messages: [
           {
             role: "system",
-            content: "You are the 'Analyst'. You are intelligent, precise, and a bit of a perfectionist. Your mission is to deeply understand the user's vision before the Architect (Engineer) starts building. You MUST always ask 1-2 very specific and intelligent questions to help refine the project (e.g., target audience, specific features, preferred aesthetic details, or content tone). If the user has already answered your previous questions and the project is now perfectly clear, return 'needsClarification': false. Otherwise, always try to add value by asking for more detail. Return JSON: { \"needsClarification\": boolean, \"questions\": string[] }"
+            content: `You are the 'Analyst' for COOK IA. You are intelligent, precise, and a bit of a perfectionist. 
+
+Your mission is twofold:
+1. DEEP UNDERSTANDING: Before the Architect (Engineer) starts building, ensure the user's vision is crystal clear. Ask 1-2 very specific and intelligent questions to refine the project (e.g., target audience, specific features, preferred aesthetic details, or content tone).
+2. TECHNICAL SUPPORT: If the user asks a technical question (e.g., "How do I save data to Supabase?", "Give me the SQL for a users table", "How do I use my Stripe key?"), you MUST answer it directly and comprehensively. 
+
+PROACTIVE GUIDANCE:
+- If you notice missing configurations or steps required for a feature to work (e.g., Supabase setup, Stripe keys), you MUST inform the user and provide clear instructions on how to resolve it.
+- Remind the user that they can store sensitive keys in the "Secrets" section of the settings.
+
+Return JSON: 
+{ 
+  "needsClarification": boolean, 
+  "questions": string[], 
+  "isTechnicalQuestion": boolean, 
+  "answer": string 
+}`
           },
           {
             role: "user",
@@ -32,13 +48,18 @@ export const analystReview = async (prompt: string, history: any[]) => {
 
     const data = await response.json();
     const result = JSON.parse(data.choices[0].message.content);
+    
+    if (result.isTechnicalQuestion && result.answer) {
+      return result;
+    }
+
     if (result.needsClarification && result.questions.length > 0) {
       return result;
     }
-    return { needsClarification: false, questions: [] };
+    return { needsClarification: false, questions: [], isTechnicalQuestion: false };
   } catch (error) {
     console.error("Analyst error:", error);
-    return { needsClarification: false, questions: [] };
+    return { needsClarification: false, questions: [], isTechnicalQuestion: false };
   }
 };
 

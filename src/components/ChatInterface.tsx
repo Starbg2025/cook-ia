@@ -210,10 +210,24 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
           />
           
           <div className="absolute left-3 bottom-3 flex items-center gap-1">
-            <button className={`p-2 rounded-lg ${isDark ? 'text-white/40 hover:text-white hover:bg-white/5' : 'text-slate-400 hover:text-slate-900 hover:bg-slate-100'} transition-all`}>
+            <button 
+              onClick={onCloneSite}
+              className={`p-2 rounded-lg ${isDark ? 'text-orange-primary hover:text-orange-400 hover:bg-white/5' : 'text-orange-600 hover:text-orange-700 hover:bg-slate-100'} transition-all`}
+              title="Clone site"
+            >
+              <Copy size={18} />
+            </button>
+            <button 
+              onClick={onEcommerceProduct}
+              className={`p-2 rounded-lg ${isDark ? 'text-orange-primary hover:text-orange-400 hover:bg-white/5' : 'text-orange-600 hover:text-orange-700 hover:bg-slate-100'} transition-all`}
+              title="E-commerce product"
+            >
+              <ShoppingBag size={18} />
+            </button>
+            <button className={`p-2 rounded-lg ${isDark ? 'text-orange-primary hover:text-orange-400 hover:bg-white/5' : 'text-orange-600 hover:text-orange-700 hover:bg-slate-100'} transition-all`}>
               <Layout size={18} />
             </button>
-            <button className={`p-2 rounded-lg ${isDark ? 'text-white/40 hover:text-white hover:bg-white/5' : 'text-slate-400 hover:text-slate-900 hover:bg-slate-100'} transition-all`}>
+            <button className={`p-2 rounded-lg ${isDark ? 'text-orange-primary hover:text-orange-400 hover:bg-white/5' : 'text-orange-600 hover:text-orange-700 hover:bg-slate-100'} transition-all`}>
               <Mic size={18} />
             </button>
             <input 

@@ -15,7 +15,9 @@ import {
   ExternalLink,
   ChevronRight,
   Sparkles,
-  Zap
+  Zap,
+  Copy,
+  ShoppingBag
 } from 'lucide-react';
 import { Conversation } from '../types';
 import { supabase } from '../services/supabaseService';
@@ -29,6 +31,8 @@ interface HistorySidebarProps {
   onDeleteConversation: (id: string) => void;
   onOpenSettings: (tab?: any) => void;
   onSelectView: (view: 'your-apps' | 'faq') => void;
+  onCloneSite: () => void;
+  onEcommerceProduct: () => void;
   currentView: string;
   user: any;
   isDark?: boolean;
@@ -42,6 +46,8 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = ({
   onDeleteConversation,
   onOpenSettings,
   onSelectView,
+  onCloneSite,
+  onEcommerceProduct,
   currentView,
   user,
   isDark = false
@@ -51,6 +57,8 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = ({
   const buildItems = [
     { id: 'your-apps', label: 'Your apps', icon: Zap },
     { id: 'faq', label: 'FAQ', icon: HelpCircle },
+    { id: 'clone', label: 'Clone site', icon: Copy, action: onCloneSite },
+    { id: 'ecommerce', label: 'E-commerce', icon: ShoppingBag, action: onEcommerceProduct },
   ];
 
   const filteredConversations = conversations.filter(conv => 
@@ -87,7 +95,11 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = ({
           <button
             key={item.id}
             onClick={() => {
-              onSelectView(item.id as any);
+              if (item.action) {
+                item.action();
+              } else {
+                onSelectView(item.id as any);
+              }
             }}
             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-sm font-medium ${
               currentView === item.id
