@@ -53,6 +53,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
 
   const handleSendSupportMessage = async () => {
     if (!supportMessage.trim()) return;
+    
+    if (!user) {
+      alert("Vous devez être connecté pour envoyer un message de support.");
+      return;
+    }
+
     setIsSending(true);
     try {
       // Note: We assume a 'support_messages' table exists in Supabase
@@ -60,21 +66,27 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
         .from('support_messages')
         .insert([
           { 
-            user_id: user?.id, 
-            email: user?.email, 
+            user_id: user.id, 
+            email: user.email, 
             message: supportMessage,
             created_at: new Date().toISOString()
           }
         ]);
       
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw new Error(error.message);
+      }
       
       setSendSuccess(true);
       setSupportMessage('');
       setTimeout(() => setSendSuccess(false), 3000);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error sending message:', err);
-      alert("Erreur lors de l'envoi du message. Veuillez réessayer.");
+      const errorMessage = err.message?.includes('relation "support_messages" does not exist')
+        ? "Le système de messagerie n'est pas encore configuré sur la base de données. Veuillez contacter Benit par email."
+        : "Erreur lors de l'envoi du message. Veuillez réessayer ou contacter benit800@gmail.com.";
+      alert(errorMessage);
     } finally {
       setIsSending(false);
     }
@@ -388,17 +400,23 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                 </div>
                 
                 <div className="space-y-2">
+                  {!user && (
+                    <div className={`p-3 rounded-xl border text-xs text-center mb-2 ${isDark ? 'bg-orange-primary/10 border-orange-primary/20 text-orange-primary' : 'bg-orange-50 border-orange-100 text-orange-600'}`}>
+                      Vous devez être connecté pour envoyer un message.
+                    </div>
+                  )}
                   <textarea 
                     value={supportMessage}
                     onChange={(e) => setSupportMessage(e.target.value)}
-                    placeholder="Votre message (sera envoyé à Benit via Supabase)..."
+                    placeholder={user ? "Votre message (sera envoyé à Benit via Supabase)..." : "Veuillez vous connecter pour envoyer un message..."}
+                    disabled={!user}
                     className={`w-full p-3 rounded-xl border text-sm focus:outline-none focus:border-blue-500 transition-all min-h-[100px] resize-none ${
                       isDark ? 'bg-white/5 border-white/10 text-white placeholder:text-white/20' : 'bg-white border-slate-200 text-slate-900 placeholder:text-slate-400'
-                    }`}
+                    } ${!user ? 'opacity-50 cursor-not-allowed' : ''}`}
                   />
                   <button 
                     onClick={handleSendSupportMessage}
-                    disabled={isSending || !supportMessage.trim()}
+                    disabled={isSending || !supportMessage.trim() || !user}
                     className={`w-full py-3 rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-2 ${
                       sendSuccess 
                         ? 'bg-green-500 text-white' 
