@@ -21,6 +21,8 @@ interface ChatInterfaceProps {
   onEcommerceProduct?: () => void;
   onOpenSettings?: (tab?: any) => void;
   isDark?: boolean;
+  isFocusMode?: boolean;
+  setIsFocusMode?: (val: boolean) => void;
 }
 
 const ActionHistoryItem: React.FC<{ action: ActionHistory; isDark: boolean }> = ({ action, isDark }) => {
@@ -55,7 +57,9 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   onCloneSite,
   onEcommerceProduct,
   onOpenSettings,
-  isDark = true
+  isDark = true,
+  isFocusMode = false,
+  setIsFocusMode,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -246,13 +250,24 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
             </button>
           </div>
 
-          <div className="absolute right-3 bottom-3">
+          <div className="absolute right-3 bottom-3 flex items-center gap-2">
+            <button
+              onClick={() => setIsFocusMode?.(!isFocusMode)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold transition-all ${
+                isFocusMode 
+                  ? 'bg-orange-primary text-white shadow-[0_0_15px_rgba(255,107,0,0.4)]' 
+                  : (isDark ? 'bg-white/5 text-white/40 hover:text-white' : 'bg-slate-100 text-slate-400 hover:text-slate-900')
+              }`}
+            >
+              <Zap size={12} className={isFocusMode ? 'animate-pulse' : ''} />
+              FOCUS MODE
+            </button>
             <button 
               onClick={handleSend}
               disabled={isLoading || !prompt.trim()}
               className={`p-2 rounded-xl transition-all ${
                 prompt.trim() 
-                  ? 'bg-blue-500 text-white hover:bg-blue-600' 
+                  ? 'bg-orange-primary text-white hover:bg-orange-600' 
                   : (isDark ? 'bg-white/5 text-white/20' : 'bg-slate-100 text-slate-300')
               }`}
             >

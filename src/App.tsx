@@ -93,6 +93,7 @@ export default function App() {
   const [isConverting, setIsConverting] = useState(false);
   const [imageSearchContext, setImageSearchContext] = useState<'chat' | 'section'>('chat');
   const [isDeploying, setIsDeploying] = useState(false);
+  const [isFocusMode, setIsFocusMode] = useState(false);
   const [theme, setTheme] = useState<'dark' | 'light'>('light');
   const [isProjectSettings, setIsProjectSettings] = useState(true);
   const [prompts, setPrompts] = useState<string[]>([]);
@@ -590,7 +591,10 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
 
     setPendingSend(false);
 
-    const userMessage = prompt;
+    let userMessage = prompt;
+    if (isFocusMode) {
+      userMessage = `[FOCUS MODE ACTIVE: GENERATE A COMPLETE, FULLY FUNCTIONAL MULTI-PAGE WEBSITE] ${userMessage}`;
+    }
     setPrompts(prev => [userMessage, ...prev]);
     const currentImages = [...selectedImages];
     const currentVideos = [...selectedVideos];
@@ -1148,6 +1152,8 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
                   }}
                   onCloneSite={handleCloneSite}
                   onEcommerceProduct={handleEcommerceProduct}
+                  isFocusMode={isFocusMode}
+                  setIsFocusMode={setIsFocusMode}
                 />
               </div>
             </div>
