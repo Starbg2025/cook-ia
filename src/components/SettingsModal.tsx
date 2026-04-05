@@ -33,23 +33,69 @@ interface SettingsModalProps {
   prompts?: string[];
   conversationsCount?: number;
   isDark?: boolean;
+  projectName?: string;
+  onUpdateProjectName?: (name: string) => void;
+  repoName?: string;
+  onUpdateRepoName?: (name: string) => void;
+  repoDescription?: string;
+  onUpdateRepoDescription?: (desc: string) => void;
+  isRepoPrivate?: boolean;
+  onToggleRepoPrivate?: (val: boolean) => void;
+  secrets?: { key: string; value: string }[];
+  onAddSecret?: (key: string, value: string) => void;
+  onRemoveSecret?: (key: string) => void;
+  isLinkFullscreen?: boolean;
+  onToggleLinkFullscreen?: (val: boolean) => void;
+  onConnectGithub?: () => void;
 }
 
 type TabType = 'publish' | 'versions' | 'secrets' | 'integrations' | 'github' | 'general' | 'account' | 'help';
 
-export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialTab = 'publish', user, isProjectSettings = true, prompts = [], conversationsCount = 0, isDark = false }) => {
+export const SettingsModal: React.FC<SettingsModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  initialTab = 'publish', 
+  user, 
+  isProjectSettings = true, 
+  prompts = [], 
+  conversationsCount = 0, 
+  isDark = false,
+  projectName = '',
+  onUpdateProjectName,
+  repoName = '',
+  onUpdateRepoName,
+  repoDescription = '',
+  onUpdateRepoDescription,
+  isRepoPrivate = true,
+  onToggleRepoPrivate,
+  secrets = [],
+  onAddSecret,
+  onRemoveSecret,
+  isLinkFullscreen = false,
+  onToggleLinkFullscreen,
+  onConnectGithub
+}) => {
   const [activeTab, setActiveTab] = useState<TabType>(initialTab);
   const [accessLevel, setAccessLevel] = useState('Restricted: Only people you specify can access');
-  const [isLinkFullscreen, setIsLinkFullscreen] = useState(false);
-  const [secrets, setSecrets] = useState<{ key: string; value: string }[]>([]);
+  const [isAccessDropdownOpen, setIsAccessDropdownOpen] = useState(false);
+  const [collaboratorEmail, setCollaboratorEmail] = useState('');
+  const [collaborators, setCollaborators] = useState<{email: string, role: string}[]>([]);
   const [newSecretKey, setNewSecretKey] = useState('');
   const [newSecretValue, setNewSecretValue] = useState('');
   const [isCopied, setIsCopied] = useState(false);
   const [supportMessage, setSupportMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [sendSuccess, setSendSuccess] = useState(false);
+  const [localProjectName, setLocalProjectName] = useState(projectName);
 
   const currentUrl = typeof window !== 'undefined' ? window.location.href : 'https://cook-ia.online';
+
+  const handleAddCollaborator = () => {
+    if (!collaboratorEmail.trim()) return;
+    if (collaborators.find(c => c.email === collaboratorEmail)) return;
+    setCollaborators([...collaborators, { email: collaboratorEmail, role: 'Editor' }]);
+    setCollaboratorEmail('');
+  };
 
   const handleSendSupportMessage = async () => {
     if (!supportMessage.trim()) return;
@@ -99,7 +145,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
   };
 
   const tabs = isProjectSettings ? [
-    { id: 'publish', label: 'Publish', icon: Share2 },
+    { id: 'publish', label: 'Share', icon: Share2 },
     { id: 'versions', label: 'Versions', icon: History },
     { id: 'secrets', label: 'Secrets', icon: Key },
     { id: 'integrations', label: 'Integrations', icon: Layers },
@@ -113,8 +159,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
   React.useEffect(() => {
     if (isOpen) {
       setActiveTab(initialTab);
+      setLocalProjectName(projectName);
     }
-  }, [isOpen, initialTab]);
+  }, [isOpen, initialTab, projectName]);
 
   const renderContent = () => {
     switch (activeTab) {
@@ -131,7 +178,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                 <label className={`text-sm font-medium ${isDark ? 'text-white/40' : 'text-slate-500'}`}>General access</label>
                 <div className="relative">
                   <button 
-                    onClick={() => {}}
+                    onClick={() => setIsAccessDropdownOpen(!isAccessDropdownOpen)}
                     className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all text-sm ${
                       isDark ? 'border-white/10 bg-white/5 hover:bg-white/10 text-white' : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-900'
                     }`}
@@ -140,8 +187,38 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                       <Lock size={16} className="text-slate-400" />
                       <span>{accessLevel}</span>
                     </div>
-                    <ChevronDown size={16} className="text-slate-400" />
+                    <ChevronDown size={16} className={`text-slate-400 transition-transform ${isAccessDropdownOpen ? 'rotate-180' : ''}`} />
                   </button>
+                  
+                  <AnimatePresence>
+                    {isAccessDropdownOpen && (
+                      <motion.div 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 10 }}
+                        className={`absolute top-full left-0 right-0 mt-2 p-2 rounded-xl border z-10 shadow-xl ${
+                          isDark ? 'bg-[#1A1A1A] border-white/10' : 'bg-white border-slate-200'
+                        }`}
+                      >
+                        {['Restricted: Only people you specify can access', 'Anyone with the link can view'].map((level) => (
+                          <button
+                            key={level}
+                            onClick={() => {
+                              setAccessLevel(level);
+                              setIsAccessDropdownOpen(false);
+                            }}
+                            className={`w-full text-left p-3 rounded-lg text-sm transition-colors ${
+                              accessLevel === level 
+                                ? (isDark ? 'bg-white/10 text-white' : 'bg-slate-100 text-slate-900')
+                                : (isDark ? 'text-white/40 hover:bg-white/5 hover:text-white' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900')
+                            }`}
+                          >
+                            {level}
+                          </button>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               </div>
 
@@ -151,11 +228,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                   <input 
                     type="text"
                     placeholder="Start typing email addresses here"
+                    value={collaboratorEmail}
+                    onChange={(e) => setCollaboratorEmail(e.target.value)}
                     className={`flex-1 p-3 rounded-xl border text-sm focus:outline-none focus:border-blue-500 transition-all ${
                       isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
                     }`}
                   />
-                  <button className="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-all">
+                  <button 
+                    onClick={handleAddCollaborator}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-all"
+                  >
                     Add
                   </button>
                 </div>
@@ -175,6 +257,29 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                   </div>
                   <span className="text-xs text-slate-400">Owner</span>
                 </div>
+
+                {collaborators.map((c, i) => (
+                  <div key={i} className={`flex items-center justify-between p-3 rounded-xl transition-all ${isDark ? 'hover:bg-white/5' : 'hover:bg-slate-50'}`}>
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-slate-400 flex items-center justify-center text-white font-bold text-xs">
+                        {c.email.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex flex-col">
+                        <span className={`text-sm font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>{c.email.split('@')[0]}</span>
+                        <span className="text-xs text-slate-400">{c.email}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-400">{c.role}</span>
+                      <button 
+                        onClick={() => setCollaborators(collaborators.filter((_, idx) => idx !== i))}
+                        className="p-1 hover:bg-red-500/10 text-red-500 rounded-md transition-colors"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
 
               <div className={`space-y-4 pt-6 border-t ${isDark ? 'border-white/5' : 'border-slate-100'}`}>
@@ -184,7 +289,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                     <span className="text-xs text-slate-400">Default to fullscreen</span>
                   </div>
                   <button 
-                    onClick={() => setIsLinkFullscreen(!isLinkFullscreen)}
+                    onClick={() => onToggleLinkFullscreen?.(!isLinkFullscreen)}
                     className={`w-10 h-5 rounded-full relative transition-all ${isLinkFullscreen ? 'bg-blue-500' : 'bg-slate-200'}`}
                   >
                     <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${isLinkFullscreen ? 'right-1' : 'left-1'}`} />
@@ -257,7 +362,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                 <button 
                   onClick={() => {
                     if (newSecretKey && newSecretValue) {
-                      setSecrets([...secrets, { key: newSecretKey, value: newSecretValue }]);
+                      onAddSecret?.(newSecretKey, newSecretValue);
                       setNewSecretKey('');
                       setNewSecretValue('');
                     }
@@ -275,7 +380,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                       <Key size={14} className="text-blue-500" />
                       <span className={`text-sm font-mono ${isDark ? 'text-white' : 'text-slate-900'}`}>{s.key}</span>
                     </div>
-                    <span className="text-xs text-slate-400">••••••••••••••••</span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-slate-400">••••••••••••••••</span>
+                      <button 
+                        onClick={() => onRemoveSecret?.(s.key)}
+                        className="p-1 hover:bg-red-500/10 text-red-500 rounded-md transition-colors"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -443,10 +556,54 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
         return (
           <div className="space-y-6 p-2">
             <h3 className={`text-lg font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>GitHub Integration</h3>
+            
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className={`text-sm font-medium ${isDark ? 'text-white/40' : 'text-slate-500'}`}>Repository Name</label>
+                <input 
+                  type="text"
+                  value={repoName}
+                  onChange={(e) => onUpdateRepoName?.(e.target.value)}
+                  placeholder="my-awesome-project"
+                  className={`w-full p-3 rounded-xl border text-sm focus:outline-none focus:border-blue-500 transition-all ${
+                    isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
+                  }`}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className={`text-sm font-medium ${isDark ? 'text-white/40' : 'text-slate-500'}`}>Description</label>
+                <textarea 
+                  value={repoDescription}
+                  onChange={(e) => onUpdateRepoDescription?.(e.target.value)}
+                  placeholder="A brief description of your site"
+                  className={`w-full p-3 rounded-xl border text-sm focus:outline-none focus:border-blue-500 transition-all min-h-[80px] resize-none ${
+                    isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
+                  }`}
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-3 rounded-xl border border-white/5 bg-white/5">
+                <div className="flex flex-col">
+                  <span className={`text-sm font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>Private Repository</span>
+                  <span className="text-xs text-slate-400">Only you can access this repo</span>
+                </div>
+                <button 
+                  onClick={() => onToggleRepoPrivate?.(!isRepoPrivate)}
+                  className={`w-10 h-5 rounded-full relative transition-all ${isRepoPrivate ? 'bg-blue-500' : 'bg-slate-200'}`}
+                >
+                  <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${isRepoPrivate ? 'right-1' : 'left-1'}`} />
+                </button>
+              </div>
+            </div>
+
             <div className={`p-6 rounded-2xl border ${isDark ? 'border-white/10 bg-white/5' : 'border-slate-100 bg-slate-50'} text-center`}>
-              <Github size={32} className="mx-auto mb-4 text-slate-900 opacity-50" />
+              <Github size={32} className={`mx-auto mb-4 ${isDark ? 'text-white' : 'text-slate-900'} opacity-50`} />
               <p className={`text-sm mb-6 ${isDark ? 'text-white/80' : 'text-slate-700'}`}>Enregistrez votre projet directement sur GitHub pour le déployer ailleurs.</p>
-              <button className="w-full py-3 bg-slate-900 text-white rounded-xl text-sm font-medium hover:bg-black transition-all flex items-center justify-center gap-2">
+              <button 
+                onClick={onConnectGithub}
+                className="w-full py-3 bg-slate-900 text-white rounded-xl text-sm font-medium hover:bg-black transition-all flex items-center justify-center gap-2"
+              >
                 <Github size={18} />
                 Connect to GitHub
               </button>
@@ -463,13 +620,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                   <span className={`text-sm font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>Project Name</span>
                   <span className="text-xs text-slate-400">Change the name of your project</span>
                 </div>
-                <input 
-                  type="text"
-                  defaultValue="Vibrant Morphing"
-                  className={`p-2 rounded-lg border text-sm focus:outline-none focus:border-blue-500 transition-all ${
-                    isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
-                  }`}
-                />
+                <div className="flex gap-2">
+                  <input 
+                    type="text"
+                    value={localProjectName}
+                    onChange={(e) => setLocalProjectName(e.target.value)}
+                    className={`p-2 rounded-lg border text-sm focus:outline-none focus:border-blue-500 transition-all ${
+                      isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
+                    }`}
+                  />
+                  <button 
+                    onClick={() => onUpdateProjectName?.(localProjectName)}
+                    className="px-3 py-1 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 transition-all"
+                  >
+                    Save
+                  </button>
+                </div>
               </div>
             </div>
           </div>

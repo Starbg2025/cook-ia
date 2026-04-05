@@ -187,7 +187,7 @@ export const Preview: React.FC<PreviewProps> = ({
   }, [isVisualEditing, isSectionSelectionMode, generatedCode, viewMode]);
 
   return (
-    <section className={`flex-1 ${isDark ? 'bg-[#141414] border-white/5' : 'bg-white border-slate-200'} rounded-3xl border overflow-hidden flex flex-col shadow-2xl`}>
+    <section className={`flex-1 ${isDark ? 'bg-[#141414] border-white/5' : 'bg-white border-slate-200'} md:rounded-3xl md:border overflow-hidden flex flex-col md:shadow-2xl`}>
       {/* Browser-like Header */}
       <div className={`h-12 ${isDark ? 'bg-[#1A1A1A] border-white/5' : 'bg-slate-50 border-slate-200'} border-b flex items-center px-6 justify-between`}>
         <div className="flex gap-2 w-20">

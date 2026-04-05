@@ -98,13 +98,40 @@ export default function App() {
   const [isProjectSettings, setIsProjectSettings] = useState(true);
   const [prompts, setPrompts] = useState<string[]>([]);
   const [pendingSend, setPendingSend] = useState<boolean>(false);
+  const [settingsTab, setSettingsTab] = useState<'publish' | 'versions' | 'secrets' | 'integrations' | 'github' | 'general' | 'account' | 'help'>('publish');
+  const [secrets, setSecrets] = useState<{ key: string; value: string }[]>([]);
+  const [isLinkFullscreen, setIsLinkFullscreen] = useState(false);
+
+  const handleUpdateProjectName = async (newName: string) => {
+    if (!currentConversationId || !newName.trim()) return;
+    
+    try {
+      const { error } = await supabase
+        .from('conversations')
+        .update({ title: newName })
+        .eq('id', currentConversationId);
+        
+      if (error) throw error;
+      
+      setConversations(prev => prev.map(c => c.id === currentConversationId ? { ...c, title: newName } : c));
+    } catch (err) {
+      console.error('Error updating project name:', err);
+    }
+  };
+
+  const handleAddSecret = (key: string, value: string) => {
+    setSecrets(prev => [...prev, { key, value }]);
+  };
+
+  const handleRemoveSecret = (key: string) => {
+    setSecrets(prev => prev.filter(s => s.key !== key));
+  };
   const [styleConfig, setStyleConfig] = useState<StyleConfig>({
     primaryColor: '#FF6B00',
     fontFamily: 'Inter',
     borderRadius: '1rem'
   });
   const [sectionEdit, setSectionEdit] = useState<SectionEditState>({ isActive: false });
-  const [settingsTab, setSettingsTab] = useState<any>('publish');
   const [user, setUser] = useState<any>(null);
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [selectedVideos, setSelectedVideos] = useState<string[]>([]);
@@ -520,11 +547,19 @@ export default function App() {
   };
 
   const handleCloneSite = () => {
+    if (!user) {
+      setIsAuthModalOpen(true);
+      return;
+    }
     setUrlModalType('clone');
     setIsUrlModalOpen(true);
   };
 
   const handleEcommerceProduct = () => {
+    if (!user) {
+      setIsAuthModalOpen(true);
+      return;
+    }
     setUrlModalType('ecommerce');
     setIsUrlModalOpen(true);
   };
@@ -552,7 +587,7 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
     }
   };
 
-  const handleFeedback = (index: number, type: 'like' | 'dislike') => {
+  const handleFeedback = async (index: number, type: 'like' | 'dislike') => {
     setMessages(prev => {
       const newMessages = [...prev];
       if (newMessages[index]) {
@@ -563,6 +598,18 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
       }
       return newMessages;
     });
+    
+    // Persist feedback to Supabase
+    if (currentConversationId) {
+      const updatedMessages = [...messages];
+      if (updatedMessages[index]) {
+        updatedMessages[index] = {
+          ...updatedMessages[index],
+          feedback: updatedMessages[index].feedback === type ? undefined : type
+        };
+        await saveConversation(updatedMessages);
+      }
+    }
   };
 
   const handleSend = async () => {
@@ -984,7 +1031,7 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
         </div>
 
         {/* View Mode Switcher */}
-        <div className={`hidden md:flex items-center p-1 rounded-xl border ${isDark ? 'bg-[#141414] border-white/5' : 'bg-slate-50 border-slate-200'}`}>
+        <div className={`flex items-center p-1 rounded-xl border ${isDark ? 'bg-[#141414] border-white/5' : 'bg-slate-50 border-slate-200'}`}>
           <button 
             onClick={() => setViewMode('chat')}
             className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
@@ -1077,7 +1124,7 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
         </motion.div>
 
         {/* Content Area */}
-        <main className="flex-1 flex flex-col min-w-0 relative w-full">
+        <main className="flex-1 flex flex-col min-w-0 relative">
           {viewMode === 'your-apps' ? (
             <div className={`flex-1 flex flex-col items-center justify-center p-8 ${isDark ? 'bg-[#0A0A0A] text-white' : 'bg-white text-slate-900'}`}>
               <h2 className="text-3xl font-bold mb-4">Your Apps</h2>
@@ -1142,62 +1189,54 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
               </div>
             </div>
           ) : viewMode === 'chat' ? (
-            <div className="flex-1 flex flex-col overflow-hidden">
-              <div className="flex-1 min-w-0">
-                <ChatInterface 
-                  isDark={isDark}
-                  messages={messages}
-                  isLoading={isLoading}
-                  prompt={prompt}
-                  setPrompt={setPrompt}
-                  handleSend={handleSend}
-                  onAbort={handleAbort}
-                  chatEndRef={chatEndRef}
-                  logoUrl={LOGO_URL}
-                  selectedImages={selectedImages}
-                  setSelectedImages={setSelectedImages}
-                  selectedVideos={selectedVideos}
-                  setSelectedVideos={setSelectedVideos}
-                  onOpenImageSearch={() => {
-                    setImageSearchContext('chat');
-                    setIsImageSearchOpen(true);
-                  }}
-                  onOpenSettings={(tab) => {
-                    setSettingsTab(tab || 'publish');
-                    setIsProjectSettings(true);
-                    setIsSettingsModalOpen(true);
-                  }}
-                  onCloneSite={handleCloneSite}
-                  onEcommerceProduct={handleEcommerceProduct}
-                  isFocusMode={isFocusMode}
-                  setIsFocusMode={setIsFocusMode}
-                  onFeedback={handleFeedback}
-                />
-              </div>
-            </div>
+            <ChatInterface 
+              isDark={isDark}
+              messages={messages}
+              isLoading={isLoading}
+              prompt={prompt}
+              setPrompt={setPrompt}
+              handleSend={handleSend}
+              onAbort={handleAbort}
+              chatEndRef={chatEndRef}
+              logoUrl={LOGO_URL}
+              selectedImages={selectedImages}
+              setSelectedImages={setSelectedImages}
+              selectedVideos={selectedVideos}
+              setSelectedVideos={setSelectedVideos}
+              onOpenImageSearch={() => {
+                setImageSearchContext('chat');
+                setIsImageSearchOpen(true);
+              }}
+              onOpenSettings={(tab) => {
+                setSettingsTab(tab || 'publish');
+                setIsProjectSettings(true);
+                setIsSettingsModalOpen(true);
+              }}
+              onCloneSite={handleCloneSite}
+              onEcommerceProduct={handleEcommerceProduct}
+              isFocusMode={isFocusMode}
+              setIsFocusMode={setIsFocusMode}
+              onFeedback={handleFeedback}
+            />
           ) : (
-            <div className="flex-1 flex flex-col overflow-hidden">
-              <div className="flex-1 min-w-0">
-                <Preview 
-                  viewMode={viewMode}
-                  generatedCode={generatedCode}
-                  files={[...messages].reverse().find(m => m.role === 'model' && m.files)?.files || []}
-                  iframeRef={iframeRef}
-                  onRefresh={handleRefresh}
-                  onExpand={handleExpand}
-                  onEdit={() => setViewMode('code')}
-                  onCodeChange={(newCode) => {
-                    skipIframeUpdate.current = true;
-                    setGeneratedCode(newCode);
-                  }}
-                  onDownloadZip={handleDownloadZip}
-                  styleConfig={styleConfig}
-                  sectionEdit={sectionEdit}
-                  onSectionSelect={setSectionEdit}
-                  isDark={isDark}
-                />
-              </div>
-            </div>
+            <Preview 
+              viewMode={viewMode}
+              generatedCode={generatedCode}
+              files={[...messages].reverse().find(m => m.role === 'model' && m.files)?.files || []}
+              iframeRef={iframeRef}
+              onRefresh={handleRefresh}
+              onExpand={handleExpand}
+              onEdit={() => setViewMode('code')}
+              onCodeChange={(newCode) => {
+                skipIframeUpdate.current = true;
+                setGeneratedCode(newCode);
+              }}
+              onDownloadZip={handleDownloadZip}
+              styleConfig={styleConfig}
+              sectionEdit={sectionEdit}
+              onSectionSelect={setSectionEdit}
+              isDark={isDark}
+            />
           )}
 
           {/* Mobile View Switcher */}
@@ -1497,6 +1536,20 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
         prompts={prompts}
         conversationsCount={conversations.length}
         isDark={isDark}
+        projectName={conversations.find(c => c.id === currentConversationId)?.title || 'New Project'}
+        onUpdateProjectName={handleUpdateProjectName}
+        secrets={secrets}
+        onAddSecret={handleAddSecret}
+        onRemoveSecret={handleRemoveSecret}
+        isLinkFullscreen={isLinkFullscreen}
+        onToggleLinkFullscreen={setIsLinkFullscreen}
+        onConnectGithub={handleGithubClick}
+        repoName={repoName}
+        onUpdateRepoName={setRepoName}
+        repoDescription={repoDescription}
+        onUpdateRepoDescription={setRepoDescription}
+        isRepoPrivate={isRepoPrivate}
+        onToggleRepoPrivate={setIsRepoPrivate}
       />
     </div>
   );
