@@ -552,6 +552,19 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
     }
   };
 
+  const handleFeedback = (index: number, type: 'like' | 'dislike') => {
+    setMessages(prev => {
+      const newMessages = [...prev];
+      if (newMessages[index]) {
+        newMessages[index] = {
+          ...newMessages[index],
+          feedback: newMessages[index].feedback === type ? undefined : type
+        };
+      }
+      return newMessages;
+    });
+  };
+
   const handleSend = async () => {
     if (!prompt.trim() || isLoading) return;
 
@@ -971,7 +984,7 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
         </div>
 
         {/* View Mode Switcher */}
-        <div className={`flex items-center p-1 rounded-xl border ${isDark ? 'bg-[#141414] border-white/5' : 'bg-slate-50 border-slate-200'}`}>
+        <div className={`hidden md:flex items-center p-1 rounded-xl border ${isDark ? 'bg-[#141414] border-white/5' : 'bg-slate-50 border-slate-200'}`}>
           <button 
             onClick={() => setViewMode('chat')}
             className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
@@ -1030,10 +1043,14 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
         {/* History Sidebar */}
         <motion.div 
           initial={false}
-          animate={{ width: isHistoryOpen ? 260 : 0, opacity: isHistoryOpen ? 1 : 0 }}
-          className="overflow-hidden shrink-0"
+          animate={{ 
+            width: isHistoryOpen ? 260 : 0, 
+            opacity: isHistoryOpen ? 1 : 0,
+            x: isHistoryOpen ? 0 : -260
+          }}
+          className="absolute md:relative z-40 h-full overflow-hidden shrink-0 bg-inherit"
         >
-          <div className="w-[260px] h-full">
+          <div className="w-[260px] h-full shadow-2xl md:shadow-none">
             <HistorySidebar 
               isDark={isDark}
               conversations={conversations}
@@ -1060,7 +1077,7 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
         </motion.div>
 
         {/* Content Area */}
-        <main className="flex-1 flex flex-col min-w-0 relative">
+        <main className="flex-1 flex flex-col min-w-0 relative w-full">
           {viewMode === 'your-apps' ? (
             <div className={`flex-1 flex flex-col items-center justify-center p-8 ${isDark ? 'bg-[#0A0A0A] text-white' : 'bg-white text-slate-900'}`}>
               <h2 className="text-3xl font-bold mb-4">Your Apps</h2>
@@ -1125,8 +1142,8 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
               </div>
             </div>
           ) : viewMode === 'chat' ? (
-            <div className="flex-1 flex overflow-hidden">
-              <div className="w-full min-w-0">
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <div className="flex-1 min-w-0">
                 <ChatInterface 
                   isDark={isDark}
                   messages={messages}
@@ -1154,28 +1171,72 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
                   onEcommerceProduct={handleEcommerceProduct}
                   isFocusMode={isFocusMode}
                   setIsFocusMode={setIsFocusMode}
+                  onFeedback={handleFeedback}
                 />
               </div>
             </div>
           ) : (
-            <Preview 
-              viewMode={viewMode}
-              generatedCode={generatedCode}
-              files={[...messages].reverse().find(m => m.role === 'model' && m.files)?.files || []}
-              iframeRef={iframeRef}
-              onRefresh={handleRefresh}
-              onExpand={handleExpand}
-              onEdit={() => setViewMode('code')}
-              onCodeChange={(newCode) => {
-                skipIframeUpdate.current = true;
-                setGeneratedCode(newCode);
-              }}
-              onDownloadZip={handleDownloadZip}
-              styleConfig={styleConfig}
-              sectionEdit={sectionEdit}
-              onSectionSelect={setSectionEdit}
-              isDark={isDark}
-            />
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <div className="flex-1 min-w-0">
+                <Preview 
+                  viewMode={viewMode}
+                  generatedCode={generatedCode}
+                  files={[...messages].reverse().find(m => m.role === 'model' && m.files)?.files || []}
+                  iframeRef={iframeRef}
+                  onRefresh={handleRefresh}
+                  onExpand={handleExpand}
+                  onEdit={() => setViewMode('code')}
+                  onCodeChange={(newCode) => {
+                    skipIframeUpdate.current = true;
+                    setGeneratedCode(newCode);
+                  }}
+                  onDownloadZip={handleDownloadZip}
+                  styleConfig={styleConfig}
+                  sectionEdit={sectionEdit}
+                  onSectionSelect={setSectionEdit}
+                  isDark={isDark}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Mobile View Switcher */}
+          {(viewMode === 'chat' || viewMode === 'preview' || viewMode === 'code') && (
+            <div className={`md:hidden flex items-center justify-around p-2 border-t shrink-0 z-50 ${isDark ? 'bg-[#0A0A0A] border-white/5' : 'bg-white border-slate-200'}`}>
+              <button 
+                onClick={() => setViewMode('chat')}
+                className={`flex flex-col items-center gap-1 p-2 rounded-lg text-[10px] font-bold transition-all ${
+                  viewMode === 'chat' 
+                    ? (isDark ? 'text-white' : 'text-slate-900') 
+                    : (isDark ? 'text-white/40' : 'text-slate-400')
+                }`}
+              >
+                <MessageSquare size={18} />
+                Chat
+              </button>
+              <button 
+                onClick={() => setViewMode('code')}
+                className={`flex flex-col items-center gap-1 p-2 rounded-lg text-[10px] font-bold transition-all ${
+                  viewMode === 'code' 
+                    ? (isDark ? 'text-white' : 'text-slate-900') 
+                    : (isDark ? 'text-white/40' : 'text-slate-400')
+                }`}
+              >
+                <Code size={18} />
+                Code
+              </button>
+              <button 
+                onClick={() => setViewMode('preview')}
+                className={`flex flex-col items-center gap-1 p-2 rounded-lg text-[10px] font-bold transition-all ${
+                  viewMode === 'preview' 
+                    ? (isDark ? 'text-white' : 'text-slate-900') 
+                    : (isDark ? 'text-white/40' : 'text-slate-400')
+                }`}
+              >
+                <Eye size={18} />
+                Preview
+              </button>
+            </div>
           )}
         </main>
       </div>

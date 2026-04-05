@@ -83,8 +83,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
       setTimeout(() => setSendSuccess(false), 3000);
     } catch (err: any) {
       console.error('Error sending message:', err);
-      const errorMessage = err.message?.includes('relation "support_messages" does not exist')
-        ? "Le système de messagerie n'est pas encore configuré sur la base de données. Veuillez contacter Benit par email."
+      const errorMessage = err.message?.includes('relation "support_messages" does not exist') || err.message?.includes('Could not find the table')
+        ? "Le système de messagerie n'est pas encore configuré sur la base de données. Veuillez contacter Benit directement par email à benit800@gmail.com."
         : "Erreur lors de l'envoi du message. Veuillez réessayer ou contacter benit800@gmail.com.";
       alert(errorMessage);
     } finally {

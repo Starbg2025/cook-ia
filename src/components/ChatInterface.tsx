@@ -23,6 +23,7 @@ interface ChatInterfaceProps {
   isDark?: boolean;
   isFocusMode?: boolean;
   setIsFocusMode?: (val: boolean) => void;
+  onFeedback?: (index: number, type: 'like' | 'dislike') => void;
 }
 
 const ActionHistoryItem: React.FC<{ action: ActionHistory; isDark: boolean }> = ({ action, isDark }) => {
@@ -60,6 +61,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   isDark = true,
   isFocusMode = false,
   setIsFocusMode,
+  onFeedback,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -153,10 +155,24 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
               {msg.role === 'model' && (
                 <div className="flex items-center gap-4 mt-4 pt-4 border-t border-white/5">
                   <div className="flex items-center gap-1">
-                    <button className={`p-1.5 rounded-md ${isDark ? 'text-white/20 hover:text-white hover:bg-white/5' : 'text-slate-400 hover:text-slate-900 hover:bg-slate-100'}`}>
+                    <button 
+                      onClick={() => onFeedback?.(idx, 'like')}
+                      className={`p-1.5 rounded-md transition-colors ${
+                        msg.feedback === 'like' 
+                          ? 'text-green-500 bg-green-500/10' 
+                          : (isDark ? 'text-white/20 hover:text-white hover:bg-white/5' : 'text-slate-400 hover:text-slate-900 hover:bg-slate-100')
+                      }`}
+                    >
                       <ThumbsUp size={14} />
                     </button>
-                    <button className={`p-1.5 rounded-md ${isDark ? 'text-white/20 hover:text-white hover:bg-white/5' : 'text-slate-400 hover:text-slate-900 hover:bg-slate-100'}`}>
+                    <button 
+                      onClick={() => onFeedback?.(idx, 'dislike')}
+                      className={`p-1.5 rounded-md transition-colors ${
+                        msg.feedback === 'dislike' 
+                          ? 'text-red-500 bg-red-500/10' 
+                          : (isDark ? 'text-white/20 hover:text-white hover:bg-white/5' : 'text-slate-400 hover:text-slate-900 hover:bg-slate-100')
+                      }`}
+                    >
                       <ThumbsDown size={14} />
                     </button>
                   </div>

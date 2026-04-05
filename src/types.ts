@@ -34,6 +34,7 @@ export interface Message {
   actionHistory?: ActionHistory[];
   modelName?: string;
   runTime?: number;
+  feedback?: 'like' | 'dislike';
 }
 
 export type ViewMode = 'preview' | 'code' | 'chat';
