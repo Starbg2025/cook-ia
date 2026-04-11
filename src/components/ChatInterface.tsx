@@ -149,7 +149,13 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
               )}
               
               <div className={`text-sm leading-relaxed ${isDark ? 'text-white/90' : 'text-slate-800'}`}>
-                {msg.content}
+                {msg.content.startsWith('[Planificateur]') || msg.content.startsWith('[Testeur]') || msg.content.startsWith('[Analyste]') ? (
+                  <div className={`p-4 rounded-2xl border ${isDark ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-200'} italic text-xs`}>
+                    {msg.content}
+                  </div>
+                ) : (
+                  msg.content
+                )}
               </div>
 
               {msg.role === 'model' && (

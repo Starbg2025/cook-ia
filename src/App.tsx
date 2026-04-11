@@ -42,7 +42,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { generateWebsite, generateTitle, updateSection, convertToReact, improveText } from './services/geminiService';
-import { analystReview, criticReview } from './services/multiAgentService';
+import { analystReview, criticReview, plannerAgent, testerAgent } from './services/multiAgentService';
 import { Message, ViewMode, Conversation, StyleConfig, SectionEditState } from './types';
 import { ChatInterface } from './components/ChatInterface';
 import { Preview } from './components/Preview';
@@ -54,7 +54,7 @@ import { UrlInputModal } from './components/UrlInputModal';
 import { AuthModal } from './components/AuthModal';
 import { SettingsModal } from './components/SettingsModal';
 
-import { supabase } from './services/supabaseService';
+import { supabase, logErrorToSupabase } from './services/supabaseService';
 import { deployToNetlify } from './services/netlifyService';
 import JSZip from 'jszip';
 import { Palette, Braces } from 'lucide-react';
@@ -734,7 +734,16 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
         return;
       }
 
-      // 2. Engineer Phase (Gemini)
+      // 2. Planner Phase (Gemini) - ALWAYS PLAN BEFORE CODING
+      const planResult = await plannerAgent(userMessage, history);
+      const planningMessage: Message = {
+        role: 'model',
+        content: `[Planificateur] Voici mon plan d'action :\n\n${planResult.plan}${planResult.isComplex ? `\n\n**Complexité détectée !** Délégation aux sous-agents : ${planResult.subAgents.join(', ')}` : ''}`,
+        _provider: 'Gemini'
+      };
+      setMessages(prev => [...prev, planningMessage]);
+
+      // 3. Engineer Phase (Gemini)
       
       // Prepare current images for API if exists
       let imageParts: any[] = [];
@@ -782,7 +791,34 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
         videoParts.length > 0 ? videoParts : undefined
       );
 
-      // 3. Critic Phase (OpenRouter)
+      // 4. Automated Testing Phase (Groq)
+      const testResult = await testerAgent(result.preview_code, enrichedUserMessage);
+      
+      if (!testResult.passed) {
+        // Log error to Supabase
+        await logErrorToSupabase(`Test failed for prompt: ${userMessage}`, { 
+          errors: testResult.errors,
+          prompt: userMessage,
+          code: result.preview_code.substring(0, 1000)
+        });
+
+        // Auto-correction: Re-generate with test feedback
+        const correctionMessage: Message = {
+          role: 'model',
+          content: `[Testeur] Bugs détectés : ${testResult.errors.join(', ')}. Je lance une correction automatique...`,
+          _provider: 'Groq'
+        };
+        setMessages(prev => [...prev, correctionMessage]);
+
+        result = await generateWebsite(
+          `${enrichedUserMessage}\n\nCORRECTION DE BUGS (TESTS ÉCHOUÉS) :\n${testResult.errors.join('\n')}`,
+          history.slice(0, -1),
+          imageParts.length > 0 ? imageParts : undefined,
+          videoParts.length > 0 ? videoParts : undefined
+        );
+      }
+
+      // 5. Critic Phase (OpenRouter)
       const critic = await criticReview(enrichedUserMessage, result.preview_code);
       
       if (!critic.approved) {
@@ -795,7 +831,7 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
         );
       }
       
-      const updatedMessages: Message[] = [...newMessages, { 
+      const updatedMessages: Message[] = [...newMessages, planningMessage, { 
         role: 'model', 
         content: result.explanation,
         code: result.preview_code,
