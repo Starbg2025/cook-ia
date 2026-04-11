@@ -72,43 +72,42 @@ Return JSON:
 
 // Agent 2: Planner (Gemini)
 export const plannerAgent = async (prompt: string, history: any[]) => {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return { plan: "No plan available.", isComplex: false, subAgents: [] };
-
   try {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: `You are the 'Planner' for COOK IA. Your job is to break down the user's request into a detailed technical plan.
+    const systemPrompt = `You are the 'Planner' for COOK IA. Your job is to break down the user's request into a detailed technical plan.
             
-            RULES:
-            1. ALWAYS plan before coding.
-            2. COMPLEXITY DETECTION: If the request is complex (multi-page, custom backend, complex animations, database integration), mark it as complex and define sub-agents (e.g., UI Designer, Backend Engineer, Content Strategist).
-            3. OUTPUT: Provide a step-by-step plan.
-            
-            Return JSON:
-            {
-              "plan": "string (markdown)",
-              "isComplex": boolean,
-              "subAgents": string[] (names of sub-agents needed)
-            }`
-          }, {
-            text: `USER REQUEST: ${prompt}\n\nHISTORY: ${JSON.stringify(history.slice(-3))}`
-          }]
-        }],
-        generationConfig: { responseMimeType: "application/json" }
-      })
+    RULES:
+    1. ALWAYS plan before coding.
+    2. COMPLEXITY DETECTION: If the request is complex (multi-page, custom backend, complex animations, database integration), mark it as complex and define sub-agents (e.g., UI Designer, Backend Engineer, Content Strategist).
+    3. OUTPUT: Provide a step-by-step plan.
+    
+    Return JSON:
+    {
+      "plan": "string (markdown)",
+      "isComplex": boolean,
+      "subAgents": string[] (names of sub-agents needed)
+    }`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: [
+        { text: systemPrompt },
+        { text: `USER REQUEST: ${prompt}\n\nHISTORY: ${JSON.stringify(history.slice(-3))}` }
+      ],
+      config: {
+        responseMimeType: "application/json"
+      }
     });
 
-    const data = await response.json();
-    const text = data.candidates[0].content.parts[0].text;
+    const text = response.text;
+    if (!text) throw new Error("Empty response from Gemini");
     return JSON.parse(text);
   } catch (error) {
     console.error("Planner error:", error);
-    return { plan: "Failed to generate plan.", isComplex: false, subAgents: [] };
+    return { 
+      plan: "Désolé, je n'ai pas pu générer de plan détaillé pour le moment. Je vais tout de même tenter de construire votre site.", 
+      isComplex: false, 
+      subAgents: [] 
+    };
   }
 };
 
