@@ -1042,13 +1042,29 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
         <div className="bg-blue-600 text-white px-4 py-2 flex items-center justify-between text-sm font-medium shrink-0 z-[60]">
           <div className="flex items-center gap-2">
             <Sparkles size={16} />
-            <span>Nouvelle mise à jour ! Les erreurs seront bientôt corrigées.</span>
+            <span>La majorité des bugs ont été corrigés ! Si vous en trouvez d'autres, dites-le nous sur Discord.</span>
           </div>
           <button onClick={() => setShowAnnouncement(false)} className="hover:bg-white/10 p-1 rounded transition-colors">
             <X size={16} />
           </button>
         </div>
       )}
+      {/* Floating Discord Button for Mobile */}
+      <a 
+        href="https://discord.gg/Pc6reuApRF" 
+        target="_blank" 
+        rel="noreferrer"
+        className="fixed bottom-20 right-6 sm:hidden z-50 flex items-center justify-center w-12 h-12 bg-[#5865F2] text-white rounded-full shadow-2xl hover:scale-110 transition-transform active:scale-95"
+        title="Rejoindre notre Discord"
+      >
+        <svg 
+          viewBox="0 0 127.14 96.36" 
+          className="w-6 h-6 fill-current"
+        >
+          <path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.71,32.65-1.82,56.6.39,80.21a105.73,105.73,0,0,0,32.77,16.15,77.7,77.7,0,0,0,7.33-11.86,67.42,67.42,0,0,1-11.7-5.58c.97-.71,1.94-1.46,2.85-2.21a71.64,71.64,0,0,0,64.29,0c.92.75,1.88,1.5,2.85,2.21a67.07,67.07,0,0,1-11.7,5.58,77.66,77.66,0,0,0,7.33,11.86,105.41,105.41,0,0,0,32.81-16.15C131.58,52.41,126.77,28.73,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,46,96.12,53,91.08,65.69,84.69,65.69Z"/>
+        </svg>
+      </a>
+
       {/* Header */}
       <header className={`h-14 border-b flex items-center justify-between px-4 shrink-0 z-50 ${isDark ? 'bg-[#0A0A0A] border-white/5' : 'bg-white border-slate-200'}`}>
         <div className="flex items-center gap-4">
@@ -1104,19 +1120,32 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
         </div>
 
         <div className="flex items-center gap-3">
+          <a 
+            href="https://discord.gg/Pc6reuApRF" 
+            target="_blank" 
+            rel="noreferrer"
+            className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-[#5865F2] text-white rounded-lg text-xs font-bold hover:bg-[#4752C4] transition-all shadow-lg"
+          >
+            Discord
+          </a>
+          <a 
+            href="https://discord.gg/Pc6reuApRF" 
+            target="_blank" 
+            rel="noreferrer"
+            className="flex sm:hidden p-2 bg-[#5865F2] text-white rounded-lg transition-all shadow-lg"
+          >
+            <svg 
+              viewBox="0 0 127.14 96.36" 
+              className="w-4.5 h-4.5 fill-current"
+            >
+              <path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.71,32.65-1.82,56.6.39,80.21a105.73,105.73,0,0,0,32.77,16.15,77.7,77.7,0,0,0,7.33-11.86,67.42,67.42,0,0,1-11.7-5.58c.97-.71,1.94-1.46,2.85-2.21a71.64,71.64,0,0,0,64.29,0c.92.75,1.88,1.5,2.85,2.21a67.07,67.07,0,0,1-11.7,5.58,77.66,77.66,0,0,0,7.33,11.86,105.41,105.41,0,0,0,32.81-16.15C131.58,52.41,126.77,28.73,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,46,96.12,53,91.08,65.69,84.69,65.69Z"/>
+            </svg>
+          </a>
           <button 
             onClick={() => setTheme(isDark ? 'light' : 'dark')}
             className={`p-2 rounded-lg transition-colors ${isDark ? 'text-white/60 hover:bg-white/5 hover:text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}
           >
             {isDark ? <Sun size={18} /> : <Moon size={18} />}
-          </button>
-
-          <button 
-            onClick={handleGithubClick}
-            className="px-4 py-1.5 bg-white text-black rounded-lg text-xs font-bold hover:bg-white/90 transition-all shadow-lg flex items-center gap-2"
-          >
-            <Github size={14} />
-            GitHub
           </button>
         </div>
       </header>

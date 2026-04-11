@@ -149,7 +149,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     { id: 'versions', label: 'Versions', icon: History },
     { id: 'secrets', label: 'Secrets', icon: Key },
     { id: 'integrations', label: 'Integrations', icon: Layers },
-    { id: 'github', label: 'GitHub', icon: Github },
   ] : [
     { id: 'general', label: 'Settings', icon: Settings },
     { id: 'account', label: 'Account', icon: User },
@@ -502,14 +501,24 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <div className={`p-6 rounded-3xl border ${isDark ? 'border-white/10 bg-white/5' : 'border-slate-100 bg-slate-50'}`}>
               <h4 className={`font-bold mb-4 ${isDark ? 'text-white' : 'text-slate-900'}`}>Contactez-nous</h4>
               <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-600">
-                    <User size={14} />
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-600">
+                      <User size={14} />
+                    </div>
+                    <div>
+                      <p className={`text-xs font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>Benit Madimba</p>
+                      <p className="text-[10px] text-slate-400">Créateur de Cook IA</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className={`text-xs font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>Benit Madimba</p>
-                    <p className="text-[10px] text-slate-400">Créateur de Cook IA</p>
-                  </div>
+                  <a 
+                    href="https://discord.gg/Pc6reuApRF" 
+                    target="_blank" 
+                    rel="noreferrer"
+                    className="flex items-center gap-2 px-3 py-1.5 bg-[#5865F2] text-white rounded-lg text-xs font-bold hover:bg-[#4752C4] transition-all"
+                  >
+                    Rejoindre Discord
+                  </a>
                 </div>
                 
                 <div className="space-y-2">
