@@ -38,7 +38,8 @@ import {
   ImagePlus,
   ImageIcon,
   ShoppingBag,
-  User
+  User,
+  Scissors
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { generateWebsite, generateTitle, updateSection, convertToReact, improveText } from './services/geminiService';

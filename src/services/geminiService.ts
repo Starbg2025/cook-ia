@@ -38,7 +38,9 @@ CRITICAL DIRECTIVES FOR MAGNIFICENT RENDERING:
 
 3. ANIMATIONS & INTERACTIVITY (The "Juice"):
    - Use GSAP or Framer Motion for:
-     - Entrance animations, hover states, smooth scroll, and parallax.
+     - Entrance animations (fade-in, slide-up, scale-in) on all major sections and elements.
+     - "Camera Follow Forward" effect: Implement a subtle zoom-in or parallax effect that simulates a camera moving forward as the user scrolls or on page load.
+     - Smooth scroll, and parallax.
      - Micro-interactions on every interactive element.
 
 4. CONTENT & DETAIL:
