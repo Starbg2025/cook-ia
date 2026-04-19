@@ -1,25 +1,20 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Google+Sans:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Orbitron:wght@400..900&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-google: "Google Sans", "Inter", sans-serif;
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Orbitron", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   
-  --color-google-blue: #1a73e8;
-  --color-google-blue-hover: #1557b0;
-  --color-google-gray-50: #f8f9fa;
-  --color-google-gray-100: #f1f3f4;
-  --color-google-gray-200: #e8eaed;
-  --color-google-gray-300: #dadce0;
-  --color-google-gray-700: #3c4043;
-  --color-google-gray-800: #202124;
-  --color-google-gray-900: #171717;
+  --color-abyssal-deep: #020b18;
+  --color-abyssal-blue: #041e3a;
+  --color-cyan-bio: #00f5d4;
+  --color-purple-neon: #7b2fff;
   
-  --color-orange-primary: #FF6B00;
-  --color-bg-dark: #0A0A0A;
-  --color-card-dark: #141414;
-  --color-border-dark: #262626;
+  --color-orange-primary: #00f5d4; /* Aligning primary color with bio cyan */
+  --color-bg-dark: #020b18;
+  --color-card-dark: #041e3a;
+  --color-border-dark: rgba(0, 245, 212, 0.1);
 }
 
 body {

@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Zap, Send, Loader2, ImagePlus, X, Image as ImageIcon, Copy, ShoppingBag, Video, Search, Layout, CheckCircle, User, Mic, Plus, Sparkles, Flag, ThumbsUp, ThumbsDown, Eye, RotateCcw, ChevronDown, FileText, Clock, Settings, Terminal } from 'lucide-react';
 import { Message, ActionHistory } from '../types';
 
+import { UnderwaterWelcome } from './UnderwaterWelcome';
+
 interface ChatInterfaceProps {
   messages: Message[];
   prompt: string;
@@ -104,89 +106,97 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 lg:p-8 space-y-12 scrollbar-hide">
-        {messages.map((msg, idx) => (
-          <motion.div 
-            key={idx}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col gap-4 max-w-4xl mx-auto w-full"
-          >
-            <div className="flex items-center gap-3 mb-1">
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${
-                msg.role === 'user' 
-                  ? (isDark ? 'bg-white/10 text-white' : 'bg-slate-100 text-slate-600')
-                  : (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600')
-              }`}>
-                {msg.role === 'user' ? <User size={12} /> : <Sparkles size={12} />}
-              </div>
-              <span className={`text-[10px] font-bold uppercase tracking-[0.2em] ${
-                msg.role === 'user' 
-                  ? (isDark ? 'text-white/40' : 'text-slate-400')
-                  : 'text-orange-primary'
-              }`}>
-                {msg.role === 'user' ? 'You' : (msg._provider || 'Cook IA')}
-              </span>
-            </div>
-
-            <div className="flex flex-col gap-4 pl-9">
-              {msg.role === 'model' && (
-                <div className={`text-[9px] px-2 py-0.5 rounded-full border w-fit ${
-                  isDark ? 'text-white/30 border-white/5 bg-white/5' : 'text-slate-400 border-slate-100 bg-slate-50'
-                } font-mono`}>
-                  {msg.modelName || 'cook-ia-engine-v3'}
+      <div className="flex-1 overflow-y-auto p-4 lg:p-8 space-y-12 scrollbar-hide relative">
+        {messages.length <= 1 && !isLoading ? (
+          <div className="absolute inset-0">
+            <UnderwaterWelcome isDark={isDark} />
+          </div>
+        ) : (
+          <>
+            {messages.map((msg, idx) => (
+              <motion.div 
+                key={idx}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex flex-col gap-4 max-w-4xl mx-auto w-full relative z-10"
+              >
+                <div className="flex items-center gap-3 mb-1">
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${
+                    msg.role === 'user' 
+                      ? (isDark ? 'bg-white/10 text-white' : 'bg-slate-100 text-slate-600')
+                      : (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600')
+                  }`}>
+                    {msg.role === 'user' ? <User size={12} /> : <Sparkles size={12} />}
+                  </div>
+                  <span className={`text-[10px] font-bold uppercase tracking-[0.2em] ${
+                    msg.role === 'user' 
+                      ? (isDark ? 'text-white/40' : 'text-slate-400')
+                      : 'text-orange-primary'
+                  }`}>
+                    {msg.role === 'user' ? 'You' : (msg._provider || 'Cook IA')}
+                  </span>
                 </div>
-              )}
 
-              {msg.images && msg.images.length > 0 && (
-                <div className="flex flex-wrap gap-3">
-                  {msg.images.map((img, i) => (
-                    <div key={i} className={`group relative w-32 h-32 rounded-2xl overflow-hidden border ${isDark ? 'border-white/10' : 'border-slate-200'} shadow-sm`}>
-                      <img src={img} alt={`Reference ${i}`} className="w-full h-full object-cover" />
+                <div className="flex flex-col gap-4 pl-9">
+                  {msg.role === 'model' && (
+                    <div className={`text-[9px] px-2 py-0.5 rounded-full border w-fit ${
+                      isDark ? 'text-white/30 border-white/5 bg-white/5' : 'text-slate-400 border-slate-100 bg-slate-50'
+                    } font-mono`}>
+                      {msg.modelName || 'cook-ia-engine-v3'}
                     </div>
-                  ))}
-                </div>
-              )}
-              
-              <div className={`text-sm leading-relaxed ${isDark ? 'text-white/90' : 'text-slate-800'}`}>
-                {msg.content.startsWith('[Planificateur]') || msg.content.startsWith('[Testeur]') || msg.content.startsWith('[Analyste]') ? (
-                  <div className={`p-4 rounded-2xl border ${isDark ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-200'} italic text-xs`}>
-                    {msg.content}
-                  </div>
-                ) : (
-                  msg.content
-                )}
-              </div>
+                  )}
 
-              {msg.role === 'model' && (
-                <div className="flex items-center gap-4 mt-4 pt-4 border-t border-white/5">
-                  <div className="flex items-center gap-1">
-                    <button 
-                      onClick={() => onFeedback?.(idx, 'like')}
-                      className={`p-1.5 rounded-md transition-colors ${
-                        msg.feedback === 'like' 
-                          ? 'text-green-500 bg-green-500/10' 
-                          : (isDark ? 'text-white/20 hover:text-white hover:bg-white/5' : 'text-slate-400 hover:text-slate-900 hover:bg-slate-100')
-                      }`}
-                    >
-                      <ThumbsUp size={14} />
-                    </button>
-                    <button 
-                      onClick={() => onFeedback?.(idx, 'dislike')}
-                      className={`p-1.5 rounded-md transition-colors ${
-                        msg.feedback === 'dislike' 
-                          ? 'text-red-500 bg-red-500/10' 
-                          : (isDark ? 'text-white/20 hover:text-white hover:bg-white/5' : 'text-slate-400 hover:text-slate-900 hover:bg-slate-100')
-                      }`}
-                    >
-                      <ThumbsDown size={14} />
-                    </button>
+                  {msg.images && msg.images.length > 0 && (
+                    <div className="flex flex-wrap gap-3">
+                      {msg.images.map((img, i) => (
+                        <div key={i} className={`group relative w-32 h-32 rounded-2xl overflow-hidden border ${isDark ? 'border-white/10' : 'border-slate-200'} shadow-sm`}>
+                          <img src={img} alt={`Reference ${i}`} className="w-full h-full object-cover" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  <div className={`text-sm leading-relaxed ${isDark ? 'text-white/90' : 'text-slate-800'}`}>
+                    {msg.content.startsWith('[Planificateur]') || msg.content.startsWith('[Testeur]') || msg.content.startsWith('[Analyste]') ? (
+                      <div className={`p-4 rounded-2xl border ${isDark ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-200'} italic text-xs`}>
+                        {msg.content}
+                      </div>
+                    ) : (
+                      <div dangerouslySetInnerHTML={{ __html: msg.content.replace(/\n/g, '<br />') }} />
+                    )}
                   </div>
+
+                  {msg.role === 'model' && (
+                    <div className="flex items-center gap-4 mt-4 pt-4 border-t border-white/5">
+                      <div className="flex items-center gap-1">
+                        <button 
+                          onClick={() => onFeedback?.(idx, 'like')}
+                          className={`p-1.5 rounded-md transition-colors ${
+                            msg.feedback === 'like' 
+                              ? 'text-green-500 bg-green-500/10' 
+                              : (isDark ? 'text-white/20 hover:text-white hover:bg-white/5' : 'text-slate-400 hover:text-slate-900 hover:bg-slate-100')
+                          }`}
+                        >
+                          <ThumbsUp size={14} />
+                        </button>
+                        <button 
+                          onClick={() => onFeedback?.(idx, 'dislike')}
+                          className={`p-1.5 rounded-md transition-colors ${
+                            msg.feedback === 'dislike' 
+                              ? 'text-red-500 bg-red-500/10' 
+                              : (isDark ? 'text-white/20 hover:text-white hover:bg-white/5' : 'text-slate-400 hover:text-slate-900 hover:bg-slate-100')
+                          }`}
+                        >
+                          <ThumbsDown size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          </motion.div>
-        ))}
+              </motion.div>
+            ))}
+          </>
+        )}
         
         {isLoading && (
           <div className="flex flex-col gap-4 max-w-4xl mx-auto w-full">

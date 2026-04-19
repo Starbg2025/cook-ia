@@ -54,13 +54,14 @@ import { ImageSearchModal } from './components/ImageSearchModal';
 import { UrlInputModal } from './components/UrlInputModal';
 import { AuthModal } from './components/AuthModal';
 import { SettingsModal } from './components/SettingsModal';
+import { LandingPage } from './components/LandingPage';
 
 import { supabase, logErrorToSupabase } from './services/supabaseService';
 import { deployToNetlify } from './services/netlifyService';
 import JSZip from 'jszip';
 import { Palette, Braces } from 'lucide-react';
 
-const LOGO_URL = "https://i.ibb.co/mC3M8SSN/logo.png"; // Note: I used a direct link format, you may need to check the exact direct link on ImgBB
+const LOGO_URL = "https://i.ibb.co/mC3M8SSN/logo.png";
 
 export default function App() {
   const [prompt, setPrompt] = useState('');
@@ -102,6 +103,7 @@ export default function App() {
   const [settingsTab, setSettingsTab] = useState<'publish' | 'versions' | 'secrets' | 'integrations' | 'github' | 'general' | 'account' | 'help'>('publish');
   const [secrets, setSecrets] = useState<{ key: string; value: string }[]>([]);
   const [isLinkFullscreen, setIsLinkFullscreen] = useState(false);
+  const [hasStarted, setHasStarted] = useState(true);
 
   const handleUpdateProjectName = async (newName: string) => {
     if (!currentConversationId || !newName.trim()) return;
@@ -881,23 +883,53 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
   }, [pendingSend, prompt]);
 
   const handleDownloadZip = async () => {
-    const lastModelMessage = [...messages].reverse().find(m => m.role === 'model' && m.files);
-    if (!lastModelMessage?.files) return;
+    try {
+      const lastModelMessage = [...messages].reverse().find(m => m.role === 'model' && m.files);
+      let filesToZip = lastModelMessage?.files || [];
 
-    const zip = new JSZip();
-    lastModelMessage.files.forEach(file => {
-      zip.file(file.path, file.content);
-    });
+      // If no files were found but we have generated code, treat it as a single-file project
+      if (filesToZip.length === 0 && generatedCode) {
+        filesToZip = [{ path: 'index.html', content: generatedCode }];
+      } else if (filesToZip.length > 0 && generatedCode) {
+        // If we have files but generatedCode is updated (e.g., via visual editor), 
+        // try to update the matching file in the array (usually index.html or the main preview file)
+        const projectType = filesToZip.find(f => f.path.includes('package.json')) ? 'react' : 'html';
+        
+        if (projectType === 'html') {
+          filesToZip = filesToZip.map(f => {
+            if (f.path === 'index.html' || f.path.endsWith('.html')) {
+              return { ...f, content: generatedCode };
+            }
+            return f;
+          });
+        }
+      }
 
-    const content = await zip.generateAsync({ type: 'blob' });
-    const url = URL.createObjectURL(content);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${siteName || 'cook-ia-project'}.zip`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+      if (filesToZip.length === 0) {
+        alert("Aucun fichier à exporter pour le moment.");
+        return;
+      }
+
+      const zip = new JSZip();
+      filesToZip.forEach(file => {
+        // Remove leading slashes to prevent issues with some zip software
+        const cleanPath = file.path.startsWith('/') ? file.path.substring(1) : file.path;
+        zip.file(cleanPath, file.content);
+      });
+
+      const content = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(content);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${siteName.replace(/[^a-z0-9]/gi, '-').toLowerCase() || 'cook-ia-project'}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("ZIP Export failed:", error);
+      alert("L'exportation ZIP a échoué. Veuillez réessayer.");
+    }
   };
   const handleAbort = () => {
     if (abortController) {
@@ -1038,18 +1070,37 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
   };
 
   return (
-    <div className={`flex flex-col h-screen ${isDark ? 'bg-[#0A0A0A] text-white' : 'bg-[#F8F9FA] text-slate-900'} overflow-hidden font-sans transition-colors duration-500`}>
-      {showAnnouncement && (
-        <div className="bg-blue-600 text-white px-4 py-2 flex items-center justify-between text-sm font-medium shrink-0 z-[60]">
-          <div className="flex items-center gap-2">
-            <Sparkles size={16} />
-            <span>La majorité des bugs ont été corrigés ! Si vous en trouvez d'autres, dites-le nous sur Discord.</span>
-          </div>
-          <button onClick={() => setShowAnnouncement(false)} className="hover:bg-white/10 p-1 rounded transition-colors">
-            <X size={16} />
-          </button>
-        </div>
-      )}
+    <AnimatePresence mode="wait">
+      {!hasStarted ? (
+        <motion.div
+           key="landing"
+           initial={{ opacity: 0 }}
+           animate={{ opacity: 1 }}
+           exit={{ opacity: 0, scale: 1.1, filter: "blur(20px)" }}
+           transition={{ duration: 1, ease: "easeInOut" }}
+           className="fixed inset-0 z-[1000]"
+        >
+          <LandingPage onEnter={() => setHasStarted(true)} />
+        </motion.div>
+      ) : (
+        <motion.div 
+          key="app"
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          className={`flex flex-col h-screen ${isDark ? 'bg-abyssal-deep text-white' : 'bg-[#F8F9FA] text-slate-900'} overflow-hidden font-sans transition-colors duration-500`}
+        >
+          {showAnnouncement && (
+            <div className={`bg-cyan-bio text-black px-4 py-2 flex items-center justify-between text-sm font-bold shrink-0 z-[60] shadow-[0_0_20px_rgba(0,245,212,0.2)]`}>
+              <div className="flex items-center gap-2">
+                <Sparkles size={16} />
+                <span>La majorité des bugs ont été corrigés ! Rejoignez notre Discord.</span>
+              </div>
+              <button onClick={() => setShowAnnouncement(false)} className="hover:bg-black/10 p-1 rounded transition-colors">
+                <X size={16} />
+              </button>
+            </div>
+          )}
       {/* Floating Discord Button for Mobile */}
       <a 
         href="https://discord.gg/Pc6reuApRF" 
@@ -1067,7 +1118,7 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
       </a>
 
       {/* Header */}
-      <header className={`h-14 border-b flex items-center justify-between px-4 shrink-0 z-50 ${isDark ? 'bg-[#0A0A0A] border-white/5' : 'bg-white border-slate-200'}`}>
+      <header className={`h-14 border-b flex items-center justify-between px-4 shrink-0 z-50 ${isDark ? 'bg-abyssal-deep border-cyan-bio/10' : 'bg-white border-slate-200'}`}>
         <div className="flex items-center gap-4">
           <button 
             onClick={() => setIsHistoryOpen(!isHistoryOpen)}
@@ -1076,10 +1127,10 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
             <Menu size={20} />
           </button>
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-orange-primary rounded-md flex items-center justify-center">
-              <Zap size={14} className="text-white" />
+            <div className="w-6 h-6 bg-cyan-bio rounded-md flex items-center justify-center shadow-[0_0_15px_rgba(0,245,212,0.4)]">
+              <Zap size={14} className="text-white fill-white" />
             </div>
-            <span className={`font-bold text-sm tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>COOK IA</span>
+            <span className={`font-display font-black text-sm tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>COOK IA</span>
           </div>
         </div>
 
@@ -1617,6 +1668,8 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
         isRepoPrivate={isRepoPrivate}
         onToggleRepoPrivate={setIsRepoPrivate}
       />
-    </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

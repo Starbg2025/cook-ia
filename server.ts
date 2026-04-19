@@ -410,6 +410,23 @@ Return the response EXCLUSIVELY in JSON format with three fields (do not include
 
     // Fallback Chain Execution
     try {
+      // 0. Try Modal GLM-5 (Priority 0 - New backend)
+      const modalKey = process.env.LLM_BACKEND_API_KEY;
+      const modalUrl = process.env.LLM_BACKEND_URL || "https://api.us-west-2.modal.direct/v1";
+      if (modalKey) {
+        try {
+          const result = await tryRequest(
+            modalUrl.endsWith('/v1') ? `${modalUrl}/chat/completions` : `${modalUrl}/v1/chat/completions`,
+            modalKey,
+            "zai-org/GLM-5-FP8",
+            "Modal"
+          );
+          return res.json(result);
+        } catch (err: any) {
+          console.warn(`[Fallback] Modal failed: ${err.message}`);
+        }
+      }
+
       // 1. Try Groq (Priority 1)
       if (groqKey) {
         try {
