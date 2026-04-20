@@ -288,7 +288,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter }) => {
           <h2 className="font-display text-5xl md:text-8xl mb-16 tracking-tighter">TECH STACK MODERNE</h2>
           
           <div className="flex flex-wrap justify-center gap-6 max-w-4xl mx-auto">
-            {["React 18", "TypeScript", "Node.js", "Express", "Supabase", "Firestore", "Tailwind CSS", "Vite", "Gemini 1.5 Pro", "GLM-5 Modal", "Framer Motion"].map((tech, i) => (
+            {["React 18", "TypeScript", "Node.js", "Express", "Supabase", "Firestore", "Tailwind CSS", "Vite", "Gemini 1.5 Pro", "Framer Motion"].map((tech, i) => (
               <motion.div 
                 key={i}
                 initial={{ opacity: 0, y: 20 }}
