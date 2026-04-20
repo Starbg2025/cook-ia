@@ -88,7 +88,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [sendSuccess, setSendSuccess] = useState(false);
   const [localProjectName, setLocalProjectName] = useState(projectName);
 
-  const currentUrl = typeof window !== 'undefined' ? window.location.href : 'https://cook-ia.online';
+  const currentUrl = typeof window !== 'undefined' ? window.location.href : 'https://cook-ia.netlify.app';
 
   const handleAddCollaborator = () => {
     if (!collaboratorEmail.trim()) return;

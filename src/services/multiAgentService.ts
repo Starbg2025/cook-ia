@@ -8,6 +8,14 @@ export const analystReview = async (prompt: string, history: any[]) => {
   if (!apiKey) return { needsClarification: false, questions: [] };
 
   try {
+    // Helper to format history for text-based models
+    const formatHistory = (hist: any[]) => {
+      return hist.map(h => {
+        const text = h.parts.filter((p: any) => p.text).map((p: any) => p.text).join(" ");
+        return `${h.role === "model" ? "Assistant" : "User"}: ${text}`;
+      }).join("\n");
+    };
+
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -25,17 +33,6 @@ Your mission is twofold:
 1. DEEP UNDERSTANDING: Before the Architect (Engineer) starts building, ensure the user's vision is crystal clear. Ask 1-2 very specific and intelligent questions to refine the project (e.g., target audience, specific features, preferred aesthetic details, or content tone).
 2. TECHNICAL SUPPORT: If the user asks a technical question (e.g., "How do I save data to Supabase?", "Give me the SQL for a users table", "How do I use my Stripe key?"), you MUST answer it directly and comprehensively. 
 
-PROACTIVE GUIDANCE:
-- If you notice missing configurations or steps required for a feature to work (e.g., Supabase setup, Stripe keys), you MUST inform the user and provide clear instructions on how to resolve it.
-- Remind the user that they can store sensitive keys in the "Secrets" section of the settings.
-
-NEW CAPABILITIES TO GUIDE USERS ON:
-- IMAGE-TO-CODE: Users can upload an image and ask to code from it. You should ask if they want to copy the exact layout or just the aesthetic.
-- COLOR EXTRACTION: Users can ask to copy the color palette of an image.
-- MULTI-PAGE ARCHITECTURE: Users can ask for a complete site with separate pages (index, about, contact, etc.).
-- FOCUS MODE: Users can activate Focus Mode for a complete, production-ready site from a simple prompt.
-- WEBSITE CLONING: Users can provide a URL to clone a site. You should ask if they want a 1:1 clone or an improved version.
-
 Return JSON: 
 { 
   "needsClarification": boolean, 
@@ -46,7 +43,7 @@ Return JSON:
           },
           {
             role: "user",
-            content: `HISTORY: ${JSON.stringify(history.slice(-5))}\n\nCURRENT PROMPT: ${prompt}`
+            content: `HISTORY:\n${formatHistory(history.slice(-5))}\n\nCURRENT PROMPT: ${prompt}`
           }
         ],
         response_format: { type: "json_object" }
@@ -87,11 +84,19 @@ export const plannerAgent = async (prompt: string, history: any[]) => {
       "subAgents": string[] (names of sub-agents needed)
     }`;
 
+    // Helper to format history for text-based models
+    const formatHistory = (hist: any[]) => {
+      return hist.map(h => {
+        const text = h.parts.filter((p: any) => p.text).map((p: any) => p.text).join(" ");
+        return `${h.role === "model" ? "Assistant" : "User"}: ${text}`;
+      }).join("\n");
+    };
+
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: [
         { text: systemPrompt },
-        { text: `USER REQUEST: ${prompt}\n\nHISTORY: ${JSON.stringify(history.slice(-3))}` }
+        { text: `USER REQUEST: ${prompt}\n\nHISTORY:\n${formatHistory(history.slice(-3))}` }
       ],
       config: {
         responseMimeType: "application/json"
@@ -102,7 +107,38 @@ export const plannerAgent = async (prompt: string, history: any[]) => {
     if (!text) throw new Error("Empty response from Gemini");
     return JSON.parse(text);
   } catch (error) {
-    console.error("Planner error:", error);
+    console.warn("Planner Gemini error, trying Groq fallback:", error);
+    const apiKey = process.env.GROQ_API_KEY;
+    if (apiKey) {
+      try {
+        const fallbackResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${apiKey}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            model: "llama-3.3-70b-versatile",
+            messages: [
+              {
+                role: "system",
+                content: `You are the 'Planner' for COOK IA. Break down the user's request into a detailed technical plan.
+                Return JSON: { "plan": "string", "isComplex": boolean, "subAgents": string[] }`
+              },
+              {
+                role: "user",
+                content: `USER REQUEST: ${prompt}`
+              }
+            ],
+            response_format: { type: "json_object" }
+          })
+        });
+        const data = await fallbackResponse.json();
+        return JSON.parse(data.choices[0].message.content);
+      } catch (fallbackErr) {
+        console.error("Planner fallback failed:", fallbackErr);
+      }
+    }
     return { 
       plan: "Désolé, je n'ai pas pu générer de plan détaillé pour le moment. Je vais tout de même tenter de construire votre site.", 
       isComplex: false, 
@@ -164,7 +200,7 @@ export const criticReview = async (prompt: string, generatedCode: string) => {
       headers: {
         "Authorization": `Bearer ${apiKey}`,
         "Content-Type": "application/json",
-        "HTTP-Referer": "https://cook-ia.online",
+        "HTTP-Referer": "https://cook-ia.netlify.app",
         "X-Title": "COOK IA"
       },
       body: JSON.stringify({

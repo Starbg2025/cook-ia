@@ -53,7 +53,7 @@ async function processTask(id: string) {
         await new Promise(resolve => setTimeout(resolve, 6000));
         const slug = task.payload.siteName.toLowerCase().replace(/\s+/g, '-') || 'site';
         task.result = { 
-          url: `https://${slug}.cook-ia.online`,
+          url: `https://${slug}.cook-ia.netlify.app`,
           status: "Live",
           deployedAt: new Date()
         };
@@ -68,7 +68,7 @@ async function processTask(id: string) {
         break;
       case 'deployment_sync':
         await new Promise(resolve => setTimeout(resolve, 8000));
-        task.result = { url: "https://sync.cook-ia.online/deploy/success" };
+        task.result = { url: "https://sync.cook-ia.netlify.app/deploy/success" };
         break;
       case 'session_log':
         // Record connection and session metadata
@@ -121,7 +121,7 @@ async function startServer() {
     
     try {
       const slug = siteName.toLowerCase().replace(/\s+/g, '-') || 'site';
-      const url = `https://${slug}.cook-ia.online`;
+      const url = `https://${slug}.cook-ia.netlify.app`;
       
       // Simulate real deployment steps
       console.log(`[Deployment] Step 1: Provisioning server for ${slug}...`);
@@ -341,6 +341,7 @@ CRITICAL DIRECTIVES FOR MAGNIFICENT RENDERING:
 6. MANDATORY BADGE:
    - You MUST ALWAYS include a small, elegant badge at the bottom right of the page (fixed position).
    - The badge should say "Créé avec COOK IA" with the logo.
+   - Example style: <div style="position: fixed; bottom: 20px; right: 20px; background: rgba(0,0,0,0.8); color: white; padding: 8px 16px; border-radius: 9999px; font-size: 12px; font-weight: 600; z-index: 9999; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(4px); display: flex; items-center: center; gap: 8px; font-family: sans-serif; cursor: pointer;" onclick="window.open('https://cook-ia.netlify.app/', '_blank')"><img src="https://i.ibb.co/mC3M8SSN/logo.png" style="width: 16px; height: 16px; object-fit: contain;">Créé avec COOK IA</div>
 
 Return the response EXCLUSIVELY in JSON format with three fields (do not include any other text outside the JSON):
 1. 'explanation': A brief, professional description of the architectural and design choices made.
@@ -349,10 +350,18 @@ Return the response EXCLUSIVELY in JSON format with three fields (do not include
 
     const messages = [
       { role: "system", content: systemInstruction },
-      ...history.map((h: any) => ({
-        role: h.role === "model" ? "assistant" : "user",
-        content: h.parts[0].text || ""
-      }))
+      ...history.map((h: any) => {
+        // Concatenate all text parts for each message
+        const textContent = h.parts
+          .filter((p: any) => p.text)
+          .map((p: any) => p.text)
+          .join("\n");
+        
+        return {
+          role: h.role === "model" ? "assistant" : "user",
+          content: textContent || (h.role === "user" ? "[Image/Media content]" : "Processing...")
+        };
+      })
     ];
 
     const userContent: any[] = [{ type: "text", text: prompt }];
@@ -376,7 +385,7 @@ Return the response EXCLUSIVELY in JSON format with three fields (do not include
       };
       
       if (providerName === "OpenRouter") {
-        headers["HTTP-Referer"] = "https://cook-ia.online";
+        headers["HTTP-Referer"] = "https://cook-ia.netlify.app";
         headers["X-Title"] = "COOK IA";
       }
 
@@ -384,7 +393,7 @@ Return the response EXCLUSIVELY in JSON format with three fields (do not include
         model,
         messages,
         temperature: 0.7,
-        max_tokens: 4000
+        max_tokens: 8192
       };
 
       if (isJson) {
@@ -405,7 +414,16 @@ Return the response EXCLUSIVELY in JSON format with three fields (do not include
       const data: any = await response.json();
       const content = data.choices[0].message.content;
       console.log(`[Fallback] ${providerName} succeeded!`);
-      return { ...JSON.parse(content), _provider: providerName.toLowerCase() };
+      
+      // Robust JSON Parsing
+      try {
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        const jsonStr = jsonMatch ? jsonMatch[0] : content;
+        return { ...JSON.parse(jsonStr), _provider: providerName.toLowerCase() };
+      } catch (e) {
+        console.error(`[Fallback] ${providerName} returned invalid JSON:`, content.substring(0, 500));
+        throw new Error(`${providerName} returned invalid JSON format.`);
+      }
     }
 
     // Fallback Chain Execution
