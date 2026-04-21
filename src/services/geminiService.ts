@@ -56,7 +56,7 @@ CRITICAL DIRECTIVES FOR MAGNIFICENT RENDERING:
      - A React component version with routing (App.jsx, components/, pages/).
      - A Python backend structure (app.py) if the site requires any data handling or forms.
      - A README.md file.
-   - The README.md MUST explicitly state: "Ce site a été créé avec COOK IA, l'IA de création web de Benit Madimba."
+   - The README.md MUST explicitly state: "Ce site a été créé avec COOK IA, l'IA de création web."
    - Also provide a 'preview_code' which is a single, self-contained HTML string. To simulate multiple pages in the preview, use a robust client-side routing system or dynamic section switching.
    - Use modern patterns: CSS Variables, Flexbox/Grid, ES6 Modules, and high-performance animations.
 

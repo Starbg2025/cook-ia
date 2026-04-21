@@ -20,7 +20,8 @@ import {
   Zap,
   ChevronRight,
   LogOut,
-  Loader2
+  Loader2,
+  ShieldCheck
 } from 'lucide-react';
 import { supabase } from '../services/supabaseService';
 
@@ -49,7 +50,7 @@ interface SettingsModalProps {
   onConnectGithub?: () => void;
 }
 
-type TabType = 'publish' | 'versions' | 'secrets' | 'integrations' | 'github' | 'general' | 'account' | 'help';
+type TabType = 'publish' | 'versions' | 'secrets' | 'integrations' | 'github' | 'general' | 'account' | 'help' | 'founder';
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ 
   isOpen, 
@@ -152,6 +153,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   ] : [
     { id: 'general', label: 'Settings', icon: Settings },
     { id: 'account', label: 'Account', icon: User },
+    { id: 'founder', label: 'Fondateur', icon: ShieldCheck },
     { id: 'help', label: 'Help', icon: HelpCircle },
   ];
 
@@ -410,6 +412,62 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   {isCopied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
                 </button>
               </div>
+            </div>
+          </div>
+        );
+      case 'founder':
+        return (
+          <div className="space-y-8 p-2">
+            <div className="flex flex-col gap-1">
+              <h3 className={`text-lg font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>Le Fondateur</h3>
+              <p className="text-xs text-slate-400">Découvrez l'esprit derrière Cook IA.</p>
+            </div>
+
+            <div className={`p-8 rounded-[40px] border relative overflow-hidden ${isDark ? 'border-white/10 bg-white/5' : 'border-slate-100 bg-slate-50 shadow-sm'}`}>
+              <div className="relative z-10">
+                <div className="flex items-center gap-6 mb-8">
+                  <div className="w-24 h-24 rounded-full border-4 border-blue-500/20 p-1">
+                    <div className="w-full h-full rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-3xl overflow-hidden shadow-2xl">
+                      <img 
+                        src="https://i.ibb.co/mC3M8SSN/logo.png" 
+                        alt="Benit Madimba" 
+                        className="w-full h-full object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <h4 className={`text-2xl font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>Benit Madimba</h4>
+                    <p className="text-sm text-blue-500 font-bold uppercase tracking-widest">Fondateur & CEO</p>
+                    <div className="flex items-center gap-4 mt-3 text-slate-400">
+                      <a href="https://github.com/benitmadimba" target="_blank" rel="noreferrer" className="hover:text-blue-500 transition-colors"><Github size={18} /></a>
+                      <a href="https://discord.gg/Pc6reuApRF" target="_blank" rel="noreferrer" className="hover:text-blue-500 transition-colors"><Globe size={18} /></a>
+                    </div>
+                  </div>
+                </div>
+
+                <div className={`space-y-4 text-sm leading-relaxed ${isDark ? 'text-white/60' : 'text-slate-600'}`}>
+                  <p>
+                    Benit Madimba est le visionnaire derrière <strong>Cook IA</strong>. Passionné par l'intelligence artificielle et le développement web, il a conçu cet outil pour démocratiser la création de sites web de haute qualité.
+                  </p>
+                  <p>
+                    Son objectif est de permettre à quiconque, peu importe son niveau technique, de transformer une simple idée en un produit digital magnifique et fonctionnel en quelques secondes.
+                  </p>
+                </div>
+
+                <div className="mt-8 pt-8 border-t border-white/5 flex items-center justify-between">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Contact Direct</span>
+                    <span className={`text-sm ${isDark ? 'text-white' : 'text-slate-900'} font-medium`}>benit800@gmail.com</span>
+                  </div>
+                  <div className="px-4 py-2 rounded-2xl bg-orange-primary/10 border border-orange-primary/20 text-orange-primary text-xs font-bold">
+                    Membre Gold
+                  </div>
+                </div>
+              </div>
+              
+              {/* Decorative gradient */}
+              <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 blur-[100px] -mr-32 -mt-32 rounded-full" />
             </div>
           </div>
         );

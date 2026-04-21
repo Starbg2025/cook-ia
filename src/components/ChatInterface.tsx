@@ -150,12 +150,12 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                   }`}>
                     {msg.role === 'user' ? <User size={12} /> : <Sparkles size={12} />}
                   </div>
-                  <span className={`text-[10px] font-bold uppercase tracking-[0.2em] ${
+                  <span className={`text-[10px] font-bold tracking-[0.2em] ${
                     msg.role === 'user' 
                       ? (isDark ? 'text-white/40' : 'text-slate-400')
                       : 'text-orange-primary'
                   }`}>
-                    {msg.role === 'user' ? 'You' : (msg._provider || 'Cook IA')}
+                    {msg.role === 'user' ? 'You' : 'cook-ia-engine-v3'}
                   </span>
                 </div>
 
