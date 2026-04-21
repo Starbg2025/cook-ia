@@ -19,6 +19,7 @@ export interface ProjectFile {
 export interface ActionHistory {
   type: 'read' | 'thought' | 'shell';
   content: string;
+  status: 'loading' | 'completed' | 'failed';
   duration?: number;
 }
 

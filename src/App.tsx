@@ -44,7 +44,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { generateWebsite, generateTitle, updateSection, convertToReact, improveText } from './services/geminiService';
 import { analystReview, criticReview, plannerAgent, testerAgent } from './services/multiAgentService';
-import { Message, ViewMode, Conversation, StyleConfig, SectionEditState } from './types';
+import { Message, ViewMode, Conversation, StyleConfig, SectionEditState, ActionHistory } from './types';
 import { ChatInterface } from './components/ChatInterface';
 import { Preview } from './components/Preview';
 import { HistorySidebar } from './components/HistorySidebar';
@@ -74,6 +74,8 @@ export default function App() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingStatus, setLoadingStatus] = useState("Building your site...");
+  const [currentActions, setCurrentActions] = useState<ActionHistory[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode | 'your-apps' | 'faq'>('chat');
   const [generatedCode, setGeneratedCode] = useState<string>('');
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
@@ -675,6 +677,18 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
     const controller = new AbortController();
     setAbortController(controller);
     setIsLoading(true);
+    setLoadingStatus("Analyse de votre demande...");
+    setCurrentActions([]);
+
+    const addAction = (type: 'read' | 'thought' | 'shell', content: string) => {
+      const id = Math.random().toString(36).substr(2, 9);
+      setCurrentActions(prev => [...prev, { type, content, status: 'loading', id } as any]);
+      return id;
+    };
+
+    const completeAction = (id: string, status: 'completed' | 'failed' = 'completed') => {
+      setCurrentActions(prev => prev.map(a => (a as any).id === id ? { ...a, status } : a));
+    };
 
     try {
       const history = await Promise.all(newMessages.map(async (m) => {
@@ -709,9 +723,14 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
       }));
 
       // 1. Analyst Phase (Groq)
+      const a1 = addAction('thought', "Démarrage de l'analyse sémantique du prompt...");
       const review = await analystReview(userMessage, history);
+      completeAction(a1);
       
+      setLoadingStatus("Planification stratégique...");
+      const a2 = addAction('thought', "Élaboration de la stratégie de développement...");
       if (review.isTechnicalQuestion && review.answer) {
+        completeAction(a2);
         const technicalMessage: Message = {
           role: 'model',
           content: `[Expert Technique] ${review.answer}`,
@@ -738,7 +757,12 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
       }
 
       // 2. Planner Phase (Gemini) - ALWAYS PLAN BEFORE CODING
+      const a3 = addAction('read', "Vérification des composants réutilisables...");
       const planResult = await plannerAgent(userMessage, history);
+      completeAction(a3);
+
+      setLoadingStatus("Génération de l'architecture...");
+      const a4 = addAction('thought', "Plan stratégique validé. Initialisation de l'Ingénieur IA...");
       const planningMessage: Message = {
         role: 'model',
         content: `[Planificateur] Voici mon plan d'action :\n\n${planResult.plan}${planResult.isComplex ? `\n\n**Complexité détectée !** Délégation aux sous-agents : ${planResult.subAgents.join(', ')}` : ''}`,
@@ -787,15 +811,21 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
         enrichedUserMessage += "\n\nReference Images (URLs):\n" + urls.join('\n');
       }
 
+      const a5 = addAction('thought', "Génération des fichiers sources (HTML/JS/React)...");
       let result = await generateWebsite(
         enrichedUserMessage, 
         history.slice(0, -1), 
         imageParts.length > 0 ? imageParts : undefined,
         videoParts.length > 0 ? videoParts : undefined
       );
+      completeAction(a5);
+
+      setLoadingStatus("Tests de qualité et validation...");
+      const a6 = addAction('shell', "Compilation des assets et vérification de la syntaxe...");
 
       // 4. Automated Testing Phase (Groq)
       const testResult = await testerAgent(result.preview_code, enrichedUserMessage);
+      completeAction(a6);
       
       if (!testResult.passed) {
         // Log error to Supabase
@@ -822,9 +852,14 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
       }
 
       // 5. Critic Phase (OpenRouter)
+      const a7 = addAction('read', "Analyse de la conformité visuelle et UX...");
       const critic = await criticReview(enrichedUserMessage, result.preview_code);
+      completeAction(a7);
       
+      setLoadingStatus("Finalisation du design...");
+      const a8 = addAction('thought', "Finalisation des derniers détails esthétiques...");
       if (!critic.approved) {
+        completeAction(a8, 'failed');
         // Re-generate with feedback
         result = await generateWebsite(
           `${enrichedUserMessage}\n\nFEEDBACK DU CRITIQUE (À CORRIGER) :\n${critic.feedback}`,
@@ -839,6 +874,7 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
         content: result.explanation,
         code: result.preview_code,
         files: result.files,
+        actionHistory: currentActions,
         _provider: result._provider
       }];
       setMessages(updatedMessages);
@@ -849,6 +885,7 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
       await saveConversation(updatedMessages);
     } catch (error: any) {
       if (error.name === 'AbortError') {
+        addAction('thought', "Processus interrompu par l'utilisateur.");
         setMessages(prev => [...prev, { 
           role: 'model', 
           content: "Requête annulée par l'utilisateur." 
@@ -856,6 +893,8 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
         return;
       }
       console.error("Error generating website:", error);
+      addAction('thought', "Erreur critique détectée. Tentative de diagnostic...");
+      
       let errorMessage = "Désolé, une erreur est survenue lors de la génération. Veuillez réessayer.";
       if (error.message?.includes("API key")) {
         errorMessage = "Clé API invalide ou manquante. Vérifiez votre configuration.";
@@ -991,11 +1030,17 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
   };
 
   const handleRefresh = () => {
+    // Attempt to reset to the original code from the message history to discard visual edits
+    const lastModelMessage = [...messages].reverse().find(m => m.role === 'model' && m.code);
+    if (lastModelMessage?.code) {
+      setGeneratedCode(lastModelMessage.code);
+    }
+    
     if (generatedCode && iframeRef.current) {
       const doc = iframeRef.current.contentDocument;
       if (doc) {
         doc.open();
-        doc.write(generatedCode);
+        doc.write(lastModelMessage?.code || generatedCode);
         doc.close();
       }
     }
@@ -1310,6 +1355,8 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
               isDark={isDark}
               messages={messages}
               isLoading={isLoading}
+              loadingStatus={loadingStatus}
+              actions={currentActions}
               prompt={prompt}
               setPrompt={setPrompt}
               handleSend={handleSend}

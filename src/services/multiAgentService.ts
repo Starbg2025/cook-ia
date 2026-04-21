@@ -2,6 +2,30 @@ import { GoogleGenAI, Type } from "@google/genai";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
+// Shadow Watchdog: Internal health check and silent fallback management
+let primaryModelHealthy = true;
+
+export const shadowWatchdog = {
+  isHealthy: () => primaryModelHealthy,
+  setUnhealthy: () => {
+    primaryModelHealthy = false;
+    console.warn("[Shadow Watchdog] Gemini marked as unhealthy. Activation of Silent Fallback Protocol.");
+    // Auto-reset health after 5 minutes
+    setTimeout(() => {
+      primaryModelHealthy = true;
+      console.log("[Shadow Watchdog] Gemini health reset. Returning to primary model.");
+    }, 5 * 60 * 1000);
+  }
+};
+
+const getApiKey = (provider: string) => {
+  switch (provider) {
+    case 'GROQ': return process.env.GROQ_API_KEY;
+    case 'OPENROUTER': return process.env.OPENROUTER_API_KEY;
+    default: return null;
+  }
+};
+
 // Agent 1: Analyst (Groq)
 export const analystReview = async (prompt: string, history: any[]) => {
   const apiKey = process.env.GROQ_API_KEY;
@@ -69,6 +93,53 @@ Return JSON:
 
 // Agent 2: Planner (Gemini)
 export const plannerAgent = async (prompt: string, history: any[]) => {
+  const tryGroqFallback = async (p: string) => {
+    const apiKey = process.env.GROQ_API_KEY;
+    if (apiKey) {
+      try {
+        const fallbackResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${apiKey}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            model: "llama-3.3-70b-versatile",
+            messages: [
+              {
+                role: "system",
+                content: `You are the 'Planner' for COOK IA. Break down the user's request into a detailed technical plan.
+                Return JSON: { "plan": "string", "isComplex": boolean, "subAgents": string[] }`
+              },
+              {
+                role: "user",
+                content: `USER REQUEST: ${p}`
+              }
+            ],
+            response_format: { type: "json_object" }
+          })
+        });
+        const data = await fallbackResponse.json();
+        return JSON.parse(data.choices[0].message.content);
+      } catch (fallbackErr) {
+        console.error("Planner fallback failed:", fallbackErr);
+        throw fallbackErr;
+      }
+    }
+    throw new Error("No Groq key for fallback");
+  };
+
+  // If primary model is already known to be down, skip directly
+  if (!shadowWatchdog.isHealthy()) {
+    console.log("[Shadow Watchdog] Planner skipping Gemini due to health state.");
+    try {
+      return await tryGroqFallback(prompt);
+    } catch {
+      // Return basic plan if all fail
+      return { plan: "Planification simplifiée (mode secours).", isComplex: false, subAgents: [] };
+    }
+  }
+
   try {
     const systemPrompt = `You are the 'Planner' for COOK IA. Your job is to break down the user's request into a detailed technical plan.
             
@@ -84,7 +155,6 @@ export const plannerAgent = async (prompt: string, history: any[]) => {
       "subAgents": string[] (names of sub-agents needed)
     }`;
 
-    // Helper to format history for text-based models
     const formatHistory = (hist: any[]) => {
       return hist.map(h => {
         const text = h.parts.filter((p: any) => p.text).map((p: any) => p.text).join(" ");
@@ -107,43 +177,17 @@ export const plannerAgent = async (prompt: string, history: any[]) => {
     if (!text) throw new Error("Empty response from Gemini");
     return JSON.parse(text);
   } catch (error) {
+    shadowWatchdog.setUnhealthy();
     console.warn("Planner Gemini error, trying Groq fallback:", error);
-    const apiKey = process.env.GROQ_API_KEY;
-    if (apiKey) {
-      try {
-        const fallbackResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${apiKey}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            model: "llama-3.3-70b-versatile",
-            messages: [
-              {
-                role: "system",
-                content: `You are the 'Planner' for COOK IA. Break down the user's request into a detailed technical plan.
-                Return JSON: { "plan": "string", "isComplex": boolean, "subAgents": string[] }`
-              },
-              {
-                role: "user",
-                content: `USER REQUEST: ${prompt}`
-              }
-            ],
-            response_format: { type: "json_object" }
-          })
-        });
-        const data = await fallbackResponse.json();
-        return JSON.parse(data.choices[0].message.content);
-      } catch (fallbackErr) {
-        console.error("Planner fallback failed:", fallbackErr);
-      }
+    try {
+      return await tryGroqFallback(prompt);
+    } catch {
+      return { 
+        plan: "Désolé, je n'ai pas pu générer de plan détaillé pour le moment. Je vais tout de même tenter de construire votre site.", 
+        isComplex: false, 
+        subAgents: [] 
+      };
     }
-    return { 
-      plan: "Désolé, je n'ai pas pu générer de plan détaillé pour le moment. Je vais tout de même tenter de construire votre site.", 
-      isComplex: false, 
-      subAgents: [] 
-    };
   }
 };
 

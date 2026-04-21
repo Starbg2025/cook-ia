@@ -1,4 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
+import { shadowWatchdog } from "./multiAgentService";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
@@ -98,12 +99,11 @@ const generateWithAIFallback = async (
 };
 
 export const convertToReact = async (htmlCode: string, framework: 'react' | 'nextjs' | 'python' | 'javascript') => {
-  try {
-    const model = "gemini-3-flash-preview";
-    let targetPrompt = "";
-    
-    if (framework === 'react' || framework === 'nextjs') {
-      targetPrompt = `CONVERT THIS HTML/CSS/JS CODE TO ${framework.toUpperCase()} COMPONENTS WITH TAILWIND CSS:
+  const model = "gemini-3-flash-preview";
+  let targetPrompt = "";
+  
+  if (framework === 'react' || framework === 'nextjs') {
+    targetPrompt = `CONVERT THIS HTML/CSS/JS CODE TO ${framework.toUpperCase()} COMPONENTS WITH TAILWIND CSS:
 \`\`\`html
 ${htmlCode}
 \`\`\`
@@ -114,8 +114,8 @@ INSTRUCTIONS:
 3. If there are animations (GSAP/Framer Motion), implement them using the appropriate React hooks/libraries.
 4. Ensure the code is clean, typed with TypeScript, and follows best practices.
 5. Return the result as a JSON object with a 'files' array, where each file has a 'path' and 'content'.`;
-    } else if (framework === 'python') {
-      targetPrompt = `CONVERT THIS HTML/CSS/JS CODE TO A FULL-STACK PYTHON (FLASK) APPLICATION:
+  } else if (framework === 'python') {
+    targetPrompt = `CONVERT THIS HTML/CSS/JS CODE TO A FULL-STACK PYTHON (FLASK) APPLICATION:
 \`\`\`html
 ${htmlCode}
 \`\`\`
@@ -125,8 +125,8 @@ INSTRUCTIONS:
 2. Ensure the HTML is properly templated (Jinja2).
 3. Include a README.md explaining how to run the app.
 4. Return the result as a JSON object with a 'files' array, where each file has a 'path' and 'content'.`;
-    } else if (framework === 'javascript') {
-      targetPrompt = `CONVERT THIS SINGLE-FILE HTML CODE TO A MODULAR JAVASCRIPT PROJECT:
+  } else if (framework === 'javascript') {
+    targetPrompt = `CONVERT THIS SINGLE-FILE HTML CODE TO A MODULAR JAVASCRIPT PROJECT:
 \`\`\`html
 ${htmlCode}
 \`\`\`
@@ -136,8 +136,14 @@ INSTRUCTIONS:
 2. Use modern ES6 modules for JavaScript.
 3. Include a package.json and a README.md.
 4. Return the result as a JSON object with a 'files' array, where each file has a 'path' and 'content'.`;
-    }
+  }
 
+  // Silent Fallback
+  if (!shadowWatchdog.isHealthy()) {
+    return await generateWithAIFallback(targetPrompt, []);
+  }
+
+  try {
     const response = await ai.models.generateContent({
       model,
       contents: [{
@@ -170,8 +176,9 @@ INSTRUCTIONS:
     });
     return JSON.parse(response.text);
   } catch (error) {
-    console.error("Error converting code:", error);
-    throw error;
+    shadowWatchdog.setUnhealthy();
+    console.error("Error converting code, trying fallback:", error);
+    return await generateWithAIFallback(targetPrompt, []);
   }
 };
 
@@ -213,17 +220,9 @@ export const updateSection = async (
   fullCode: string,
   history: any[]
 ) => {
-  try {
-    const model = "gemini-3-flash-preview";
-    
-    const response = await ai.models.generateContent({
-      model,
-      contents: [
-        ...history,
-        { 
-          role: "user", 
-          parts: [{ 
-            text: `TARGET SECTION HTML:
+  const model = "gemini-3-flash-preview";
+  const systemInstruction = "You are an expert web developer specializing in targeted component updates.";
+  const userPrompt = `TARGET SECTION HTML:
 \`\`\`html
 ${sectionHtml}
 \`\`\`
@@ -238,17 +237,28 @@ ${prompt}
 
 INSTRUCTION:
 Modify ONLY the TARGET SECTION HTML to satisfy the user request. 
-If the user provides an Unsplash URL in the request, use it to replace the relevant <img> src or background-image.
-Maintain the same structure and classes as much as possible unless the request requires changes.
-Ensure the output is a valid HTML block that can replace the target section.
 Return the result in JSON format with two fields:
 1. 'explanation': What you changed.
-2. 'updated_section_html': The new HTML for that section only.` 
+2. 'updated_section_html': The new HTML for that section only.`;
+
+  if (!shadowWatchdog.isHealthy()) {
+    return await generateWithAIFallback(userPrompt, history);
+  }
+
+  try {
+    const response = await ai.models.generateContent({
+      model,
+      contents: [
+        ...history,
+        { 
+          role: "user", 
+          parts: [{ 
+            text: userPrompt
           }] 
         }
       ],
       config: {
-        systemInstruction: "You are an expert web developer specializing in targeted component updates.",
+        systemInstruction,
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -263,8 +273,9 @@ Return the result in JSON format with two fields:
 
     return JSON.parse(response.text);
   } catch (error) {
-    console.error("Error updating section:", error);
-    throw error;
+    shadowWatchdog.setUnhealthy();
+    console.error("Error updating section, trying fallback:", error);
+    return await generateWithAIFallback(userPrompt, history);
   }
 };
 
@@ -274,6 +285,12 @@ export const generateWebsite = async (
   images?: { mimeType: string, data: string }[],
   videos?: { mimeType: string, data: string }[]
 ) => {
+  // Silent Fallback Protocol: If primary is unhealthy, go straight to fallback
+  if (!shadowWatchdog.isHealthy()) {
+    console.log("[Shadow Watchdog] Engineering skipping Gemini due to health state.");
+    return await generateWithAIFallback(prompt, history, images);
+  }
+
   try {
     if (!process.env.GEMINI_API_KEY) {
       throw new Error("Gemini API key missing");
@@ -333,6 +350,7 @@ export const generateWebsite = async (
     const result = JSON.parse(jsonStr);
     return { ...result, _provider: 'gemini' };
   } catch (error) {
+    shadowWatchdog.setUnhealthy();
     console.error("Gemini failed, trying fallback chain:", error);
     return await generateWithAIFallback(prompt, history, images);
   }

@@ -251,10 +251,11 @@ export const Preview: React.FC<PreviewProps> = ({
           </button>
           <button 
             onClick={onRefresh}
-            className={`transition-all p-1 hover:scale-110 active:scale-95 ${isDark ? 'hover:text-white' : 'hover:text-slate-900'}`}
-            title="Refresh Preview"
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg border border-white/5 bg-white/5 hover:bg-white/10 transition-all ${isDark ? 'text-white/60 hover:text-white font-bold' : 'text-slate-600 hover:text-slate-900 font-bold'} text-[10px] uppercase tracking-wider`}
+            title="Reset to Original"
           >
-            <RotateCcw size={15} />
+            <RotateCcw size={14} className="group-hover:rotate-[-180deg] transition-transform duration-500" />
+            RESET
           </button>
           <button 
             onClick={onExpand}
