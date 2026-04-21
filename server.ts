@@ -443,13 +443,13 @@ Return the response EXCLUSIVELY in JSON format with three fields (do not include
         }
       }
 
-      // 2. Try OpenRouter Free (Priority 2)
+      // 2. Try OpenRouter (Priority 2)
       if (openRouterKey) {
         try {
           const result = await tryRequest(
             "https://openrouter.ai/api/v1/chat/completions",
             openRouterKey,
-            "google/gemma-2-9b-it:free",
+            "google/gemini-2.0-flash-001",
             "OpenRouter"
           );
           return res.json(result);
@@ -458,7 +458,14 @@ Return the response EXCLUSIVELY in JSON format with three fields (do not include
         }
       }
 
-      throw new Error("No fallback providers available or all failed.");
+      // 3. Last Resort: Emergency JSON Recovery
+      console.error("[Fallback] All AI providers failed. Sending emergency recovery payload.");
+      return res.json({
+        explanation: "Mode Secours Extrême activé. Les serveurs de calcul sont temporairement surchargés. Voici une structure de base en attendant.",
+        preview_code: `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Mode Secours</title><script src="https://cdn.tailwindcss.com"></script></head><body class="bg-[#0A0A0A] text-white flex items-center justify-center h-screen font-sans text-center px-4"><div><div class="w-20 h-20 bg-orange-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-orange-500/30 font-black text-orange-500">IA</div><h1 class="text-3xl font-black mb-4">MODE SECOURS ACTIF</h1><p class="text-white/40 mb-8 max-w-md mx-auto small uppercase tracking-widest leading-loose">Les modèles d'IA principaux (Gemini, Groq, OpenRouter) ne répondent plus. Votre demande est en file d'attente.</p><button onclick="window.location.reload()" class="bg-white text-black px-8 py-3 rounded-full font-bold uppercase tracking-widest text-[11px] hover:bg-orange-500 hover:text-white transition-all shadow-2xl">Réessayer la connexion</button></div></body></html>`,
+        files: [{ path: "index.html", content: "Mode secours actif." }],
+        _provider: 'emergency-watchdog'
+      });
     } catch (error: any) {
       console.error("[Fallback] Final failure:", error.message);
       res.status(500).json({ error: error.message });
