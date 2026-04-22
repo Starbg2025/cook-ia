@@ -9,11 +9,11 @@ export const shadowWatchdog = {
   isHealthy: () => primaryModelHealthy,
   setUnhealthy: () => {
     primaryModelHealthy = false;
-    console.warn("[Shadow Watchdog] Gemini marked as unhealthy. Activation of Silent Fallback Protocol.");
+    console.debug("[Shadow Watchdog] Gemini marked as unhealthy. Activation of Silent Fallback Protocol.");
     // Auto-reset health after 5 minutes
     setTimeout(() => {
       primaryModelHealthy = true;
-      console.log("[Shadow Watchdog] Gemini health reset. Returning to primary model.");
+      console.debug("[Shadow Watchdog] Gemini health reset. Returning to primary model.");
     }, 5 * 60 * 1000);
   }
 };
@@ -86,7 +86,7 @@ Return JSON:
     }
     return { needsClarification: false, questions: [], isTechnicalQuestion: false };
   } catch (error) {
-    console.error("Analyst error:", error);
+    console.debug("Analyst error:", error);
     return { needsClarification: false, questions: [], isTechnicalQuestion: false };
   }
 };
@@ -122,7 +122,7 @@ export const plannerAgent = async (prompt: string, history: any[]) => {
         const data = await fallbackResponse.json();
         return JSON.parse(data.choices[0].message.content);
       } catch (fallbackErr) {
-        console.error("Planner fallback failed:", fallbackErr);
+        console.debug("Planner fallback failed:", fallbackErr);
         throw fallbackErr;
       }
     }
@@ -131,7 +131,7 @@ export const plannerAgent = async (prompt: string, history: any[]) => {
 
   // If primary model is already known to be down, skip directly
   if (!shadowWatchdog.isHealthy()) {
-    console.log("[Shadow Watchdog] Planner skipping Gemini due to health state.");
+    console.debug("[Shadow Watchdog] Planner skipping Gemini due to health state.");
     try {
       return await tryGroqFallback(prompt);
     } catch {
@@ -178,7 +178,7 @@ export const plannerAgent = async (prompt: string, history: any[]) => {
     return JSON.parse(text);
   } catch (error) {
     shadowWatchdog.setUnhealthy();
-    console.warn("Planner Gemini error, trying Groq fallback:", error);
+    console.debug("Planner Gemini error, trying Groq fallback:", error);
     try {
       return await tryGroqFallback(prompt);
     } catch {
@@ -228,7 +228,7 @@ export const testerAgent = async (code: string, prompt: string) => {
     const data = await response.json();
     return JSON.parse(data.choices[0].message.content);
   } catch (error) {
-    console.error("Tester error:", error);
+    console.debug("Tester error:", error);
     return { passed: true, errors: [] };
   }
 };
@@ -266,7 +266,7 @@ export const criticReview = async (prompt: string, generatedCode: string) => {
     const data = await response.json();
     return JSON.parse(data.choices[0].message.content);
   } catch (error) {
-    console.error("Critic error:", error);
+    console.debug("Critic error:", error);
     return { approved: true, feedback: "" };
   }
 };

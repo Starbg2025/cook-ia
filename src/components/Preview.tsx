@@ -39,6 +39,7 @@ export const Preview: React.FC<PreviewProps> = ({
 }) => {
   const [isVisualEditing, setIsVisualEditing] = React.useState(false);
   const [isSectionSelectionMode, setIsSectionSelectionMode] = React.useState(false);
+  const [isElementSelectionMode, setIsElementSelectionMode] = React.useState(false);
   const [selectedFilePath, setSelectedFilePath] = React.useState<string | null>(null);
   const [showActionHistory, setShowActionHistory] = React.useState(false);
 
@@ -139,6 +140,65 @@ export const Preview: React.FC<PreviewProps> = ({
         });
       }
 
+      // Element Selection Mode (Visual Inspector)
+      if (isElementSelectionMode) {
+        const allElements = doc.querySelectorAll('body *:not(script):not(style)');
+        allElements.forEach((el: any) => {
+          el.style.cursor = 'crosshair';
+          el.style.transition = 'outline 0.1s';
+
+          const handleMouseOver = (e: MouseEvent) => {
+            e.stopPropagation();
+            el.style.outline = '1px solid #3B82F6';
+            el.style.backgroundColor = 'rgba(59, 130, 246, 0.05)';
+          };
+
+          const handleMouseOut = (e: MouseEvent) => {
+            e.stopPropagation();
+            el.style.outline = '';
+            el.style.backgroundColor = '';
+          };
+
+          const handleClick = (e: MouseEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Generate basic selector
+            let selector = el.tagName.toLowerCase();
+            if (el.id) selector += `#${el.id}`;
+            if (el.className) {
+              const classes = el.className.split(' ').filter((c: string) => c.trim() && !c.includes(':')).join('.');
+              if (classes) selector += `.${classes}`;
+            }
+
+            if (onSectionSelect) {
+              onSectionSelect({
+                isActive: true,
+                selector: selector,
+                sectionHtml: el.outerHTML,
+                elementContext: {
+                  tagName: el.tagName.toLowerCase(),
+                  classes: Array.from(el.classList),
+                  content: el.innerText || el.value || '',
+                  computedStyles: {
+                    color: window.getComputedStyle(el).color,
+                    backgroundColor: window.getComputedStyle(el).backgroundColor,
+                    fontSize: window.getComputedStyle(el).fontSize,
+                    fontWeight: window.getComputedStyle(el).fontWeight,
+                    borderRadius: window.getComputedStyle(el).borderRadius
+                  }
+                }
+              });
+            }
+            setIsElementSelectionMode(false);
+          };
+
+          el.addEventListener('mouseover', handleMouseOver);
+          el.addEventListener('mouseout', handleMouseOut);
+          el.addEventListener('click', handleClick);
+        });
+      }
+
       if (isVisualEditing) {
         // Make all text-containing elements editable
         const walk = doc.createTreeWalker(doc.body, NodeFilter.SHOW_ELEMENT, null);
@@ -235,6 +295,13 @@ export const Preview: React.FC<PreviewProps> = ({
               <span className="hidden sm:inline">Export ZIP</span>
             </button>
           )}
+          <button 
+            onClick={() => setIsElementSelectionMode(!isElementSelectionMode)}
+            className={`transition-all p-1 hover:scale-110 active:scale-95 ${isElementSelectionMode ? 'text-blue-500' : isDark ? 'hover:text-white' : 'hover:text-slate-900'}`}
+            title="Visual Inspector (Element Edit)"
+          >
+            <MousePointer2 size={15} />
+          </button>
           <button 
             onClick={() => setIsSectionSelectionMode(!isSectionSelectionMode)}
             className={`transition-all p-1 hover:scale-110 active:scale-95 ${isSectionSelectionMode ? 'text-blue-400' : isDark ? 'hover:text-white' : 'hover:text-slate-900'}`}

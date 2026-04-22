@@ -21,7 +21,8 @@ import {
   ChevronRight,
   LogOut,
   Loader2,
-  ShieldCheck
+  ShieldCheck,
+  Users
 } from 'lucide-react';
 import { supabase } from '../services/supabaseService';
 
@@ -147,6 +148,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const tabs = isProjectSettings ? [
     { id: 'publish', label: 'Share', icon: Share2 },
+    { id: 'collaboration', label: 'Collaboration', icon: Users },
     { id: 'versions', label: 'Versions', icon: History },
     { id: 'secrets', label: 'Secrets', icon: Key },
     { id: 'integrations', label: 'Integrations', icon: Layers },
@@ -527,6 +529,50 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <span className="text-sm font-bold">Se déconnecter</span>
                 </div>
               </button>
+            </div>
+          </div>
+        );
+      case 'collaboration':
+        return (
+          <div className="space-y-6 p-2">
+            <div className="flex flex-col gap-1">
+              <h3 className={`text-lg font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>Mode Collaboration</h3>
+              <p className="text-xs text-slate-400">Travaillez ensemble en temps réel sur vos designs.</p>
+            </div>
+            
+            <div className="p-6 rounded-3xl border flex flex-col items-center text-center gap-4 border-dashed border-orange-primary/30 bg-orange-primary/5">
+              <div className="w-16 h-16 rounded-full bg-orange-primary/10 text-orange-primary flex items-center justify-center">
+                <Users size={32} />
+              </div>
+              <div className="space-y-1">
+                <h4 className={`font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>Collaboration Supabase</h4>
+                <p className="text-xs text-slate-400 max-w-sm">
+                  Utilisez <b>Supabase Realtime</b> pour inviter des amis. Une fois activé, vous verrez les curseurs des autres et les changements de code seront instantanés.
+                </p>
+              </div>
+              <button 
+                onClick={handleCopyLink}
+                className="flex items-center gap-2 px-6 py-3 bg-orange-primary text-white rounded-full text-xs font-bold hover:bg-orange-600 transition-all shadow-lg"
+              >
+                {isCopied ? <Check size={14} /> : <Share2 size={14} />}
+                {isCopied ? 'Lien Copié !' : 'Partager le Lien de Collaboration'}
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <h4 className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-white/40' : 'text-slate-500'}`}>Configuration Supabase</h4>
+              <div className="space-y-3">
+                {[
+                  { step: 1, text: "Activez 'Realtime' dans le dashboard Supabase (Table 'conversations')." },
+                  { step: 2, text: "Configurez les règles de sécurité (RLS) pour autoriser les écritures." },
+                  { step: 3, text: "Partagez l'URL avec un autre utilisateur de Cook IA." },
+                ].map((s) => (
+                  <div key={s.step} className="flex gap-3 items-start">
+                    <span className="w-5 h-5 rounded-full bg-slate-500/10 text-slate-500 flex items-center justify-center text-[10px] font-bold shrink-0">{s.step}</span>
+                    <p className={`text-xs ${isDark ? 'text-white/70' : 'text-slate-600'}`}>{s.text}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         );

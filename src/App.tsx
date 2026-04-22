@@ -29,6 +29,7 @@ import {
   LogOut,
   ChevronRight,
   Sparkles,
+  MousePointer2,
   Camera,
   Search,
   Layout,
@@ -148,7 +149,14 @@ export default function App() {
 
   const [activeMobileTab, setActiveMobileTab] = useState<'chat' | 'preview'>('chat');
   const [searchQuery, setSearchQuery] = useState('');
+  const [collaborators, setCollaborators] = useState<Record<string, { x: number; y: number; name: string }>>({});
   const [showAnnouncement, setShowAnnouncement] = useState(true);
+
+  React.useEffect(() => {
+    if (sectionEdit.isActive && sectionEdit.elementContext) {
+      setIsStyleEditorOpen(true);
+    }
+  }, [sectionEdit.isActive, sectionEdit.elementContext]);
 
   const isDark = theme === 'dark';
 
@@ -199,6 +207,69 @@ export default function App() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!currentConversationId || !user) return;
+
+    // Real-time site synchronisation
+    const channel = supabase
+      .channel(`chat:${currentConversationId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'conversations',
+          filter: `id=eq.${currentConversationId}`,
+        },
+        (payload: any) => {
+          const newMsgs = payload.new.messages as Message[];
+          setMessages(newMsgs);
+          
+          // Sync code if it changed
+          const lastModelMsg = [...newMsgs].reverse().find(m => m.role === 'model' && m.code);
+          if (lastModelMsg?.code && lastModelMsg.code !== generatedCode) {
+            setGeneratedCode(lastModelMsg.code);
+          }
+        }
+      )
+      // Cursors tracking
+      .on('presence', { event: 'sync' }, () => {
+        const newState = channel.presenceState();
+        const newCollabs: any = {};
+        Object.entries(newState).forEach(([key, presence]: [string, any[]]) => {
+          if (key !== user.id) {
+            newCollabs[key] = presence[0];
+          }
+        });
+        setCollaborators(newCollabs);
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await channel.track({
+            name: user.profile?.full_name || user.email,
+            x: 0,
+            y: 0
+          });
+        }
+      });
+
+    // Mouse position sharing
+    const handleMouseMove = (e: MouseEvent) => {
+      channel.track({
+        name: user.profile?.full_name || user.email,
+        x: e.clientX,
+        y: e.clientY
+      });
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+
+    return () => {
+      channel.unsubscribe();
+      window.removeEventListener('mousemove', handleMouseMove);
+    };
+  }, [currentConversationId, user, generatedCode]);
 
   const fetchProfile = async (authUser: any) => {
     const { data: profile } = await supabase
@@ -1444,13 +1515,46 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
         </main>
       </div>
 
+      {/* Real-time Collaboration Cursors */}
+      {Object.entries(collaborators).map(([id, data]) => (
+        <motion.div
+          key={id}
+          style={{
+            position: 'fixed',
+            left: data.x,
+            top: data.y,
+            pointerEvents: 'none',
+            zIndex: 9999,
+          }}
+          initial={{ opacity: 0, scale: 0 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ type: 'spring', damping: 15, stiffness: 300 }}
+        >
+          <MousePointer2 
+            size={24} 
+            className="fill-orange-primary text-orange-primary drop-shadow-lg"
+            style={{ transform: 'rotate(-90deg)' }}
+          />
+          <div className="ml-4 mt-2 px-2 py-1 bg-orange-primary text-white text-[10px] font-black uppercase tracking-widest rounded-lg shadow-xl whitespace-nowrap">
+            {data.name}
+          </div>
+        </motion.div>
+      ))}
+
       <AnimatePresence>
         {isStyleEditorOpen && (
           <StyleEditor 
             isOpen={isStyleEditorOpen}
-            onClose={() => setIsStyleEditorOpen(false)}
+            onClose={() => {
+              setIsStyleEditorOpen(false);
+              setSectionEdit(prev => ({ ...prev, isActive: false, elementContext: undefined }));
+            }}
             config={styleConfig}
             onChange={setStyleConfig}
+            elementEdit={sectionEdit.elementContext ? sectionEdit : undefined}
+            onElementChange={(newHtml) => {
+              if (onCodeChange) onCodeChange(newHtml);
+            }}
           />
         )}
       </AnimatePresence>

@@ -88,6 +88,41 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   onFeedback,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isListening, setIsListening] = React.useState(false);
+  const recognitionRef = useRef<any>(null);
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined' && ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = false;
+      recognitionRef.current.interimResults = false;
+      recognitionRef.current.lang = 'fr-FR';
+
+      recognitionRef.current.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        setPrompt(transcript);
+        setIsListening(false);
+      };
+
+      recognitionRef.current.onerror = () => {
+        setIsListening(false);
+      };
+
+      recognitionRef.current.onend = () => {
+        setIsListening(false);
+      };
+    }
+  }, [setPrompt]);
+
+  const toggleListening = () => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+    } else {
+      setIsListening(true);
+      recognitionRef.current?.start();
+    }
+  };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -312,10 +347,25 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
             >
               <ShoppingBag size={18} />
             </button>
-            <button className={`p-2 rounded-lg ${isDark ? 'text-orange-primary hover:text-orange-400 hover:bg-white/5' : 'text-orange-600 hover:text-orange-700 hover:bg-slate-100'} transition-all`}>
-              <Layout size={18} />
+            <button 
+              onClick={() => {
+                setPrompt("FAIS UN AUDIT SEO COMPLET DE MON SITE : Analyse les mots-clés, la structure des balises H1-H6, la méta-description et propose des améliorations pour Google.");
+                handleSend();
+              }}
+              className={`p-2 rounded-lg ${isDark ? 'text-orange-primary hover:text-orange-400 hover:bg-white/5' : 'text-orange-600 hover:text-orange-700 hover:bg-slate-100'} transition-all`}
+              title="SEO Assistant & Audit"
+            >
+              <FileText size={18} />
             </button>
-            <button className={`p-2 rounded-lg ${isDark ? 'text-orange-primary hover:text-orange-400 hover:bg-white/5' : 'text-orange-600 hover:text-orange-700 hover:bg-slate-100'} transition-all`}>
+            <button 
+              onClick={toggleListening}
+              className={`p-2 rounded-lg transition-all ${
+                isListening 
+                  ? 'text-red-500 bg-red-500/10 animate-pulse' 
+                  : (isDark ? 'text-orange-primary hover:text-orange-400 hover:bg-white/5' : 'text-orange-600 hover:text-orange-700 hover:bg-slate-100')
+              }`}
+              title={isListening ? "Listening..." : "Hands-Free Voice Control"}
+            >
               <Mic size={18} />
             </button>
             <input 

@@ -9,6 +9,12 @@ export interface SectionEditState {
   sectionId?: string;
   sectionHtml?: string;
   selector?: string;
+  elementContext?: {
+    tagName: string;
+    classes: string[];
+    content: string;
+    computedStyles: Record<string, string>;
+  };
 }
 
 export interface ProjectFile {

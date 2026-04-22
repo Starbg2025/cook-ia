@@ -75,7 +75,7 @@ const generateWithAIFallback = async (
   history: any[],
   images?: { mimeType: string, data: string }[]
 ) => {
-  console.log("[Fallback] Gemini is unresponsive. Fallback AI (Groq/OpenRouter) is taking over...");
+  console.debug("[Fallback] Gemini is unresponsive. Switching to fallback...");
 
   const response = await fetch("/api/ai/fallback", {
     method: "POST",
@@ -177,7 +177,7 @@ INSTRUCTIONS:
     return JSON.parse(response.text);
   } catch (error) {
     shadowWatchdog.setUnhealthy();
-    console.error("Error converting code, trying fallback:", error);
+    console.debug("Error converting code, trying fallback:", error);
     return await generateWithAIFallback(targetPrompt, []);
   }
 };
@@ -274,7 +274,7 @@ Return the result in JSON format with two fields:
     return JSON.parse(response.text);
   } catch (error) {
     shadowWatchdog.setUnhealthy();
-    console.error("Error updating section, trying fallback:", error);
+    console.debug("Error updating section, trying fallback:", error);
     return await generateWithAIFallback(userPrompt, history);
   }
 };
@@ -351,7 +351,7 @@ export const generateWebsite = async (
     return { ...result, _provider: 'gemini' };
   } catch (error) {
     shadowWatchdog.setUnhealthy();
-    console.error("Gemini failed, trying fallback chain:", error);
+    console.debug("Gemini failed, trying fallback chain:", error);
     return await generateWithAIFallback(prompt, history, images);
   }
 };
@@ -365,7 +365,7 @@ export const generateTitle = async (prompt: string) => {
     });
     return response.text?.trim() || "New Website";
   } catch (error) {
-    console.error("Gemini Title generation failed:", error);
+    console.debug("Gemini Title generation failed:", error);
     return "New Website";
   }
 };
