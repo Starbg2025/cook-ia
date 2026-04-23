@@ -3,8 +3,11 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Zap, Send, Loader2, ImagePlus, X, Image as ImageIcon, Copy, ShoppingBag, Video, Search, Layout, CheckCircle, User, Mic, Plus, Sparkles, Flag, ThumbsUp, ThumbsDown, Eye, RotateCcw, ChevronDown, FileText, Clock, Settings, Terminal } from 'lucide-react';
 import { Message, ActionHistory } from '../types';
 import { shadowWatchdog } from '../services/multiAgentService';
-
 import { UnderwaterWelcome } from './UnderwaterWelcome';
+import { MessageActionOverlay } from './MessageActionOverlay';
+import { TypingIndicator } from './TypingIndicator';
+
+// ... (rest of the file remains largely the same, applying changes to message mapping logic)
 
 interface ChatInterfaceProps {
   messages: Message[];
@@ -194,7 +197,16 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                   </span>
                 </div>
 
-                <div className="flex flex-col gap-4 pl-9">
+                <div className="flex flex-col gap-4 pl-9 group relative">
+                  {msg.role === 'model' && (
+                    <MessageActionOverlay 
+                      isDark={isDark}
+                      onCopy={() => navigator.clipboard.writeText(msg.content)}
+                      onRewrite={(type) => console.log('Rewrite', type)}
+                      onAnalyze={() => console.log('Analyze')}
+                      onPin={() => console.log('Pin')}
+                    />
+                  )}
                   {msg.role === 'model' && (
                     <div className={`text-[9px] px-2 py-0.5 rounded-full border w-fit ${
                       isDark ? 'text-white/30 border-white/5 bg-white/5' : 'text-slate-400 border-slate-100 bg-slate-50'
@@ -274,17 +286,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
               </span>
             </div>
             <div className="pl-9 space-y-6">
-              <div className="flex items-center gap-2">
-                <div className={`w-4 h-4 rounded-full border-2 ${isDark ? 'border-white/10 border-t-white' : 'border-slate-200 border-t-slate-600'} animate-spin shrink-0`} />
-                <span className={`text-xs font-medium ${isDark ? 'text-white/80' : 'text-slate-700'}`}>
-                  {loadingStatus}
-                </span>
-                {!shadowWatchdog.isHealthy() && (
-                  <span className="text-[9px] px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-500 border border-orange-500/20 ml-2">
-                    Mode Secours
-                  </span>
-                )}
-              </div>
+              <TypingIndicator status={loadingStatus} isDark={isDark} />
 
               {actions.length > 0 && (
                 <motion.div 
