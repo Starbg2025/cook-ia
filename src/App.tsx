@@ -313,8 +313,16 @@ export default function App() {
       .select('*')
       .order('created_at', { ascending: false });
     
+    if (error) {
+      if (error.message.includes("Refresh Token Not Found") || error.message.includes("Invalid Refresh Token")) {
+        supabase.auth.signOut();
+        setUser(null);
+        setConversations([]);
+      }
+      console.error("Error loading conversations:", error);
+      return;
+    }
     if (data) setConversations(data);
-    if (error) console.error("Error loading conversations:", error);
   };
 
   const handleSelectConversation = (id: string) => {
