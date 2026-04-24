@@ -283,8 +283,9 @@ async function startServer() {
 
   // AI Fallback Proxy (Groq -> OpenRouter Free)
   app.post("/api/ai/fallback", async (req, res) => {
-    const { prompt, history, images } = req.body;
+    const { prompt, history, images, targetModel } = req.body;
     const groqKey = process.env.GROQ_API_KEY;
+    const modalKey = process.env.MODAL_API_KEY;
     const openRouterKey = process.env.OPENROUTER_API_KEY;
 
     const systemInstruction = `You are COOK IA, a world-class senior web engineer and elite product designer. 
@@ -428,6 +429,26 @@ Return the response EXCLUSIVELY in JSON format with three fields (do not include
 
     // Fallback Chain Execution
     try {
+      // 0. Priority: Target Model (if provided)
+      if (targetModel) {
+        if (targetModel.includes("GLM") || targetModel === "zai-org/GLM-5.1-FP8") {
+          if (modalKey) {
+            try {
+              const result = await tryRequest(
+                "https://api.us-west-2.modal.direct/v1/chat/completions",
+                modalKey,
+                "zai-org/GLM-5.1-FP8",
+                "Modal"
+              );
+              return res.json(result);
+            } catch (err: any) {
+              console.warn(`[Fallback] Target Modal failed: ${err.message}`);
+            }
+          }
+        }
+        // Add other target models if needed
+      }
+
       // 1. Try Groq (Priority 1)
       if (groqKey) {
         try {
@@ -440,6 +461,21 @@ Return the response EXCLUSIVELY in JSON format with three fields (do not include
           return res.json(result);
         } catch (err: any) {
           console.warn(`[Fallback] Groq failed: ${err.message}`);
+        }
+      }
+      
+      // 1.5 Try Modal GLM (Specialized fallback)
+      if (modalKey) {
+        try {
+          const result = await tryRequest(
+            "https://api.us-west-2.modal.direct/v1/chat/completions",
+            modalKey,
+            "zai-org/GLM-5.1-FP8",
+            "Modal"
+          );
+          return res.json(result);
+        } catch (err: any) {
+          console.warn(`[Fallback] Modal failed: ${err.message}`);
         }
       }
 

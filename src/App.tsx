@@ -109,10 +109,18 @@ export default function App() {
   const [secrets, setSecrets] = useState<{ key: string; value: string }[]>([]);
   const [isLinkFullscreen, setIsLinkFullscreen] = useState(false);
   const [hasStarted, setHasStarted] = useState(true);
+  const [selectedModel, setSelectedModel] = useState<string>(() => {
+    const saved = localStorage.getItem('selectedModel');
+    return saved || 'gemini-3-flash-preview';
+  });
   const [isRealtimeEnabled, setIsRealtimeEnabled] = useState(() => {
     const saved = localStorage.getItem('isRealtimeEnabled');
     return saved !== null ? JSON.parse(saved) : true;
   });
+
+  useEffect(() => {
+    localStorage.setItem('selectedModel', selectedModel);
+  }, [selectedModel]);
 
   useEffect(() => {
     localStorage.setItem('isRealtimeEnabled', JSON.stringify(isRealtimeEnabled));
@@ -499,7 +507,8 @@ export default function App() {
         sectionPrompt,
         sectionEdit.sectionHtml,
         generatedCode,
-        history
+        history,
+        selectedModel
       );
 
       // Replace the old section HTML with the new one in the full code
@@ -566,7 +575,8 @@ export default function App() {
         `Réécris le texte de cette section dans un style ${style}. Voici le nouveau texte à intégrer intelligemment : "${improved}"`,
         sectionEdit.sectionHtml,
         generatedCode,
-        []
+        [],
+        selectedModel
       );
 
       const updatedCode = generatedCode.replace(sectionEdit.sectionHtml, result.updated_section_html);
@@ -908,7 +918,8 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
         enrichedUserMessage, 
         history.slice(0, -1), 
         imageParts.length > 0 ? imageParts : undefined,
-        videoParts.length > 0 ? videoParts : undefined
+        videoParts.length > 0 ? videoParts : undefined,
+        selectedModel
       );
       completeAction(a5);
 
@@ -939,7 +950,8 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
           `${enrichedUserMessage}\n\nCORRECTION DE BUGS (TESTS ÉCHOUÉS) :\n${testResult.errors.join('\n')}`,
           history.slice(0, -1),
           imageParts.length > 0 ? imageParts : undefined,
-          videoParts.length > 0 ? videoParts : undefined
+          videoParts.length > 0 ? videoParts : undefined,
+          selectedModel
         );
       }
 
@@ -957,7 +969,8 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
           `${enrichedUserMessage}\n\nFEEDBACK DU CRITIQUE (À CORRIGER) :\n${critic.feedback}`,
           history.slice(0, -1),
           imageParts.length > 0 ? imageParts : undefined,
-          videoParts.length > 0 ? videoParts : undefined
+          videoParts.length > 0 ? videoParts : undefined,
+          selectedModel
         );
       }
       
@@ -1846,6 +1859,8 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
         onToggleRepoPrivate={setIsRepoPrivate}
         isRealtimeEnabled={isRealtimeEnabled}
         onToggleRealtime={setIsRealtimeEnabled}
+        selectedModel={selectedModel}
+        onSelectModel={setSelectedModel}
       />
         </motion.div>
       )}

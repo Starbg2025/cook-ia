@@ -22,7 +22,9 @@ import {
   LogOut,
   Loader2,
   ShieldCheck,
-  Users
+  Users,
+  CheckCircle,
+  Sparkles
 } from 'lucide-react';
 import { supabase } from '../services/supabaseService';
 
@@ -51,9 +53,11 @@ interface SettingsModalProps {
   onConnectGithub?: () => void;
   isRealtimeEnabled?: boolean;
   onToggleRealtime?: (val: boolean) => void;
+  selectedModel?: string;
+  onSelectModel?: (model: string) => void;
 }
 
-type TabType = 'publish' | 'versions' | 'secrets' | 'integrations' | 'github' | 'general' | 'account' | 'help' | 'founder' | 'collaboration';
+type TabType = 'publish' | 'versions' | 'secrets' | 'integrations' | 'github' | 'general' | 'account' | 'help' | 'founder' | 'collaboration' | 'models';
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ 
   isOpen, 
@@ -79,7 +83,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onToggleLinkFullscreen,
   onConnectGithub,
   isRealtimeEnabled = true,
-  onToggleRealtime
+  onToggleRealtime,
+  selectedModel = 'gemini-3-flash-preview',
+  onSelectModel
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>(initialTab);
   const [accessLevel, setAccessLevel] = useState('Restricted: Only people you specify can access');
@@ -158,6 +164,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     { id: 'integrations', label: 'Integrations', icon: Layers },
   ] : [
     { id: 'general', label: 'Settings', icon: Settings },
+    { id: 'models', label: 'AI Models', icon: Sparkles },
     { id: 'account', label: 'Account', icon: User },
     { id: 'founder', label: 'Fondateur', icon: ShieldCheck },
     { id: 'help', label: 'Help', icon: HelpCircle },
@@ -771,6 +778,73 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     Save
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        );
+      case 'models':
+        return (
+          <div className="space-y-6 p-2">
+            <div className="flex flex-col gap-1">
+              <h3 className={`text-lg font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>Intelligence Artificielle</h3>
+              <p className="text-xs text-slate-400">Choisissez le moteur qui alimente vos créations.</p>
+            </div>
+            
+            <div className="space-y-3">
+              {[
+                { 
+                  id: 'gemini-3-flash-preview', 
+                  name: 'Gemini 3 Flash', 
+                  provider: 'Google', 
+                  desc: 'Le modèle le plus rapide et polyvalent. Idéal pour le design et le code React.', 
+                  badge: 'Recommandé' 
+                },
+                { 
+                  id: 'zai-org/GLM-5.1-FP8', 
+                  name: 'GLM 5.1', 
+                  provider: 'Zhipu AI (via Modal)', 
+                  desc: 'Modèle ultra-performant pour le raisonnement logique et les structures complexes.', 
+                  badge: 'Nouveau' 
+                },
+              ].map((m) => (
+                <button
+                  key={m.id}
+                  onClick={() => onSelectModel?.(m.id)}
+                  className={`w-full text-left p-4 rounded-2xl border transition-all relative group ${
+                    selectedModel === m.id 
+                      ? 'border-orange-primary bg-orange-primary/5 ring-1 ring-orange-primary'
+                      : `border-white/5 bg-white/5 hover:border-white/10 hover:bg-white/10`
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-sm font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{m.name}</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-white/10 text-white/40 uppercase font-black">{m.provider}</span>
+                    </div>
+                    {m.badge && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-orange-primary text-white font-bold uppercase tracking-wider">
+                        {m.badge}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-400 leading-relaxed pr-8">{m.desc}</p>
+                  
+                  {selectedModel === m.id && (
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                      <CheckCircle size={20} className="text-orange-primary" />
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+
+            <div className={`p-4 rounded-2xl border ${isDark ? 'bg-blue-500/5 border-blue-500/20' : 'bg-blue-50 border-blue-100'}`}>
+              <div className="flex gap-3">
+                <Info size={16} className="text-blue-500 shrink-0 mt-0.5" />
+                <p className={`text-[11px] leading-relaxed ${isDark ? 'text-blue-400' : 'text-blue-700'}`}>
+                  Le modèle sélectionné sera utilisé pour toutes les nouvelles générations et mises à jour de sections. 
+                  Si un modèle est temporairement indisponible, le système basculera automatiquement sur Gemini.
+                </p>
               </div>
             </div>
           </div>

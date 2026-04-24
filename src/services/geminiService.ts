@@ -73,9 +73,10 @@ Return the response EXCLUSIVELY in JSON format with three fields (do not include
 const generateWithAIFallback = async (
   prompt: string,
   history: any[],
-  images?: { mimeType: string, data: string }[]
+  images?: { mimeType: string, data: string }[],
+  targetModel?: string
 ) => {
-  console.debug("[Fallback] Gemini is unresponsive. Switching to fallback...");
+  console.debug("[Fallback] Gemini is unresponsive or alternate model selected. Switching to fallback...");
 
   const response = await fetch("/api/ai/fallback", {
     method: "POST",
@@ -85,7 +86,8 @@ const generateWithAIFallback = async (
     body: JSON.stringify({
       prompt,
       history,
-      images
+      images,
+      targetModel
     })
   });
 
@@ -218,9 +220,9 @@ export const updateSection = async (
   prompt: string,
   sectionHtml: string,
   fullCode: string,
-  history: any[]
+  history: any[],
+  model: string = "gemini-3-flash-preview"
 ) => {
-  const model = "gemini-3-flash-preview";
   const systemInstruction = "You are an expert web developer specializing in targeted component updates.";
   const userPrompt = `TARGET SECTION HTML:
 \`\`\`html
@@ -241,8 +243,8 @@ Return the result in JSON format with two fields:
 1. 'explanation': What you changed.
 2. 'updated_section_html': The new HTML for that section only.`;
 
-  if (!shadowWatchdog.isHealthy()) {
-    return await generateWithAIFallback(userPrompt, history);
+  if (!shadowWatchdog.isHealthy() || model !== "gemini-3-flash-preview") {
+    return await generateWithAIFallback(userPrompt, history, undefined, model);
   }
 
   try {
@@ -283,12 +285,13 @@ export const generateWebsite = async (
   prompt: string, 
   history: { role: "user" | "model", parts: { text?: string, inlineData?: { mimeType: string, data: string } }[] }[],
   images?: { mimeType: string, data: string }[],
-  videos?: { mimeType: string, data: string }[]
+  videos?: { mimeType: string, data: string }[],
+  model: string = "gemini-3-flash-preview"
 ) => {
-  // Silent Fallback Protocol: If primary is unhealthy, go straight to fallback
-  if (!shadowWatchdog.isHealthy()) {
-    console.log("[Shadow Watchdog] Engineering skipping Gemini due to health state.");
-    return await generateWithAIFallback(prompt, history, images);
+  // Silent Fallback Protocol: If primary is unhealthy OR custom model requested, go straight to fallback
+  if (!shadowWatchdog.isHealthy() || model !== "gemini-3-flash-preview") {
+    console.log(`[Watchdog] Skipping Gemini. Reason: ${!shadowWatchdog.isHealthy() ? 'unhealthy' : 'custom model: ' + model}`);
+    return await generateWithAIFallback(prompt, history, images, model);
   }
 
   try {
