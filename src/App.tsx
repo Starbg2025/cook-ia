@@ -1058,7 +1058,7 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
   };
 
   const copyToClipboard = () => {
-    const url = `${siteName || 'votre-site'}.cook-ia.netlify.app`;
+    const url = `${siteName || 'votre-site'}.cook-ia.indevs.in`;
     navigator.clipboard.writeText(url);
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2000);
@@ -1158,7 +1158,7 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
         />
         <button 
           onClick={() => {
-            window.location.href = "https://cook-ia.netlify.app";
+            window.location.href = "https://cook-ia.indevs.in";
           }}
           className="fixed bottom-6 right-6 bg-black/80 backdrop-blur-md border border-white/10 text-white px-4 py-2 rounded-full text-xs font-bold hover:bg-black transition-all z-50 shadow-2xl flex items-center gap-2"
         >
@@ -1561,7 +1561,11 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
             onChange={setStyleConfig}
             elementEdit={sectionEdit.elementContext ? sectionEdit : undefined}
             onElementChange={(newHtml) => {
-              if (onCodeChange) onCodeChange(newHtml);
+              if (sectionEdit.sectionHtml && generatedCode) {
+                const updatedCode = generatedCode.replace(sectionEdit.sectionHtml, newHtml);
+                setGeneratedCode(updatedCode);
+                setSectionEdit(prev => ({ ...prev, sectionHtml: newHtml }));
+              }
             }}
           />
         )}
@@ -1732,17 +1736,17 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
                         placeholder="my-awesome-site"
                         className="w-full bg-[#0A0A0A] border border-white/5 rounded-2xl p-4 pr-32 text-sm font-mono focus:outline-none focus:border-orange-primary/50 transition-all"
                       />
-                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 font-mono text-sm">.cook-ia.netlify.app</span>
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 font-mono text-sm">.cook-ia.indevs.in</span>
                     </div>
                   </div>
 
                   <div className="bg-[#0A0A0A] border border-white/5 rounded-2xl p-4 flex items-center justify-between group">
                     <span className="text-orange-primary font-mono text-sm truncate mr-4">
-                      {siteName || 'votre-site'}.cook-ia.netlify.app
+                      {siteName || 'votre-site'}.cook-ia.indevs.in
                     </span>
                     <button 
                       onClick={() => {
-                        const url = publishedUrl || `https://${siteName || 'votre-site'}.cook-ia.netlify.app`;
+                        const url = publishedUrl || `https://${siteName || 'votre-site'}.cook-ia.indevs.in`;
                         navigator.clipboard.writeText(url);
                         setIsCopied(true);
                         setTimeout(() => setIsCopied(false), 2000);

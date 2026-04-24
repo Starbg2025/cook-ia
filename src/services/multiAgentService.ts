@@ -244,7 +244,7 @@ export const criticReview = async (prompt: string, generatedCode: string) => {
       headers: {
         "Authorization": `Bearer ${apiKey}`,
         "Content-Type": "application/json",
-        "HTTP-Referer": "https://cook-ia.netlify.app",
+        "HTTP-Referer": "https://cook-ia.indevs.in",
         "X-Title": "COOK IA"
       },
       body: JSON.stringify({

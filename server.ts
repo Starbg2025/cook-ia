@@ -53,7 +53,7 @@ async function processTask(id: string) {
         await new Promise(resolve => setTimeout(resolve, 6000));
         const slug = task.payload.siteName.toLowerCase().replace(/\s+/g, '-') || 'site';
         task.result = { 
-          url: `https://${slug}.cook-ia.netlify.app`,
+          url: `https://${slug}.cook-ia.indevs.in`,
           status: "Live",
           deployedAt: new Date()
         };
@@ -68,7 +68,7 @@ async function processTask(id: string) {
         break;
       case 'deployment_sync':
         await new Promise(resolve => setTimeout(resolve, 8000));
-        task.result = { url: "https://sync.cook-ia.netlify.app/deploy/success" };
+        task.result = { url: "https://sync.cook-ia.indevs.in/deploy/success" };
         break;
       case 'session_log':
         // Record connection and session metadata
@@ -121,7 +121,7 @@ async function startServer() {
     
     try {
       const slug = siteName.toLowerCase().replace(/\s+/g, '-') || 'site';
-      const url = `https://${slug}.cook-ia.netlify.app`;
+      const url = `https://${slug}.cook-ia.indevs.in`;
       
       // Simulate real deployment steps
       console.log(`[Deployment] Step 1: Provisioning server for ${slug}...`);
@@ -341,7 +341,7 @@ CRITICAL DIRECTIVES FOR MAGNIFICENT RENDERING:
 6. MANDATORY BADGE:
    - You MUST ALWAYS include a small, elegant badge at the bottom right of the page (fixed position).
    - The badge should say "Créé avec COOK IA" with the logo.
-   - Example style: <div style="position: fixed; bottom: 20px; right: 20px; background: rgba(0,0,0,0.8); color: white; padding: 8px 16px; border-radius: 9999px; font-size: 12px; font-weight: 600; z-index: 9999; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(4px); display: flex; items-center: center; gap: 8px; font-family: sans-serif; cursor: pointer;" onclick="window.open('https://cook-ia.netlify.app/', '_blank')"><img src="https://i.ibb.co/mC3M8SSN/logo.png" style="width: 16px; height: 16px; object-fit: contain;">Créé avec COOK IA</div>
+   - Example style: <div style="position: fixed; bottom: 20px; right: 20px; background: rgba(0,0,0,0.8); color: white; padding: 8px 16px; border-radius: 9999px; font-size: 12px; font-weight: 600; z-index: 9999; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(4px); display: flex; items-center: center; gap: 8px; font-family: sans-serif; cursor: pointer;" onclick="window.open('https://cook-ia.indevs.in/', '_blank')"><img src="https://i.ibb.co/mC3M8SSN/logo.png" style="width: 16px; height: 16px; object-fit: contain;">Créé avec COOK IA</div>
 
 Return the response EXCLUSIVELY in JSON format with three fields (do not include any other text outside the JSON):
 1. 'explanation': A brief, professional description of the architectural and design choices made.
@@ -385,7 +385,7 @@ Return the response EXCLUSIVELY in JSON format with three fields (do not include
       };
       
       if (providerName === "OpenRouter") {
-        headers["HTTP-Referer"] = "https://cook-ia.netlify.app";
+        headers["HTTP-Referer"] = "https://cook-ia.indevs.in";
         headers["X-Title"] = "COOK IA";
       }
 

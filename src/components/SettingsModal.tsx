@@ -51,7 +51,7 @@ interface SettingsModalProps {
   onConnectGithub?: () => void;
 }
 
-type TabType = 'publish' | 'versions' | 'secrets' | 'integrations' | 'github' | 'general' | 'account' | 'help' | 'founder';
+type TabType = 'publish' | 'versions' | 'secrets' | 'integrations' | 'github' | 'general' | 'account' | 'help' | 'founder' | 'collaboration';
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ 
   isOpen, 
@@ -90,7 +90,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [sendSuccess, setSendSuccess] = useState(false);
   const [localProjectName, setLocalProjectName] = useState(projectName);
 
-  const currentUrl = typeof window !== 'undefined' ? window.location.href : 'https://cook-ia.netlify.app';
+  const currentUrl = typeof window !== 'undefined' ? window.location.href : 'https://cook-ia.indevs.in';
 
   const handleAddCollaborator = () => {
     if (!collaboratorEmail.trim()) return;
