@@ -49,6 +49,8 @@ interface SettingsModalProps {
   isLinkFullscreen?: boolean;
   onToggleLinkFullscreen?: (val: boolean) => void;
   onConnectGithub?: () => void;
+  isRealtimeEnabled?: boolean;
+  onToggleRealtime?: (val: boolean) => void;
 }
 
 type TabType = 'publish' | 'versions' | 'secrets' | 'integrations' | 'github' | 'general' | 'account' | 'help' | 'founder' | 'collaboration';
@@ -75,7 +77,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onRemoveSecret,
   isLinkFullscreen = false,
   onToggleLinkFullscreen,
-  onConnectGithub
+  onConnectGithub,
+  isRealtimeEnabled = true,
+  onToggleRealtime
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>(initialTab);
   const [accessLevel, setAccessLevel] = useState('Restricted: Only people you specify can access');
@@ -536,11 +540,29 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         return (
           <div className="space-y-6 p-2">
             <div className="flex flex-col gap-1">
-              <h3 className={`text-lg font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>Mode Collaboration</h3>
+              <div className="flex items-center justify-between">
+                <h3 className={`text-lg font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>Mode Collaboration</h3>
+                <button 
+                  onClick={() => onToggleRealtime?.(!isRealtimeEnabled)}
+                  className={`w-12 h-6 rounded-full relative transition-all duration-300 ${isRealtimeEnabled ? 'bg-orange-primary shadow-lg shadow-orange-primary/20' : 'bg-slate-300'}`}
+                >
+                  <motion.div 
+                    animate={{ x: isRealtimeEnabled ? 26 : 4 }}
+                    className="absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm"
+                  />
+                </button>
+              </div>
               <p className="text-xs text-slate-400">Travaillez ensemble en temps réel sur vos designs.</p>
             </div>
             
-            <div className="p-6 rounded-3xl border flex flex-col items-center text-center gap-4 border-dashed border-orange-primary/30 bg-orange-primary/5">
+            {!isRealtimeEnabled && (
+              <div className="p-4 rounded-2xl bg-orange-primary/10 border border-orange-primary/20 text-orange-primary text-xs font-semibold flex items-center gap-2">
+                <Zap size={14} className="animate-pulse" />
+                Le mode temps réel est actuellement désactivé. Activez-le pour collaborer.
+              </div>
+            )}
+            
+            <div className={`p-6 rounded-3xl border flex flex-col items-center text-center gap-4 transition-opacity ${!isRealtimeEnabled ? 'opacity-50 pointer-events-none' : ''} border-dashed border-orange-primary/30 bg-orange-primary/5`}>
               <div className="w-16 h-16 rounded-full bg-orange-primary/10 text-orange-primary flex items-center justify-center">
                 <Users size={32} />
               </div>

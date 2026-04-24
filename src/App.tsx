@@ -64,6 +64,8 @@ import { Palette, Braces } from 'lucide-react';
 
 const LOGO_URL = "https://i.ibb.co/mC3M8SSN/logo.png";
 
+import { CookieBanner } from './components/CookieBanner';
+
 export default function App() {
   const [prompt, setPrompt] = useState('');
   const [messages, setMessages] = useState<Message[]>([
@@ -107,6 +109,14 @@ export default function App() {
   const [secrets, setSecrets] = useState<{ key: string; value: string }[]>([]);
   const [isLinkFullscreen, setIsLinkFullscreen] = useState(false);
   const [hasStarted, setHasStarted] = useState(true);
+  const [isRealtimeEnabled, setIsRealtimeEnabled] = useState(() => {
+    const saved = localStorage.getItem('isRealtimeEnabled');
+    return saved !== null ? JSON.parse(saved) : true;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('isRealtimeEnabled', JSON.stringify(isRealtimeEnabled));
+  }, [isRealtimeEnabled]);
 
   const handleUpdateProjectName = async (newName: string) => {
     if (!currentConversationId || !newName.trim()) return;
@@ -209,7 +219,10 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!currentConversationId || !user) return;
+    if (!currentConversationId || !user || !isRealtimeEnabled) {
+      setCollaborators({});
+      return;
+    }
 
     // Real-time site synchronisation
     const channel = supabase
@@ -1165,6 +1178,7 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
           <img src={LOGO_URL} alt="Logo" className="w-4 h-4 object-contain" />
           Créé avec COOK IA
         </button>
+        <CookieBanner />
       </div>
     );
   }
@@ -1830,9 +1844,12 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
         onUpdateRepoDescription={setRepoDescription}
         isRepoPrivate={isRepoPrivate}
         onToggleRepoPrivate={setIsRepoPrivate}
+        isRealtimeEnabled={isRealtimeEnabled}
+        onToggleRealtime={setIsRealtimeEnabled}
       />
         </motion.div>
       )}
+      <CookieBanner />
     </AnimatePresence>
   );
 }
