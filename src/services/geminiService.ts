@@ -1,7 +1,4 @@
-import { GoogleGenAI, Type } from "@google/genai";
 import { shadowWatchdog } from "./multiAgentService";
-
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
 const systemInstruction = `You are COOK IA, a world-class senior web engineer and elite product designer. 
 Your mission is to transform even the simplest user prompt into a "magnificent", high-end, and fully functional website that feels like a premium digital product.
@@ -70,6 +67,23 @@ Return the response EXCLUSIVELY in JSON format with three fields (do not include
 2. 'preview_code': The complete, production-ready single-file HTML/CSS/JS code for immediate preview.
 3. 'files': An array of objects, each with 'path' (e.g., "src/index.html") and 'content' (the file content).`;
 
+// Helper for proxy calls
+const callGeminiProxy = async (prompt: string, history: any[], systemInstruction?: string, model?: string, images?: any[]) => {
+  const response = await fetch("/api/ai/gemini", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt, history, systemInstruction, model, images })
+  });
+
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(err.error || "Failed to call Gemini proxy");
+  }
+
+  const result = await response.json();
+  return result.text;
+};
+
 const generateWithAIFallback = async (
   prompt: string,
   history: any[],
@@ -101,7 +115,6 @@ const generateWithAIFallback = async (
 };
 
 export const convertToReact = async (htmlCode: string, framework: 'react' | 'nextjs' | 'python' | 'javascript') => {
-  const model = "gemini-3-flash-preview";
   let targetPrompt = "";
   
   if (framework === 'react' || framework === 'nextjs') {
@@ -146,37 +159,8 @@ INSTRUCTIONS:
   }
 
   try {
-    const response = await ai.models.generateContent({
-      model,
-      contents: [{
-        role: "user",
-        parts: [{
-          text: targetPrompt
-        }]
-      }],
-      config: {
-        systemInstruction: "You are a world-class full-stack developer.",
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            files: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  path: { type: Type.STRING },
-                  content: { type: Type.STRING }
-                },
-                required: ["path", "content"]
-              }
-            }
-          },
-          required: ["files"]
-        }
-      }
-    });
-    return JSON.parse(response.text);
+    const text = await callGeminiProxy(targetPrompt, [], "You are a world-class full-stack developer.");
+    return JSON.parse(text);
   } catch (error) {
     shadowWatchdog.setUnhealthy();
     console.debug("Error converting code, trying fallback:", error);
@@ -186,30 +170,18 @@ INSTRUCTIONS:
 
 export const improveText = async (text: string, style: 'professional' | 'creative' | 'sales') => {
   try {
-    const model = "gemini-3-flash-preview";
     const stylePrompts = {
       professional: "Rewrite this text to be professional, serious, and reassuring. Suitable for corporate or B2B contexts.",
       creative: "Rewrite this text to be creative, original, and dynamic. Suitable for startups or creative agencies.",
       sales: "Rewrite this text to be sales-oriented, persuasive, and focused on conversion. Use marketing psychological triggers."
     };
 
-    const response = await ai.models.generateContent({
-      model,
-      contents: [{
-        role: "user",
-        parts: [{
-          text: `ORIGINAL TEXT: "${text}"
-          
-STYLE REQUEST: ${stylePrompts[style]}
-
-Return ONLY the improved text string.`
-        }]
-      }],
-      config: {
-        systemInstruction: "You are an expert copywriter."
-      }
-    });
-    return response.text;
+    const improvedText = await callGeminiProxy(
+      `ORIGINAL TEXT: "${text}" STYLE REQUEST: ${stylePrompts[style]} Return ONLY the improved text string.`,
+      [],
+      "You are an expert copywriter."
+    );
+    return improvedText;
   } catch (error) {
     console.error("Error improving text:", error);
     throw error;
@@ -248,32 +220,8 @@ Return the result in JSON format with two fields:
   }
 
   try {
-    const response = await ai.models.generateContent({
-      model,
-      contents: [
-        ...history,
-        { 
-          role: "user", 
-          parts: [{ 
-            text: userPrompt
-          }] 
-        }
-      ],
-      config: {
-        systemInstruction,
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            explanation: { type: Type.STRING },
-            updated_section_html: { type: Type.STRING }
-          },
-          required: ["explanation", "updated_section_html"]
-        }
-      }
-    });
-
-    return JSON.parse(response.text);
+    const text = await callGeminiProxy(userPrompt, history, systemInstruction, model);
+    return JSON.parse(text);
   } catch (error) {
     shadowWatchdog.setUnhealthy();
     console.debug("Error updating section, trying fallback:", error);
@@ -295,13 +243,7 @@ export const generateWebsite = async (
   }
 
   try {
-    if (!process.env.GEMINI_API_KEY) {
-      throw new Error("Gemini API key missing");
-    }
-
-    const model = "gemini-3-flash-preview";
-    
-    // Log the coding session in the background (Watchdog)
+    // Log the coding session in the background (Watchdog) via proxy or direct fetch
     fetch("/api/watchdog/enqueue", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -315,37 +257,8 @@ export const generateWebsite = async (
       })
     }).catch(err => console.error("[Watchdog] Failed to log session:", err));
 
-    const userParts: any[] = [{ text: prompt }];
-    if (images && images.length > 0) {
-      images.forEach(img => {
-        userParts.push({
-          inlineData: img
-        });
-      });
-    }
-    if (videos && videos.length > 0) {
-      videos.forEach(vid => {
-        userParts.push({
-          inlineData: vid
-        });
-      });
-    }
-
-    const response = await ai.models.generateContent({
-      model,
-      contents: [
-        ...history,
-        { role: "user", parts: userParts }
-      ],
-      config: {
-        systemInstruction,
-        tools: [{ urlContext: {} }],
-      }
-    });
-
-    const text = response.text;
-    if (!text) throw new Error("No response from Gemini");
-
+    const text = await callGeminiProxy(prompt, history, systemInstruction, model, images);
+    
     // Try to find JSON in the response
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     const jsonStr = jsonMatch ? jsonMatch[0] : text;
@@ -361,12 +274,12 @@ export const generateWebsite = async (
 
 export const generateTitle = async (prompt: string) => {
   try {
-    const model = "gemini-3-flash-preview";
-    const response = await ai.models.generateContent({
-      model,
-      contents: `Generate a very short, catchy title (max 4 words) for a website project based on this prompt: "${prompt}". Return only the title text.`,
-    });
-    return response.text?.trim() || "New Website";
+    const text = await callGeminiProxy(
+      `Generate a very short, catchy title (max 4 words) for a website project based on this prompt: "${prompt}". Return only the title text.`,
+      [],
+      "You are a creative copywriter."
+    );
+    return text.trim() || "New Website";
   } catch (error) {
     console.debug("Gemini Title generation failed:", error);
     return "New Website";

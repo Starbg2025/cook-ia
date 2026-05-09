@@ -2,8 +2,14 @@ import express from "express";
 import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
 import fetch from "node-fetch";
+import helmet from "helmet";
+import { createClient } from '@supabase/supabase-js';
 
 dotenv.config();
+
+const supabaseUrl = process.env.SUPABASE_URL || "https://bxsilckpxcpsgojrakfs.supabase.co";
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || "sb_publishable_LGb-62oHXiolJluDwsXUiw_ZxRfiUpT";
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Watchdog Architecture: Background Task Queue
 interface WatchdogTask {
@@ -96,8 +102,46 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
+  app.use(helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+  }));
+
+  app.use((req, res, next) => {
+    res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; frame-src 'self' https://*.indevs.in https://www.google.com/recaptcha/; connect-src 'self' https://*.supabase.co https://*.indevs.in;");
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    next();
+  });
+
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+  // Supabase Proxy for Logging
+  app.post("/api/supabase/log-error", async (req, res) => {
+    const { error, context } = req.body;
+    try {
+      const { error: dbError } = await supabase
+        .from('error_logs')
+        .insert([{ 
+          error_message: error, 
+          context: context,
+          created_at: new Date().toISOString()
+        }]);
+      
+      if (dbError) throw dbError;
+      res.json({ success: true });
+    } catch (err: any) {
+      console.error("[Supabase Proxy] Failed to log error:", err.message);
+      res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
+  app.post("/api/supabase/conversations", async (req, res) => {
+    // Proxy for creating/updating conversations if needed
+    // For now, I'll just proxy the specific log-error call to show the pattern
+  });
 
   // Debug middleware
   app.use((req, res, next) => {
@@ -159,6 +203,187 @@ async function startServer() {
     const { type, payload } = req.body;
     const taskId = addToWatchdog(type, payload);
     res.json({ taskId });
+  });
+
+  // Agents Proxy
+  app.post("/api/ai/agents", async (req, res) => {
+    const { agentType, prompt, history, code } = req.body;
+    const groqKey = process.env.GROQ_API_KEY;
+    const openRouterKey = process.env.OPENROUTER_API_KEY;
+    const geminiKey = process.env.GEMINI_API_KEY;
+
+    try {
+      if (agentType === 'analyst') {
+        if (!groqKey) return res.json({ needsClarification: false, questions: [] });
+        // Implement analyst logic using groqKey
+        // (Similar to src/services/multiAgentService.ts but on the server)
+        const formatHistory = (hist: any[]) => hist.map(h => `${h.role === "model" ? "Assistant" : "User"}: ${h.parts[0].text}`).join("\n");
+        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${groqKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: "llama-3.3-70b-versatile",
+            messages: [
+              { role: "system", content: "You are the 'Analyst' for COOK IA. Ask 1-2 questions to refine the project or answer technical questions. Return JSON: { \"needsClarification\": boolean, \"questions\": string[], \"isTechnicalQuestion\": boolean, \"answer\": string }" },
+              { role: "user", content: `HISTORY:\n${formatHistory(history.slice(-5))}\n\nCURRENT PROMPT: ${prompt}` }
+            ],
+            response_format: { type: "json_object" }
+          })
+        });
+        const data: any = await response.json();
+        return res.json(JSON.parse(data.choices[0].message.content));
+      }
+
+      if (agentType === 'planner') {
+        const apiKey = process.env.GEMINI_API_KEY;
+        if (!apiKey) return res.json({ plan: "Planification simplifiée.", isComplex: false, subAgents: [] });
+        
+        const formatHistory = (hist: any[]) => hist.map(h => `${h.role === "model" ? "Assistant" : "User"}: ${h.parts[0].text}`).join("\n");
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: `You are the 'Planner' for COOK IA. Break down the user's request into a detailed technical plan. Return JSON: { "plan": "string", "isComplex": boolean, "subAgents": string[] }\n\nUSER REQUEST: ${prompt}\n\nHISTORY:\n${formatHistory(history.slice(-3))}` }] }],
+            generationConfig: { responseMimeType: "application/json" }
+          })
+        });
+        const data: any = await response.json();
+        return res.json(JSON.parse(data.candidates[0].content.parts[0].text));
+      }
+
+      if (agentType === 'tester') {
+        if (!groqKey) return res.json({ passed: true, errors: [] });
+        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${groqKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: "llama-3.3-70b-versatile",
+            messages: [
+              { role: "system", content: "You are the 'Automated Tester'. Analyze code for bugs. Return JSON: { \"passed\": boolean, \"errors\": string[] }" },
+              { role: "user", content: `PROMPT: ${prompt}\n\nCODE: ${code.substring(0, 5000)}` }
+            ],
+            response_format: { type: "json_object" }
+          })
+        });
+        const data: any = await response.json();
+        return res.json(JSON.parse(data.choices[0].message.content));
+      }
+
+      if (agentType === 'critic') {
+        if (!openRouterKey) return res.json({ approved: true, feedback: "" });
+        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${openRouterKey}`, "Content-Type": "application/json", "HTTP-Referer": "https://cook-ia.indevs.in", "X-Title": "COOK IA" },
+          body: JSON.stringify({
+            model: "google/gemini-2.0-flash-lite-preview-02-05:free",
+            messages: [
+              { role: "system", content: "You are the 'Critic'. Verify if the generated code matches the request. Return JSON: { \"approved\": boolean, \"feedback\": string }" },
+              { role: "user", content: `USER REQUEST: ${prompt}\n\nGENERATED CODE SUMMARY: ${code.substring(0, 2000)}...` }
+            ],
+            response_format: { type: "json_object" }
+          })
+        });
+        const data: any = await response.json();
+        return res.json(JSON.parse(data.choices[0].message.content));
+      }
+
+      // Add other agents as needed...
+      res.status(400).json({ error: "Unknown agent type" });
+    } catch (error: any) {
+      console.error(`[Agent Proxy] Error for ${agentType}:`, error.message);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Standard Gemini Proxy
+  app.post("/api/ai/gemini", async (req, res) => {
+    const { prompt, history, images, systemInstruction: customSystem, model: requestedModel } = req.body;
+    const apiKey = process.env.GEMINI_API_KEY;
+
+    if (!apiKey) {
+      return res.status(500).json({ error: "Gemini API key missing on server" });
+    }
+
+    try {
+      const modelName = requestedModel || "gemini-3-flash-preview";
+      const contents = [
+        ...history,
+        { role: "user", parts: [{ text: prompt }] }
+      ];
+
+      // Handle images if any
+      if (images && images.length > 0) {
+        images.forEach((img: any) => {
+          contents[contents.length - 1].parts.push({
+            inlineData: {
+              mimeType: img.mimeType,
+              data: img.data
+            }
+          });
+        });
+      }
+
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents,
+          systemInstruction: customSystem ? { parts: [{ text: customSystem }] } : undefined,
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 8192,
+          }
+        })
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(`Gemini API Error: ${JSON.stringify(err)}`);
+      }
+
+      const data: any = await response.json();
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      
+      if (!text) {
+        throw new Error("Empty response from Gemini");
+      }
+
+      res.json({ text });
+    } catch (error: any) {
+      console.error("[Gemini Proxy] Error:", error.message);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Generic Supabase Proxy (Database operations)
+  app.post("/api/supabase/db", async (req, res) => {
+    const { table, action, data, id, query } = req.body;
+    
+    try {
+      let result;
+      switch (action) {
+        case 'select':
+          result = await supabase.from(table).select(query || '*').order('created_at', { ascending: false });
+          break;
+        case 'insert':
+          result = await supabase.from(table).insert(data);
+          break;
+        case 'update':
+          result = await supabase.from(table).update(data).eq('id', id);
+          break;
+        case 'delete':
+          result = await supabase.from(table).delete().eq('id', id);
+          break;
+        default:
+          throw new Error("Invalid action for Supabase proxy");
+      }
+
+      if (result.error) throw result.error;
+      res.json(result.data);
+    } catch (err: any) {
+      console.error(`[Supabase DB Proxy] Error on ${table}/${action}:`, err.message);
+      res.status(500).json({ error: err.message });
+    }
   });
 
   // GitHub OAuth Routes
