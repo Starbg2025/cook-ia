@@ -300,7 +300,12 @@ async function startServer() {
           })
         });
         const data: any = await response.json();
-        return res.json(JSON.parse(data.candidates[0].content.parts[0].text));
+        if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+            return res.json(JSON.parse(data.candidates[0].content.parts[0].text));
+        } else {
+            console.error("[Planner] Invalid Gemini response:", data);
+            return res.status(500).json({ error: "Invalid response from Gemini" });
+        }
       }
 
       if (agentType === 'tester') {

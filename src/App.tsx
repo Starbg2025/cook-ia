@@ -740,12 +740,8 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
   const handleSend = async () => {
     if (!prompt.trim() || isLoading) return;
 
-    // Check verification if user is logged in
-    const lastVerification = user?.user_metadata?.last_verification_date;
-    const today = new Date().toISOString().split('T')[0];
-
-    if (user && lastVerification !== today) {
-      // Prompt for verification for logged in users
+    // Check if user is logged in, but lacks a username
+    if (user && !user.profile?.username) {
       setIsAuthModalOpen(true);
       return;
     }
@@ -754,21 +750,6 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
   };
 
   const executeSend = async () => {
-    // Update the verification date in user metadata
-    if (user) {
-      const today = new Date().toISOString().split('T')[0];
-      try {
-        const { data, error } = await supabase.auth.updateUser({
-          data: { last_verification_date: today }
-        });
-        if (!error && data.user) {
-          setUser(data.user);
-        }
-      } catch (err) {
-        console.error("Error updating verification date:", err);
-      }
-    }
-
     setPendingSend(false);
 
     let userMessage = prompt;
