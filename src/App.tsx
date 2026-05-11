@@ -753,8 +753,8 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
       // Already verified today, send directly
       executeSend();
     } else {
-      // Send directly without bot verification
-      executeSend();
+      // Prompt for verification
+      setIsAuthModalOpen(true); 
     }
   };
 

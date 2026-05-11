@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 
 // Use public keys defined in vite.config.ts/env vars
-const supabaseUrl = "https://bxsilckpxcpsgojrakfs.supabase.co/";
+const supabaseUrl = "https://bxsilckpxcpsgojrakfs.supabase.co";
 const supabaseAnonKey = "sb_publishable_LGb-62oHXiolJluDwsXUiw_ZxRfiUpT";
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
