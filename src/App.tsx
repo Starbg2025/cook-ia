@@ -740,22 +740,17 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
   const handleSend = async () => {
     if (!prompt.trim() || isLoading) return;
 
-    if (!user) {
+    // Check verification if user is logged in
+    const lastVerification = user?.user_metadata?.last_verification_date;
+    const today = new Date().toISOString().split('T')[0];
+
+    if (user && lastVerification !== today) {
+      // Prompt for verification for logged in users
       setIsAuthModalOpen(true);
       return;
     }
 
-    // Check if verification is needed today
-    const lastVerification = user.user_metadata?.last_verification_date;
-    const today = new Date().toISOString().split('T')[0];
-
-    if (lastVerification === today) {
-      // Already verified today, send directly
-      executeSend();
-    } else {
-      // Prompt for verification
-      setIsAuthModalOpen(true); 
-    }
+    executeSend();
   };
 
   const executeSend = async () => {
