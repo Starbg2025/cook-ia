@@ -7,8 +7,8 @@ import { createClient } from '@supabase/supabase-js';
 
 dotenv.config();
 
-const supabaseUrl = process.env.SUPABASE_URL || "https://bxsilckpxcpsgojrakfs.supabase.co";
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || "sb_publishable_LGb-62oHXiolJluDwsXUiw_ZxRfiUpT";
+const supabaseUrl = "https://bxsilckpxcpsgojrakfs.supabase.co";
+const supabaseAnonKey = "sb_publishable_LGb-62oHXiolJluDwsXUiw_ZxRfiUpT";
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Watchdog Architecture: Background Task Queue
