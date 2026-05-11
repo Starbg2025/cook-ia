@@ -6,15 +6,15 @@
   --font-display: "Orbitron", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   
-  --color-abyssal-deep: #020b18;
-  --color-abyssal-blue: #041e3a;
+  --color-abyssal-deep: #050a12;
+  --color-abyssal-blue: #0a1628;
   --color-cyan-bio: #00f5d4;
   --color-purple-neon: #7b2fff;
   
-  --color-orange-primary: #00f5d4; /* Aligning primary color with bio cyan */
-  --color-bg-dark: #020b18;
-  --color-card-dark: #041e3a;
-  --color-border-dark: rgba(0, 245, 212, 0.1);
+  --color-orange-primary: #FF6B00;
+  --color-bg-dark: #050a12;
+  --color-card-dark: #0a1628;
+  --color-border-dark: rgba(255, 255, 255, 0.08);
 }
 
 body {

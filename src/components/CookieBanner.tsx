@@ -33,7 +33,7 @@ export const CookieBanner: React.FC = () => {
           className="fixed bottom-6 left-6 right-6 md:left-auto md:right-8 md:w-[400px] z-[100]"
         >
           <div className="bg-[#1A1A1A]/95 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-2xl overflow-hidden relative group">
-            <div className="absolute inset-0 bg-gradient-to-br from-orange-primary/5 to-transparent pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-br from-orange-primary/10 to-transparent pointer-events-none" />
             
             <div className="flex items-start gap-4 relative">
               <div className="w-12 h-12 rounded-xl bg-orange-primary/10 flex items-center justify-center shrink-0">
@@ -58,11 +58,12 @@ export const CookieBanner: React.FC = () => {
                 <div className="flex items-center gap-3">
                   <button
                     onClick={handleAccept}
-                    className="flex-1 bg-orange-primary hover:bg-orange-600 text-white font-bold py-2.5 rounded-xl transition-all shadow-lg shadow-orange-primary/20 flex items-center justify-center gap-2"
+                    className="flex-1 bg-orange-primary hover:bg-orange-600 text-white font-bold py-2.5 rounded-xl transition-all shadow-lg shadow-orange-primary/40 flex items-center justify-center gap-2"
                   >
                     <Check size={16} />
                     Tout accepter
                   </button>
+
                   <button
                     onClick={handleDecline}
                     className="px-4 py-2.5 rounded-xl border border-white/5 bg-white/5 text-white/80 hover:text-white hover:bg-white/10 transition-all text-sm font-medium"

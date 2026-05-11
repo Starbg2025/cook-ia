@@ -88,73 +88,54 @@ export const UnderwaterWelcome: React.FC<UnderwaterWelcomeProps> = ({ isDark, on
     <div className="relative w-full h-full flex flex-col items-center justify-center overflow-hidden bg-abyssal-deep">
       <canvas 
         ref={canvasRef} 
-        className="absolute inset-0 pointer-events-none opacity-40"
+        className="absolute inset-0 pointer-events-none opacity-20"
       />
       
       {/* Background Gradient */}
-      <div className="absolute inset-0 bg-radial-[at_50%_0%] from-abyssal-blue via-abyssal-deep to-abyssal-deep opacity-80" />
+      <div className="absolute inset-0 bg-radial-[at_50%_0%] from-abyssal-blue/30 via-abyssal-deep to-abyssal-deep opacity-80" />
 
       <motion.div 
-        initial={{ opacity: 0, scale: 0.8, y: 50 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ duration: 1.5, ease: "easeOut" }}
-        className="relative z-10 flex flex-col items-center text-center px-4"
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8, ease: "easeOut" }}
+        className="relative z-10 flex flex-col items-center text-center px-4 max-w-2xl"
       >
-        <div className="w-24 h-24 mb-12 relative">
-          <div className="absolute inset-0 bg-cyan-bio rounded-3xl blur-2xl opacity-20 animate-pulse" />
-          <div className="relative w-full h-full bg-cyan-bio rounded-3xl flex items-center justify-center shadow-[0_0_50px_rgba(0,245,212,0.3)]">
-            <Zap size={48} className="text-white fill-white" />
+        <div className="w-20 h-20 mb-10 relative">
+          <div className="absolute inset-0 bg-orange-primary rounded-2xl blur-2xl opacity-20 animate-pulse" />
+          <div className="relative w-full h-full bg-orange-primary rounded-2xl flex items-center justify-center shadow-2xl">
+            <Zap size={40} className="text-white fill-white" />
           </div>
         </div>
 
-        <h1 className="font-display text-5xl md:text-7xl mb-6 text-white tracking-tighter">
-          {"COOK IA".split('').map((char, i) => (
-            <motion.span 
-              key={i}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 + i * 0.1, duration: 0.8 }}
-              className="inline-block hover:text-cyan-bio transition-colors cursor-default"
-              style={{ display: char === ' ' ? 'inline' : 'inline-block' }}
-            >
-              {char}
-            </motion.span>
-          ))}
+        <h1 className="font-display text-4xl md:text-6xl mb-6 text-white tracking-tighter uppercase font-black">
+          COOK IA <span className="text-orange-primary">V.3</span>
         </h1>
 
-        <motion.p 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 0.7 }}
-          transition={{ delay: 1.5, duration: 1 }}
-          className="max-w-xl text-lg md:text-xl text-cyan-bio/80 font-medium mb-12 leading-relaxed"
-        >
-          Créez des applications web full stack magnifiques en quelques minutes grâce à l'IA.
-        </motion.p>
+        <p className="text-white/60 text-lg md:text-xl font-medium mb-10 leading-relaxed">
+          Propulsez vos idées web dans une nouvelle dimension. <br className="hidden md:block" />
+          Génération full-stack ultra-performante par IA.
+        </p>
 
-        <motion.div
-           initial={{ opacity: 0, y: 20 }}
-           animate={{ opacity: 1, y: 0 }}
-           transition={{ delay: 2, duration: 1 }}
-           className="flex flex-col items-center gap-8"
-        >
-          <div className="flex flex-wrap justify-center gap-4">
-            <div className="px-6 py-2 rounded-full border border-cyan-bio/20 bg-cyan-bio/5 text-cyan-bio text-xs font-bold uppercase tracking-widest backdrop-blur-sm">
-              Frontend
-            </div>
-            <div className="px-6 py-2 rounded-full border border-purple-neon/20 bg-purple-neon/5 text-purple-neon text-xs font-bold uppercase tracking-widest backdrop-blur-sm">
-              Backend
-            </div>
-            <div className="px-6 py-2 rounded-full border border-cyan-bio/20 bg-cyan-bio/5 text-cyan-bio text-xs font-bold uppercase tracking-widest backdrop-blur-sm">
-              Déploiement
-            </div>
+        <div className="flex flex-col items-center gap-6">
+          <div className="flex flex-wrap justify-center gap-3">
+            {["React 18", "Next.js", "Express", "Supabase"].map((tech) => (
+              <div key={tech} className="px-4 py-1.5 rounded-full border border-white/10 bg-white/5 text-white/40 text-[10px] font-bold uppercase tracking-widest backdrop-blur-sm">
+                {tech}
+              </div>
+            ))}
           </div>
 
-          <div className="flex flex-col items-center gap-2 text-white/40 animate-bounce mt-12">
-            <span className="text-[10px] font-bold uppercase tracking-[0.3em]">Posez votre question ci-dessous</span>
-            <ChevronDown size={16} />
-          </div>
-        </motion.div>
+          <motion.div 
+            animate={{ y: [0, 5, 0] }}
+            transition={{ duration: 2, repeat: Infinity }}
+            className="flex flex-col items-center gap-2 text-orange-primary/60 mt-8"
+          >
+            <span className="text-[10px] font-black uppercase tracking-[0.4em]">Décrivez votre projet ci-dessous</span>
+            <ChevronDown size={20} />
+          </motion.div>
+        </div>
       </motion.div>
+
 
       {/* Underwater Rays effect with pure CSS as fallback/overlay */}
       <div className="absolute top-0 left-0 w-full h-full pointer-events-none overflow-hidden opacity-20">
@@ -164,7 +145,7 @@ export const UnderwaterWelcome: React.FC<UnderwaterWelcomeProps> = ({ isDark, on
           left: '50%',
           width: '2px',
           height: '1000px',
-          background: 'linear-gradient(to bottom, var(--color-cyan-bio), transparent)',
+          background: 'linear-gradient(to bottom, var(--color-orange-primary), transparent)',
           transform: 'rotate(20deg)',
           filter: 'blur(10px)',
           animation: 'rayMove 10s infinite alternate'

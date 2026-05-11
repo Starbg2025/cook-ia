@@ -101,14 +101,14 @@ export default function App() {
   const [imageSearchContext, setImageSearchContext] = useState<'chat' | 'section'>('chat');
   const [isDeploying, setIsDeploying] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
-  const [theme, setTheme] = useState<'dark' | 'light'>('light');
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [isProjectSettings, setIsProjectSettings] = useState(true);
   const [prompts, setPrompts] = useState<string[]>([]);
   const [pendingSend, setPendingSend] = useState<boolean>(false);
   const [settingsTab, setSettingsTab] = useState<'publish' | 'versions' | 'secrets' | 'integrations' | 'github' | 'general' | 'account' | 'help'>('publish');
   const [secrets, setSecrets] = useState<{ key: string; value: string }[]>([]);
   const [isLinkFullscreen, setIsLinkFullscreen] = useState(false);
-  const [hasStarted, setHasStarted] = useState(true);
+  const [hasStarted, setHasStarted] = useState(false);
   const [selectedModel, setSelectedModel] = useState<string>(() => {
     const saved = localStorage.getItem('selectedModel');
     return saved || 'gemini-3-flash-preview';
@@ -1242,7 +1242,7 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
           className={`flex flex-col h-screen ${isDark ? 'bg-abyssal-deep text-white' : 'bg-[#F8F9FA] text-slate-900'} overflow-hidden font-sans transition-colors duration-500`}
         >
           {showAnnouncement && (
-            <div className={`bg-cyan-bio text-black px-4 py-2 flex items-center justify-between text-sm font-bold shrink-0 z-[60] shadow-[0_0_20px_rgba(0,245,212,0.2)]`}>
+            <div className={`bg-orange-primary text-white px-4 py-2 flex items-center justify-between text-sm font-bold shrink-0 z-[60] shadow-[0_0_20px_rgba(255,107,0,0.2)]`}>
               <div className="flex items-center gap-2">
                 <Sparkles size={16} />
                 <span>La majorité des bugs ont été corrigés ! Rejoignez notre Discord.</span>
@@ -1269,7 +1269,7 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
       </a>
 
       {/* Header */}
-      <header className={`h-14 border-b flex items-center justify-between px-4 shrink-0 z-50 ${isDark ? 'bg-abyssal-deep border-cyan-bio/10' : 'bg-white border-slate-200'}`}>
+      <header className={`h-14 border-b flex items-center justify-between px-4 shrink-0 z-50 ${isDark ? 'bg-abyssal-deep border-white/5' : 'bg-white border-slate-200'}`}>
         <div className="flex items-center gap-4">
           <button 
             onClick={() => setIsHistoryOpen(!isHistoryOpen)}
@@ -1278,7 +1278,7 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
             <Menu size={20} />
           </button>
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-cyan-bio rounded-md flex items-center justify-center shadow-[0_0_15px_rgba(0,245,212,0.4)]">
+            <div className="w-6 h-6 bg-orange-primary rounded-md flex items-center justify-center shadow-[0_0_15px_rgba(255,107,0,0.4)]">
               <Zap size={14} className="text-white fill-white" />
             </div>
             <span className={`font-display font-black text-sm tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>COOK IA</span>

@@ -166,10 +166,41 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 lg:p-8 space-y-12 scrollbar-hide relative">
+      <div className="flex-1 overflow-y-auto p-4 lg:p-8 space-y-12 scrollbar-hide relative flex flex-col">
         {messages.length <= 1 && !isLoading ? (
-          <div className="absolute inset-0">
-            <UnderwaterWelcome isDark={isDark} />
+          <div className="flex-1 flex items-center justify-center min-h-full">
+            <div className="w-full max-w-2xl px-6 py-12 rounded-3xl border border-white/5 bg-white/[0.02] backdrop-blur-xl relative overflow-hidden group">
+              {/* Subtle background glow */}
+              <div className="absolute -top-24 -left-24 w-48 h-48 bg-orange-primary/10 blur-[80px] rounded-full group-hover:bg-orange-primary/20 transition-colors" />
+              <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-orange-primary/10 blur-[80px] rounded-full group-hover:bg-orange-primary/20 transition-colors" />
+              
+              <div className="relative z-10 flex flex-col items-center text-center">
+                <div className="w-16 h-16 bg-orange-primary rounded-2xl flex items-center justify-center shadow-lg mb-8">
+                  <Zap size={32} className="text-white fill-white" />
+                </div>
+                
+                <h2 className="font-display text-3xl md:text-5xl font-black text-white mb-4 tracking-tighter">
+                  VOTRE VISION, <span className="text-orange-primary">NOS EXPERTS.</span>
+                </h2>
+                
+                <p className={`text-sm md:text-base ${isDark ? 'text-white/60' : 'text-slate-500'} mb-10 max-w-lg leading-relaxed`}>
+                  Décrivez votre projet web et laissez notre système multi-agents expert (GLM, Gemini, Llama) s'occuper de l'architecture, du design et du code.
+                </p>
+                
+                <div className="flex flex-wrap justify-center gap-2 mb-12">
+                   {['E-commerce', 'Dashboard', 'Landing Page', 'SaaS'].map(tag => (
+                     <span key={tag} className={`px-4 py-1.5 rounded-full border ${isDark ? 'bg-white/5 border-white/10 text-white/40' : 'bg-slate-50 border-slate-200 text-slate-400'} text-[10px] font-bold uppercase tracking-widest`}>
+                       {tag}
+                     </span>
+                   ))}
+                </div>
+
+                <div className="flex flex-col items-center gap-2 text-orange-primary/60 animate-bounce">
+                  <span className="text-[10px] font-black uppercase tracking-[0.3em]">Posez votre question ci-dessous</span>
+                  <ChevronDown size={16} />
+                </div>
+              </div>
+            </div>
           </div>
         ) : (
           <>

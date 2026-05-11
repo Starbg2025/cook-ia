@@ -18,7 +18,7 @@ const callSupabaseProxy = async (table: string, action: string, options: any = {
 export const supabase = {
   auth: {
     getSession: async () => ({ data: { session: null }, error: null }),
-    onAuthStateChanged: (callback: any) => {
+    onAuthStateChange: (callback: any) => {
       // Return a dummy unsubscribe function
       return { data: { subscription: { unsubscribe: () => {} } } };
     },

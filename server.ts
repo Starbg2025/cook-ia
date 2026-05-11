@@ -108,8 +108,7 @@ async function startServer() {
   }));
 
   app.use((req, res, next) => {
-    res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; frame-src 'self' https://*.indevs.in https://www.google.com/recaptcha/; connect-src 'self' https://*.supabase.co https://*.indevs.in;");
-    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; frame-src 'self' https://*.indevs.in https://www.google.com/recaptcha/; connect-src 'self' https:;");
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
     next();
@@ -211,12 +210,30 @@ async function startServer() {
     const groqKey = process.env.GROQ_API_KEY;
     const openRouterKey = process.env.OPENROUTER_API_KEY;
     const geminiKey = process.env.GEMINI_API_KEY;
+    const modalKey = process.env.MODAL_API_KEY;
 
     try {
       if (agentType === 'analyst') {
-        if (!groqKey) return res.json({ needsClarification: false, questions: [] });
-        // Implement analyst logic using groqKey
-        // (Similar to src/services/multiAgentService.ts but on the server)
+        if (!groqKey && !modalKey) return res.json({ needsClarification: false, questions: [] });
+        
+        // Prefer GLM if Modal is available as per user request
+        if (modalKey) {
+           const response = await fetch("https://api.us-west-2.modal.direct/v1/chat/completions", {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${modalKey}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              model: "zai-org/GLM-5.1-FP8",
+              messages: [
+                { role: "system", content: "You are the 'Analyst' for COOK IA. Ask 1-2 questions to refine the project. Return JSON: { \"needsClarification\": boolean, \"questions\": string[], \"isTechnicalQuestion\": boolean, \"answer\": string }" },
+                { role: "user", content: `PROMPT: ${prompt}` }
+              ],
+              response_format: { type: "json_object" }
+            })
+          });
+          const data: any = await response.json();
+          return res.json(JSON.parse(data.choices[0].message.content));
+        }
+
         const formatHistory = (hist: any[]) => hist.map(h => `${h.role === "model" ? "Assistant" : "User"}: ${h.parts[0].text}`).join("\n");
         const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
           method: "POST",
