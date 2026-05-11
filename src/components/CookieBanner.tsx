@@ -6,20 +6,32 @@ export const CookieBanner: React.FC = () => {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    const consent = localStorage.getItem('cookie-consent');
-    if (!consent) {
-      const timer = setTimeout(() => setIsVisible(true), 2000);
-      return () => clearTimeout(timer);
+    try {
+      const consent = localStorage.getItem('cookie-consent');
+      if (!consent) {
+        const timer = setTimeout(() => setIsVisible(true), 2000);
+        return () => clearTimeout(timer);
+      }
+    } catch (e) {
+      console.warn("Storage access denied:", e);
     }
   }, []);
 
   const handleAccept = () => {
-    localStorage.setItem('cookie-consent', 'accepted');
+    try {
+      localStorage.setItem('cookie-consent', 'accepted');
+    } catch (e) {
+      console.error("Failed to save consent:", e);
+    }
     setIsVisible(false);
   };
 
   const handleDecline = () => {
-    localStorage.setItem('cookie-consent', 'declined');
+    try {
+      localStorage.setItem('cookie-consent', 'declined');
+    } catch (e) {
+      console.error("Failed to save consent:", e);
+    }
     setIsVisible(false);
   };
 

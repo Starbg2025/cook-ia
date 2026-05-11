@@ -108,7 +108,7 @@ async function startServer() {
   }));
 
   app.use((req, res, next) => {
-    res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; frame-src 'self' https://*.indevs.in https://www.google.com/recaptcha/; connect-src 'self' https:;");
+    res.setHeader('Content-Security-Policy', "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; connect-src * 'unsafe-inline'; img-src * data: blob:; frame-src *; style-src * 'unsafe-inline';");
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
     next();
@@ -210,45 +210,80 @@ async function startServer() {
     const groqKey = process.env.GROQ_API_KEY;
     const openRouterKey = process.env.OPENROUTER_API_KEY;
     const geminiKey = process.env.GEMINI_API_KEY;
-    const modalKey = process.env.MODAL_API_KEY;
 
     try {
       if (agentType === 'analyst') {
-        if (!groqKey && !modalKey) return res.json({ needsClarification: false, questions: [] });
+        const formatHistory = (hist: any[]) => hist.map(h => `${h.role === "model" ? "Assistant" : "User"}: ${h.parts[0].text}`).join("\n");
         
-        // Prefer GLM if Modal is available as per user request
-        if (modalKey) {
-           const response = await fetch("https://api.us-west-2.modal.direct/v1/chat/completions", {
-            method: "POST",
-            headers: { "Authorization": `Bearer ${modalKey}`, "Content-Type": "application/json" },
-            body: JSON.stringify({
-              model: "zai-org/GLM-5.1-FP8",
-              messages: [
-                { role: "system", content: "You are the 'Analyst' for COOK IA. Ask 1-2 questions to refine the project. Return JSON: { \"needsClarification\": boolean, \"questions\": string[], \"isTechnicalQuestion\": boolean, \"answer\": string }" },
-                { role: "user", content: `PROMPT: ${prompt}` }
-              ],
-              response_format: { type: "json_object" }
-            })
-          });
-          const data: any = await response.json();
-          return res.json(JSON.parse(data.choices[0].message.content));
+        // 1. Try Gemini
+        if (geminiKey) {
+            try {
+              const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${geminiKey}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  contents: [{ parts: [{ text: `You are the 'Analyst' for COOK IA. Ask 1-2 questions to refine the project. Return JSON: { "needsClarification": boolean, "questions": string[], "isTechnicalQuestion": boolean, "answer": string }\n\nHISTORY:\n${formatHistory(history.slice(-5))}\n\nCURRENT PROMPT: ${prompt}` }] }],
+                  generationConfig: { responseMimeType: "application/json" }
+                })
+              });
+              if (response.ok) {
+                const data: any = await response.json();
+                return res.json(JSON.parse(data.candidates[0].content.parts[0].text));
+              }
+            } catch (e) {
+              console.warn("[Analyst] Gemini failed, trying Groq");
+            }
+        }
+        
+        // 2. Try Groq
+        if (groqKey) {
+            try {
+              const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+                method: "POST",
+                headers: { "Authorization": `Bearer ${groqKey}`, "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  model: "llama-3.3-70b-versatile",
+                  messages: [
+                    { role: "system", content: "You are the 'Analyst' for COOK IA. Ask 1-2 questions to refine the project or answer technical questions. Return JSON: { \"needsClarification\": boolean, \"questions\": string[], \"isTechnicalQuestion\": boolean, \"answer\": string }" },
+                    { role: "user", content: `HISTORY:\n${formatHistory(history.slice(-5))}\n\nCURRENT PROMPT: ${prompt}` }
+                  ],
+                  response_format: { type: "json_object" }
+                })
+              });
+              if (response.ok) {
+                const data: any = await response.json();
+                return res.json(JSON.parse(data.choices[0].message.content));
+              }
+            } catch (e) {
+              console.warn("[Analyst] Groq failed, trying OpenRouter");
+            }
         }
 
-        const formatHistory = (hist: any[]) => hist.map(h => `${h.role === "model" ? "Assistant" : "User"}: ${h.parts[0].text}`).join("\n");
-        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-          method: "POST",
-          headers: { "Authorization": `Bearer ${groqKey}`, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            model: "llama-3.3-70b-versatile",
-            messages: [
-              { role: "system", content: "You are the 'Analyst' for COOK IA. Ask 1-2 questions to refine the project or answer technical questions. Return JSON: { \"needsClarification\": boolean, \"questions\": string[], \"isTechnicalQuestion\": boolean, \"answer\": string }" },
-              { role: "user", content: `HISTORY:\n${formatHistory(history.slice(-5))}\n\nCURRENT PROMPT: ${prompt}` }
-            ],
-            response_format: { type: "json_object" }
-          })
-        });
-        const data: any = await response.json();
-        return res.json(JSON.parse(data.choices[0].message.content));
+        // 3. Try OpenRouter
+        if (openRouterKey) {
+            try {
+              const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                method: "POST",
+                headers: { "Authorization": `Bearer ${openRouterKey}`, "Content-Type": "application/json", "HTTP-Referer": "https://cook-ia.indevs.in", "X-Title": "COOK IA" },
+                body: JSON.stringify({
+                  model: "google/gemini-2.0-flash-lite-preview-02-05:free",
+                  messages: [
+                    { role: "system", content: "You are the 'Analyst' for COOK IA. Ask 1-2 questions to refine the project. Return JSON: { \"needsClarification\": boolean, \"questions\": string[], \"isTechnicalQuestion\": boolean, \"answer\": string }" },
+                    { role: "user", content: `PROMPT: ${prompt}` }
+                  ],
+                  response_format: { type: "json_object" }
+                })
+              });
+              if (response.ok) {
+                const data: any = await response.json();
+                return res.json(JSON.parse(data.choices[0].message.content));
+              }
+            } catch (e) {
+              console.warn("[Analyst] OpenRouter failed");
+            }
+        }
+
+        return res.status(500).json({ error: "All AI providers failed" });
       }
 
       if (agentType === 'planner') {
@@ -669,28 +704,9 @@ Return the response EXCLUSIVELY in JSON format with three fields (do not include
       }
     }
 
+
     // Fallback Chain Execution
     try {
-      // 0. Priority: Target Model (if provided)
-      if (targetModel) {
-        if (targetModel.includes("GLM") || targetModel === "zai-org/GLM-5.1-FP8") {
-          if (modalKey) {
-            try {
-              const result = await tryRequest(
-                "https://api.us-west-2.modal.direct/v1/chat/completions",
-                modalKey,
-                "zai-org/GLM-5.1-FP8",
-                "Modal"
-              );
-              return res.json(result);
-            } catch (err: any) {
-              console.warn(`[Fallback] Target Modal failed: ${err.message}`);
-            }
-          }
-        }
-        // Add other target models if needed
-      }
-
       // 1. Try Groq (Priority 1)
       if (groqKey) {
         try {
@@ -706,20 +722,6 @@ Return the response EXCLUSIVELY in JSON format with three fields (do not include
         }
       }
       
-      // 1.5 Try Modal GLM (Specialized fallback)
-      if (modalKey) {
-        try {
-          const result = await tryRequest(
-            "https://api.us-west-2.modal.direct/v1/chat/completions",
-            modalKey,
-            "zai-org/GLM-5.1-FP8",
-            "Modal"
-          );
-          return res.json(result);
-        } catch (err: any) {
-          console.warn(`[Fallback] Modal failed: ${err.message}`);
-        }
-      }
 
       // 2. Try OpenRouter (Priority 2)
       if (openRouterKey) {

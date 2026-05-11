@@ -110,20 +110,38 @@ export default function App() {
   const [isLinkFullscreen, setIsLinkFullscreen] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
   const [selectedModel, setSelectedModel] = useState<string>(() => {
-    const saved = localStorage.getItem('selectedModel');
-    return saved || 'gemini-3-flash-preview';
+    try {
+      const saved = localStorage.getItem('selectedModel');
+      return saved || 'gemini-3-flash-preview';
+    } catch (e) {
+      console.warn("Storage access denied:", e);
+      return 'gemini-3-flash-preview';
+    }
   });
   const [isRealtimeEnabled, setIsRealtimeEnabled] = useState(() => {
-    const saved = localStorage.getItem('isRealtimeEnabled');
-    return saved !== null ? JSON.parse(saved) : true;
+    try {
+      const saved = localStorage.getItem('isRealtimeEnabled');
+      return saved !== null ? JSON.parse(saved) : true;
+    } catch (e) {
+      console.warn("Storage access denied:", e);
+      return true;
+    }
   });
 
   useEffect(() => {
-    localStorage.setItem('selectedModel', selectedModel);
+    try {
+      localStorage.setItem('selectedModel', selectedModel);
+    } catch (e) {
+      console.error("Failed to save to localStorage:", e);
+    }
   }, [selectedModel]);
 
   useEffect(() => {
-    localStorage.setItem('isRealtimeEnabled', JSON.stringify(isRealtimeEnabled));
+    try {
+      localStorage.setItem('isRealtimeEnabled', JSON.stringify(isRealtimeEnabled));
+    } catch (e) {
+      console.error("Failed to save to localStorage:", e);
+    }
   }, [isRealtimeEnabled]);
 
   const handleUpdateProjectName = async (newName: string) => {
