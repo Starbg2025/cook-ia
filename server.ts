@@ -106,6 +106,11 @@ async function startServer() {
   app.use(helmet({
     contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false,
+    hsts: {
+      maxAge: 31536000,
+      includeSubDomains: true,
+      preload: true
+    }
   }));
 
   app.use((req, res, next) => {
