@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import fetch from "node-fetch";
 import helmet from "helmet";
 import { createClient } from '@supabase/supabase-js';
+import { GoogleGenAI } from "@google/genai";
 
 dotenv.config();
 
@@ -218,20 +219,17 @@ async function startServer() {
         // 1. Try Gemini
         if (geminiKey) {
             try {
-              const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${geminiKey}`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  contents: [{ parts: [{ text: `You are the 'Analyst' for COOK IA. Ask 1-2 questions to refine the project. Return JSON: { "needsClarification": boolean, "questions": string[], "isTechnicalQuestion": boolean, "answer": string }\n\nHISTORY:\n${formatHistory(history.slice(-5))}\n\nCURRENT PROMPT: ${prompt}` }] }],
-                  generationConfig: { responseMimeType: "application/json" }
-                })
+              const ai = new GoogleGenAI({ apiKey: geminiKey });
+              const response = await ai.models.generateContent({
+                model: "gemini-3.1-flash-preview",
+                contents: `You are the 'Analyst' for COOK IA. Ask 1-2 questions to refine the project. Return JSON: { "needsClarification": boolean, "questions": string[], "isTechnicalQuestion": boolean, "answer": string }\n\nHISTORY:\n${formatHistory(history.slice(-5))}\n\nCURRENT PROMPT: ${prompt}`,
+                config: { responseMimeType: "application/json" }
               });
-              if (response.ok) {
-                const data: any = await response.json();
-                return res.json(JSON.parse(data.candidates[0].content.parts[0].text));
+              if (response.text) {
+                return res.json(JSON.parse(response.text));
               }
             } catch (e) {
-              console.warn("[Analyst] Gemini failed, trying Groq");
+              console.warn("[Analyst] Gemini failed, trying Groq", e);
             }
         }
         
@@ -290,21 +288,20 @@ async function startServer() {
         const apiKey = process.env.GEMINI_API_KEY;
         if (!apiKey) return res.json({ plan: "Planification simplifiée.", isComplex: false, subAgents: [] });
         
+        const ai = new GoogleGenAI({ apiKey });
+        
         const formatHistory = (hist: any[]) => hist.map(h => `${h.role === "model" ? "Assistant" : "User"}: ${h.parts[0].text}`).join("\n");
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: `You are the 'Planner' for COOK IA. Break down the user's request into a detailed technical plan. Return JSON: { "plan": "string", "isComplex": boolean, "subAgents": string[] }\n\nUSER REQUEST: ${prompt}\n\nHISTORY:\n${formatHistory(history.slice(-3))}` }] }],
-            generationConfig: { responseMimeType: "application/json" }
-          })
-        });
-        const data: any = await response.json();
-        if (data.candidates && data.candidates[0] && data.candidates[0].content) {
-            return res.json(JSON.parse(data.candidates[0].content.parts[0].text));
-        } else {
-            console.error("[Planner] Invalid Gemini response:", data);
-            return res.status(500).json({ error: "Invalid response from Gemini" });
+        
+        try {
+          const response = await ai.models.generateContent({
+            model: "gemini-3.1-flash-preview",
+            contents: `You are the 'Planner' for COOK IA. Break down the user's request into a detailed technical plan. Return JSON: { "plan": "string", "isComplex": boolean, "subAgents": string[] }\n\nUSER REQUEST: ${prompt}\n\nHISTORY:\n${formatHistory(history.slice(-3))}`,
+            config: { responseMimeType: "application/json" }
+          });
+          return res.json(JSON.parse(response.text));
+        } catch (error: any) {
+             console.error("[Planner] Error:", error);
+             return res.status(500).json({ error: "Invalid response from Gemini" });
         }
       }
 
@@ -362,13 +359,29 @@ async function startServer() {
     }
 
     try {
-      const modelName = requestedModel || "gemini-3-flash-preview";
+      const ai = new GoogleGenAI({ apiKey });
+      const modelName = requestedModel || "gemini-3.1-flash-preview";
+      
       const contents = [
-        ...history,
+        ...history.map((h: any) => {
+          return {
+            role: h.role, // role must be 'user' or 'model'
+            parts: h.parts.map((p: any) => {
+              if (p.text) return { text: p.text };
+              if (p.inlineData) return {
+                inlineData: {
+                  mimeType: p.inlineData.mimeType,
+                  data: p.inlineData.data
+                }
+              };
+              return p;
+            })
+          };
+        }),
         { role: "user", parts: [{ text: prompt }] }
       ];
 
-      // Handle images if any
+      // Handle images for the current prompt
       if (images && images.length > 0) {
         images.forEach((img: any) => {
           contents[contents.length - 1].parts.push({
@@ -380,32 +393,20 @@ async function startServer() {
         });
       }
 
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents,
-          systemInstruction: customSystem ? { parts: [{ text: customSystem }] } : undefined,
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 8192,
-          }
-        })
+      const response = await ai.models.generateContent({
+        model: modelName,
+        contents,
+        config: {
+          systemInstruction: customSystem || undefined,
+          temperature: 0.7,
+        }
       });
 
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(`Gemini API Error: ${JSON.stringify(err)}`);
-      }
-
-      const data: any = await response.json();
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      
-      if (!text) {
+      if (!response.text) {
         throw new Error("Empty response from Gemini");
       }
 
-      res.json({ text });
+      res.json({ text: response.text });
     } catch (error: any) {
       console.error("[Gemini Proxy] Error:", error.message);
       res.status(500).json({ error: error.message });
