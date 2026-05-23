@@ -161,7 +161,10 @@ INSTRUCTIONS:
   try {
     const text = await callGeminiProxy(targetPrompt, [], "You are a world-class full-stack developer.");
     return JSON.parse(text);
-  } catch (error) {
+  } catch (error: any) {
+    if (error.message?.includes("Clé API Gemini") || error.message?.includes("API key")) {
+      throw error;
+    }
     shadowWatchdog.setUnhealthy();
     console.debug("Error converting code, trying fallback:", error);
     return await generateWithAIFallback(targetPrompt, []);
@@ -222,7 +225,10 @@ Return the result in JSON format with two fields:
   try {
     const text = await callGeminiProxy(userPrompt, history, systemInstruction, model);
     return JSON.parse(text);
-  } catch (error) {
+  } catch (error: any) {
+    if (error.message?.includes("Clé API Gemini") || error.message?.includes("API key")) {
+      throw error;
+    }
     shadowWatchdog.setUnhealthy();
     console.debug("Error updating section, trying fallback:", error);
     return await generateWithAIFallback(userPrompt, history);
@@ -265,7 +271,10 @@ export const generateWebsite = async (
     
     const result = JSON.parse(jsonStr);
     return { ...result, _provider: 'gemini' };
-  } catch (error) {
+  } catch (error: any) {
+    if (error.message?.includes("Clé API Gemini") || error.message?.includes("API key")) {
+      throw error;
+    }
     shadowWatchdog.setUnhealthy();
     console.debug("Gemini failed, trying fallback chain:", error);
     return await generateWithAIFallback(prompt, history, images);

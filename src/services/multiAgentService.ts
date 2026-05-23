@@ -22,8 +22,15 @@ export const analystReview = async (prompt: string, history: any[]) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ agentType: 'analyst', prompt, history })
     });
-    return await response.json();
-  } catch (error) {
+    const data = await response.json();
+    if (!response.ok) {
+        throw new Error(data.error || "Failed to call analyst agent");
+    }
+    return data;
+  } catch (error: any) {
+    if (error.message?.includes("Clé API Gemini")) {
+      throw error;
+    }
     console.debug("Analyst Proxy error:", error);
     return { needsClarification: false, questions: [], isTechnicalQuestion: false };
   }
@@ -37,8 +44,15 @@ export const plannerAgent = async (prompt: string, history: any[]) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ agentType: 'planner', prompt, history })
     });
-    return await response.json();
-  } catch (error) {
+    const data = await response.json();
+    if (!response.ok) {
+        throw new Error(data.error || "Failed to call planner agent");
+    }
+    return data;
+  } catch (error: any) {
+    if (error.message?.includes("Clé API Gemini")) {
+      throw error;
+    }
     console.debug("Planner Proxy error:", error);
     return { plan: "Désolé, je n'ai pas pu générer de plan détaillé.", isComplex: false, subAgents: [] };
   }

@@ -99,31 +99,31 @@ async function processTask(id: string) {
   }
 }
 
-async function startServer() {
-  const app = express();
-  const PORT = 3000;
+export const app = express();
+const PORT = 3000;
 
-  app.use(helmet({
-    contentSecurityPolicy: false,
-    crossOriginEmbedderPolicy: false,
-    hsts: {
-      maxAge: 31536000,
-      includeSubDomains: true,
-      preload: true
-    }
-  }));
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true
+  }
+}));
 
-  app.use((req, res, next) => {
-    res.setHeader('Content-Security-Policy', "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; connect-src * 'unsafe-inline'; img-src * data: blob:; frame-src *; style-src * 'unsafe-inline';");
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-    next();
-  });
+app.use((req, res, next) => {
+  res.setHeader('Content-Security-Policy', "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; connect-src * 'unsafe-inline' https: wss:; img-src * data: blob:; frame-src *; style-src * 'unsafe-inline';");
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  next();
+});
 
-  app.use(express.json({ limit: '50mb' }));
-  app.use(express.urlencoded({ limit: '50mb', extended: true }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-  // Supabase Proxy for Logging
+// Supabase Proxy for Logging
+
   app.post("/api/supabase/log-error", async (req, res) => {
     const { error, context } = req.body;
     try {
@@ -233,8 +233,11 @@ async function startServer() {
               if (response.text) {
                 return res.json(JSON.parse(response.text));
               }
-            } catch (e) {
+            } catch (e: any) {
               console.warn("[Analyst] Gemini failed, trying Groq", e);
+              if (e.message && (e.message.includes("API key not valid") || e.message.includes("API_KEY_INVALID"))) {
+                  return res.status(400).json({ error: "Clé API Gemini invalide ou non configurée sur le serveur." });
+              }
             }
         }
         
@@ -306,7 +309,10 @@ async function startServer() {
           return res.json(JSON.parse(response.text));
         } catch (error: any) {
              console.error("[Planner] Error:", error);
-             return res.status(500).json({ error: "Invalid response from Gemini" });
+             if (error.message && (error.message.includes("API key not valid") || error.message.includes("API_KEY_INVALID"))) {
+                return res.status(400).json({ error: "Clé API Gemini invalide ou non configurée sur le serveur." });
+             }
+             return res.status(500).json({ error: error.message || "Invalid response from Gemini" });
         }
       }
 
@@ -414,7 +420,11 @@ async function startServer() {
       res.json({ text: response.text });
     } catch (error: any) {
       console.error("[Gemini Proxy] Error:", error.message);
-      res.status(500).json({ error: error.message });
+      if (error.message.includes("API key not valid") || error.message.includes("API_KEY_INVALID")) {
+        res.status(400).json({ error: "Clé API Gemini invalide ou non configurée sur le serveur (ex. Netlify)." });
+      } else {
+        res.status(500).json({ error: error.message });
+      }
     }
   });
 
@@ -803,7 +813,8 @@ Return the response EXCLUSIVELY in JSON format with three fields (do not include
     }
   });
 
-  // Vite middleware for development
+// Vite middleware for development
+async function startViteServer() {
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { middlewareMode: true },
@@ -817,9 +828,12 @@ Return the response EXCLUSIVELY in JSON format with three fields (do not include
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-  });
+  // Only listen if not running in a serverless environment (like Netlify functions)
+  if (!process.env.NETLIFY && !process.env.LAMBDA_TASK_ROOT && process.env.NODE_ENV !== "test") {
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`Server running on http://localhost:${PORT}`);
+    });
+  }
 }
 
-startServer();
+startViteServer();

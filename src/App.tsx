@@ -506,20 +506,6 @@ export default function App() {
         parts: [{ text: m.content }]
       }));
 
-      // 1. Analyst Phase for Section Update
-      const review = await analystReview(`MISE À JOUR DE SECTION (${sectionEdit.selector}) : ${sectionPrompt}`, history);
-      if (review.needsClarification) {
-        const analystMessage: Message = {
-          role: 'model',
-          content: `[Analyste] Avant de modifier cette section (${sectionEdit.selector}), j'ai besoin de précisions :\n\n${review.questions.map((q: string, i: number) => `${i + 1}. ${q}`).join('\n')}`
-        };
-        const updatedMessages = [...messages, analystMessage];
-        setMessages(updatedMessages);
-        setIsLoading(false);
-        await saveConversation(updatedMessages);
-        return;
-      }
-
       // 2. Engineer Phase
       const result = await updateSection(
         sectionPrompt,
@@ -818,56 +804,6 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
         };
       }));
 
-      // 1. Analyst Phase (Groq)
-      const a1 = addAction('thought', "Démarrage de l'analyse sémantique du prompt...");
-      const review = await analystReview(userMessage, history);
-      completeAction(a1);
-      
-      setLoadingStatus("Planification stratégique...");
-      const a2 = addAction('thought', "Élaboration de la stratégie de développement...");
-      if (review.isTechnicalQuestion && review.answer) {
-        completeAction(a2);
-        const technicalMessage: Message = {
-          role: 'model',
-          content: `[Expert Technique] ${review.answer}`,
-          _provider: 'Groq'
-        };
-        const updatedMessages = [...newMessages, technicalMessage];
-        setMessages(updatedMessages);
-        setIsLoading(false);
-        await saveConversation(updatedMessages);
-        return;
-      }
-
-      if (review.needsClarification) {
-        const analystMessage: Message = {
-          role: 'model',
-          content: `[Analyste] Bonjour ! Je suis l'Analyste. Pour m'assurer que l'Architecte construise exactement le chef-d'œuvre que vous imaginez, j'ai besoin de quelques précisions :\n\n${review.questions.map((q: string, i: number) => `${i + 1}. ${q}`).join('\n')}`,
-          _provider: 'Groq'
-        };
-        const updatedMessages = [...newMessages, analystMessage];
-        setMessages(updatedMessages);
-        setIsLoading(false);
-        await saveConversation(updatedMessages);
-        return;
-      }
-
-      // 2. Planner Phase (Gemini) - ALWAYS PLAN BEFORE CODING
-      const a3 = addAction('read', "Vérification des composants réutilisables...");
-      const planResult = await plannerAgent(userMessage, history);
-      completeAction(a3);
-
-      setLoadingStatus("Génération de l'architecture...");
-      const a4 = addAction('thought', "Plan stratégique validé. Initialisation de l'Ingénieur IA...");
-      const planningMessage: Message = {
-        role: 'model',
-        content: `[Planificateur] Voici mon plan d'action :\n\n${planResult.plan}${planResult.isComplex ? `\n\n**Complexité détectée !** Délégation aux sous-agents : ${planResult.subAgents.join(', ')}` : ''}`,
-        _provider: 'Gemini'
-      };
-      setMessages(prev => [...prev, planningMessage]);
-
-      // 3. Engineer Phase (Gemini)
-      
       // Prepare current images for API if exists
       let imageParts: any[] = [];
       if (currentImages.length > 0) {
@@ -917,58 +853,7 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
       );
       completeAction(a5);
 
-      setLoadingStatus("Tests de qualité et validation...");
-      const a6 = addAction('shell', "Compilation des assets et vérification de la syntaxe...");
-
-      // 4. Automated Testing Phase (Groq)
-      const testResult = await testerAgent(result.preview_code, enrichedUserMessage);
-      completeAction(a6);
-      
-      if (!testResult.passed) {
-        // Log error to Supabase
-        await logErrorToSupabase(`Test failed for prompt: ${userMessage}`, { 
-          errors: testResult.errors,
-          prompt: userMessage,
-          code: result.preview_code.substring(0, 1000)
-        });
-
-        // Auto-correction: Re-generate with test feedback
-        const correctionMessage: Message = {
-          role: 'model',
-          content: `[Testeur] Bugs détectés : ${testResult.errors.join(', ')}. Je lance une correction automatique...`,
-          _provider: 'Groq'
-        };
-        setMessages(prev => [...prev, correctionMessage]);
-
-        result = await generateWebsite(
-          `${enrichedUserMessage}\n\nCORRECTION DE BUGS (TESTS ÉCHOUÉS) :\n${testResult.errors.join('\n')}`,
-          history.slice(0, -1),
-          imageParts.length > 0 ? imageParts : undefined,
-          videoParts.length > 0 ? videoParts : undefined,
-          selectedModel
-        );
-      }
-
-      // 5. Critic Phase (OpenRouter)
-      const a7 = addAction('read', "Analyse de la conformité visuelle et UX...");
-      const critic = await criticReview(enrichedUserMessage, result.preview_code);
-      completeAction(a7);
-      
-      setLoadingStatus("Finalisation du design...");
-      const a8 = addAction('thought', "Finalisation des derniers détails esthétiques...");
-      if (!critic.approved) {
-        completeAction(a8, 'failed');
-        // Re-generate with feedback
-        result = await generateWebsite(
-          `${enrichedUserMessage}\n\nFEEDBACK DU CRITIQUE (À CORRIGER) :\n${critic.feedback}`,
-          history.slice(0, -1),
-          imageParts.length > 0 ? imageParts : undefined,
-          videoParts.length > 0 ? videoParts : undefined,
-          selectedModel
-        );
-      }
-      
-      const updatedMessages: Message[] = [...newMessages, planningMessage, { 
+      const updatedMessages: Message[] = [...newMessages, { 
         role: 'model', 
         content: result.explanation,
         code: result.preview_code,
@@ -995,8 +880,8 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
       addAction('thought', "Erreur critique détectée. Tentative de diagnostic...");
       
       let errorMessage = "Désolé, une erreur est survenue lors de la génération. Veuillez réessayer.";
-      if (error.message?.includes("API key")) {
-        errorMessage = "Clé API invalide ou manquante. Vérifiez votre configuration.";
+      if (error.message?.includes("API key") || error.message?.includes("Clé API")) {
+        errorMessage = "Clé API Gemini invalide ou manquante. Si vous êtes sur Netlify, assurez-vous d'avoir ajouté GEMINI_API_KEY dans les variables d'environnement (Environment variables) de votre site.";
       } else if (error.message?.includes("safety") || error.message?.includes("blocked")) {
         errorMessage = "Le contenu a été bloqué par les filtres de sécurité. Essayez une autre URL ou un autre prompt.";
       } else if (error.message?.includes("JSON")) {
