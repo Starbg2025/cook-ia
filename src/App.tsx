@@ -44,7 +44,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { generateWebsite, generateTitle, updateSection, convertToReact, improveText } from './services/geminiService';
-import { analystReview, criticReview, plannerAgent, testerAgent } from './services/multiAgentService';
+import { analystReview, criticReview, plannerAgent, testerAgent, shadowWatchdog } from './services/multiAgentService';
 import { Message, ViewMode, Conversation, StyleConfig, SectionEditState, ActionHistory } from './types';
 import { ChatInterface } from './components/ChatInterface';
 import { Preview } from './components/Preview';
@@ -118,6 +118,7 @@ export default function App() {
   useEffect(() => {
     try {
       localStorage.setItem('user_secrets', JSON.stringify(secrets));
+      shadowWatchdog.setHealthy();
     } catch (e) {
       console.error("Failed to save secrets to localStorage:", e);
     }
@@ -128,10 +129,11 @@ export default function App() {
   const [selectedModel, setSelectedModel] = useState<string>(() => {
     try {
       const saved = localStorage.getItem('selectedModel');
-      return saved || 'gemini-3-flash-preview';
+      if (saved === 'gemini-3.5-flash') return 'gemini-2.5-flash';
+      return saved || 'gemini-2.5-flash';
     } catch (e) {
       console.warn("Storage access denied:", e);
-      return 'gemini-3-flash-preview';
+      return 'gemini-2.5-flash';
     }
   });
   const [isRealtimeEnabled, setIsRealtimeEnabled] = useState(() => {
@@ -895,18 +897,18 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
       console.error("Error generating website:", error);
       addAction('thought', "Erreur critique détectée. Tentative de diagnostic...");
       
-      let errorMessage = "Désolé, une erreur est survenue lors de la génération. Veuillez réessayer.";
+      let errorMessage = `Désolé, une erreur est survenue lors de la génération. (Erreur: ${error.message})`;
       if (error.message?.includes("API key") || error.message?.includes("Clé API") || error.message?.includes("GEMINI_API_KEY")) {
-        errorMessage = "Clé API Gemini invalide ou manquante. Allez dans Réglages (Settings) > Secrets & API Keys pour ajouter GEMINI_API_KEY, ou configurez-la sur Netlify.";
+        errorMessage = `Clé API Gemini invalide ou manquante. Erreur brute: ${error.message}. Allez dans Réglages (Settings) > Secrets & API Keys et vérifiez que votre clé GEMINI_API_KEY est exacte (sans espaces) ! Modèle sélectionné: ${selectedModel}`;
       } else if (error.message?.includes("safety") || error.message?.includes("blocked")) {
-        errorMessage = "Le contenu a été bloqué par les filtres de sécurité. Essayez une autre URL ou un autre prompt.";
+        errorMessage = `Le contenu a été bloqué par les filtres de sécurité. (Erreur: ${error.message})`;
       } else if (error.message?.includes("JSON")) {
-        errorMessage = "L'IA a eu du mal à structurer sa réponse. Veuillez réessayer, cela arrive parfois avec des sites complexes.";
+        errorMessage = `L'IA a eu du mal à structurer sa réponse. (Erreur: ${error.message})`;
       }
-        
+      
       setMessages(prev => [...prev, { 
         role: 'model', 
-        content: errorMessage 
+        content: errorMessage
       }]);
     } finally {
       setIsLoading(false);

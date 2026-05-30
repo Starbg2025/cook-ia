@@ -74,21 +74,85 @@ const getCustomHeaders = () => {
     const saved = localStorage.getItem('user_secrets');
     if (saved) {
       const secrets = JSON.parse(saved);
-      const geminiKey = secrets.find((s: any) => s.key === 'GEMINI_API_KEY' || s.key === 'GEMINI_KEY');
-      if (geminiKey) headers['x-gemini-key'] = geminiKey.value;
-      
-      const groqKey = secrets.find((s: any) => s.key === 'GROQ_API_KEY' || s.key === 'GROQ_KEY');
-      if (groqKey) headers['x-groq-key'] = groqKey.value;
+      if (Array.isArray(secrets) && secrets.length > 0) {
+        const isGeminiKey = (k: string, v: string) => {
+          const uKey = k.toUpperCase().replace(/[^A-Z]/g, '');
+          if (uKey.includes('GEMINI') || uKey.includes('GOOGLE')) return true;
+          if (v && v.startsWith('AIzaSy')) return true;
+          if ((uKey === 'APIKEY' || uKey === 'KEY') && secrets.length === 1) return true;
+          return false;
+        };
+        const isGroqKey = (k: string) => {
+          return k.toUpperCase().includes('GROQ');
+        };
+        
+        const geminiKey = secrets.find((s: any) => isGeminiKey(s.key, s.value)) || secrets[0];
+        if (geminiKey && geminiKey.value) {
+          headers['x-gemini-key'] = geminiKey.value.trim();
+        }
+        
+        const groqKey = secrets.find((s: any) => isGroqKey(s.key));
+        if (groqKey && groqKey.value) {
+          headers['x-groq-key'] = groqKey.value.trim();
+        }
+      }
     }
   } catch (e) {}
   return headers;
 };
 
-const callGeminiProxy = async (prompt: string, history: any[], systemInstruction?: string, model?: string, images?: any[]) => {
+const cleanAndParseJSON = (text: string) => {
+  let cleaned = text.trim();
+  
+  if (cleaned.startsWith("```json")) {
+    cleaned = cleaned.substring(7);
+  } else if (cleaned.startsWith("```")) {
+    cleaned = cleaned.substring(3);
+  }
+  
+  if (cleaned.endsWith("```")) {
+    cleaned = cleaned.substring(0, cleaned.length - 3);
+  }
+  
+  cleaned = cleaned.trim();
+  
+  const start = cleaned.indexOf('{');
+  const end = cleaned.lastIndexOf('}');
+  
+  if (start !== -1 && end !== -1 && end > start) {
+    cleaned = cleaned.substring(start, end + 1);
+  }
+  
+  try {
+    return JSON.parse(cleaned);
+  } catch (error: any) {
+    console.error("JSON parsing failed for cleaned text:", cleaned);
+    throw new Error(`Failed to parse AI response as JSON: ${error.message}`);
+  }
+};
+
+const isUserKeyOrQuotaError = (msg: string) => {
+  const normalized = msg.toLowerCase();
+  return (
+    normalized.includes("key") ||
+    normalized.includes("api_key") ||
+    normalized.includes("apikey") ||
+    normalized.includes("unauthorized") ||
+    normalized.includes("forbidden") ||
+    normalized.includes("quota") ||
+    normalized.includes("billing") ||
+    normalized.includes("limit") ||
+    normalized.includes("invalid") ||
+    normalized.includes("clã©") || // Handle encoding in error messages
+    normalized.includes("clé")
+  );
+};
+
+const callGeminiProxy = async (prompt: string, history: any[], systemInstruction?: string, model?: string, images?: any[], responseMimeType?: string) => {
   const response = await fetch("/api/ai/gemini", {
     method: "POST",
     headers: getCustomHeaders(),
-    body: JSON.stringify({ prompt, history, systemInstruction, model, images })
+    body: JSON.stringify({ prompt, history, systemInstruction, model, images, responseMimeType })
   });
 
   if (!response.ok) {
@@ -167,19 +231,24 @@ INSTRUCTIONS:
 4. Return the result as a JSON object with a 'files' array, where each file has a 'path' and 'content'.`;
   }
 
-  // Silent Fallback
-  if (!shadowWatchdog.isHealthy()) {
+  const hasUserKey = !!getCustomHeaders()['x-gemini-key'];
+  const isHealthy = shadowWatchdog.isHealthy();
+
+  // Switch to fallback if primary is unhealthy AND user has no explicit API Key
+  if (!isHealthy && !hasUserKey) {
     return await generateWithAIFallback(targetPrompt, []);
   }
 
   try {
-    const text = await callGeminiProxy(targetPrompt, [], "You are a world-class full-stack developer.");
-    return JSON.parse(text);
+    const text = await callGeminiProxy(targetPrompt, [], "You are a world-class full-stack developer.", undefined, undefined, "application/json");
+    return cleanAndParseJSON(text);
   } catch (error: any) {
-    if (error.message?.includes("Clé API Gemini") || error.message?.includes("API key")) {
+    if (isUserKeyOrQuotaError(error.message)) {
       throw error;
     }
-    shadowWatchdog.setUnhealthy();
+    if (!hasUserKey) {
+      shadowWatchdog.setUnhealthy();
+    }
     console.debug("Error converting code, trying fallback:", error);
     return await generateWithAIFallback(targetPrompt, []);
   }
@@ -210,7 +279,7 @@ export const updateSection = async (
   sectionHtml: string,
   fullCode: string,
   history: any[],
-  model: string = "gemini-3-flash-preview"
+  model: string = "gemini-2.5-flash"
 ) => {
   const systemInstruction = "You are an expert web developer specializing in targeted component updates.";
   const userPrompt = `TARGET SECTION HTML:
@@ -232,18 +301,24 @@ Return the result in JSON format with two fields:
 1. 'explanation': What you changed.
 2. 'updated_section_html': The new HTML for that section only.`;
 
-  if (!shadowWatchdog.isHealthy() || model !== "gemini-3-flash-preview") {
+  const hasUserKey = !!getCustomHeaders()['x-gemini-key'];
+  const isHealthy = shadowWatchdog.isHealthy();
+  const isGemini = model.startsWith("gemini-") || model.startsWith("google/");
+
+  if ((!isHealthy || !isGemini) && !hasUserKey) {
     return await generateWithAIFallback(userPrompt, history, undefined, model);
   }
 
   try {
-    const text = await callGeminiProxy(userPrompt, history, systemInstruction, model);
-    return JSON.parse(text);
+    const text = await callGeminiProxy(userPrompt, history, systemInstruction, model, undefined, "application/json");
+    return cleanAndParseJSON(text);
   } catch (error: any) {
-    if (error.message?.includes("Clé API Gemini") || error.message?.includes("API key")) {
+    if (isUserKeyOrQuotaError(error.message)) {
       throw error;
     }
-    shadowWatchdog.setUnhealthy();
+    if (!hasUserKey) {
+      shadowWatchdog.setUnhealthy();
+    }
     console.debug("Error updating section, trying fallback:", error);
     return await generateWithAIFallback(userPrompt, history);
   }
@@ -254,11 +329,15 @@ export const generateWebsite = async (
   history: { role: "user" | "model", parts: { text?: string, inlineData?: { mimeType: string, data: string } }[] }[],
   images?: { mimeType: string, data: string }[],
   videos?: { mimeType: string, data: string }[],
-  model: string = "gemini-3-flash-preview"
+  model: string = "gemini-2.5-flash"
 ) => {
-  // Silent Fallback Protocol: If primary is unhealthy OR custom model requested, go straight to fallback
-  if (!shadowWatchdog.isHealthy() || model !== "gemini-3-flash-preview") {
-    console.log(`[Watchdog] Skipping Gemini. Reason: ${!shadowWatchdog.isHealthy() ? 'unhealthy' : 'custom model: ' + model}`);
+  const hasUserKey = !!getCustomHeaders()['x-gemini-key'];
+  const isHealthy = shadowWatchdog.isHealthy();
+  const isGemini = model.startsWith("gemini-") || model.startsWith("google/");
+
+  // Silent Fallback Protocol: If primary is unhealthy OR custom model is not a gemini model, go straight to fallback
+  if ((!isHealthy || !isGemini) && !hasUserKey) {
+    console.log(`[Watchdog] Skipping Gemini. Reason: ${!isHealthy ? 'unhealthy' : 'custom model: ' + model}`);
     return await generateWithAIFallback(prompt, history, images, model);
   }
 
@@ -277,19 +356,15 @@ export const generateWebsite = async (
       })
     }).catch(err => console.error("[Watchdog] Failed to log session:", err));
 
-    const text = await callGeminiProxy(prompt, history, systemInstruction, model, images);
-    
-    // Try to find JSON in the response
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    const jsonStr = jsonMatch ? jsonMatch[0] : text;
-    
-    const result = JSON.parse(jsonStr);
-    return { ...result, _provider: 'gemini' };
+    const text = await callGeminiProxy(prompt, history, systemInstruction, model, images, "application/json");
+    return { ...cleanAndParseJSON(text), _provider: 'gemini' };
   } catch (error: any) {
-    if (error.message?.includes("Clé API Gemini") || error.message?.includes("API key")) {
+    if (isUserKeyOrQuotaError(error.message)) {
       throw error;
     }
-    shadowWatchdog.setUnhealthy();
+    if (!hasUserKey) {
+      shadowWatchdog.setUnhealthy();
+    }
     console.debug("Gemini failed, trying fallback chain:", error);
     return await generateWithAIFallback(prompt, history, images);
   }

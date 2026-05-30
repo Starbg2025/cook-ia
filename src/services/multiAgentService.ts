@@ -3,6 +3,10 @@ let primaryModelHealthy = true;
 
 export const shadowWatchdog = {
   isHealthy: () => primaryModelHealthy,
+  setHealthy: () => {
+    primaryModelHealthy = true;
+    console.debug("[Shadow Watchdog] Gemini manually marked as healthy.");
+  },
   setUnhealthy: () => {
     primaryModelHealthy = false;
     console.debug("[Shadow Watchdog] Gemini marked as unhealthy. Activation of Silent Fallback Protocol.");
@@ -20,10 +24,28 @@ const getCustomHeaders = () => {
     const saved = localStorage.getItem('user_secrets');
     if (saved) {
       const secrets = JSON.parse(saved);
-      const geminiKey = secrets.find((s: any) => s.key === 'GEMINI_API_KEY' || s.key === 'GEMINI_KEY');
-      if (geminiKey) headers['x-gemini-key'] = geminiKey.value;
-      const groqKey = secrets.find((s: any) => s.key === 'GROQ_API_KEY' || s.key === 'GROQ_KEY');
-      if (groqKey) headers['x-groq-key'] = groqKey.value;
+      if (Array.isArray(secrets) && secrets.length > 0) {
+        const isGeminiKey = (k: string, v: string) => {
+          const uKey = k.toUpperCase().replace(/[^A-Z]/g, '');
+          if (uKey.includes('GEMINI') || uKey.includes('GOOGLE')) return true;
+          if (v && v.startsWith('AIzaSy')) return true;
+          if ((uKey === 'APIKEY' || uKey === 'KEY') && secrets.length === 1) return true;
+          return false;
+        };
+        const isGroqKey = (k: string) => {
+          return k.toUpperCase().includes('GROQ');
+        };
+        
+        const geminiKey = secrets.find((s: any) => isGeminiKey(s.key, s.value)) || secrets[0];
+        if (geminiKey && geminiKey.value) {
+          headers['x-gemini-key'] = geminiKey.value.trim();
+        }
+        
+        const groqKey = secrets.find((s: any) => isGroqKey(s.key));
+        if (groqKey && groqKey.value) {
+          headers['x-groq-key'] = groqKey.value.trim();
+        }
+      }
     }
   } catch (e) {}
   return headers;

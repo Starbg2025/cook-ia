@@ -213,9 +213,13 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
   // Agents Proxy
   app.post("/api/ai/agents", async (req, res) => {
     const { agentType, prompt, history, code } = req.body;
-    const groqKey = req.headers['x-groq-key'] as string || process.env.GROQ_API_KEY;
+    let groqKey = req.headers['x-groq-key'] as string || process.env.GROQ_API_KEY;
+    if (groqKey) groqKey = groqKey.trim();
     const openRouterKey = process.env.OPENROUTER_API_KEY;
-    const geminiKey = req.headers['x-gemini-key'] as string || process.env.GEMINI_API_KEY;
+    let geminiKey = req.headers['x-gemini-key'] as string || process.env.GEMINI_API_KEY;
+    if (geminiKey) geminiKey = geminiKey.trim();
+
+    console.log(`[Agent] Type: ${agentType}, Gemini Keys present: ${!!geminiKey}, Groq Keys present: ${!!groqKey}`);
 
     try {
       if (agentType === 'analyst') {
@@ -226,7 +230,7 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
             try {
               const ai = new GoogleGenAI({ apiKey: geminiKey });
               const response = await ai.models.generateContent({
-                model: "gemini-3.1-flash-preview",
+                model: "gemini-2.5-flash",
                 contents: `You are the 'Analyst' for COOK IA. Ask 1-2 questions to refine the project. Return JSON: { "needsClarification": boolean, "questions": string[], "isTechnicalQuestion": boolean, "answer": string }\n\nHISTORY:\n${formatHistory(history.slice(-5))}\n\nCURRENT PROMPT: ${prompt}`,
                 config: { responseMimeType: "application/json" }
               });
@@ -302,7 +306,7 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
         
         try {
           const response = await ai.models.generateContent({
-            model: "gemini-3.1-flash-preview",
+            model: "gemini-2.5-flash",
             contents: `You are the 'Planner' for COOK IA. Break down the user's request into a detailed technical plan. Return JSON: { "plan": "string", "isComplex": boolean, "subAgents": string[] }\n\nUSER REQUEST: ${prompt}\n\nHISTORY:\n${formatHistory(history.slice(-3))}`,
             config: { responseMimeType: "application/json" }
           });
@@ -362,8 +366,11 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
   // Standard Gemini Proxy
   app.post("/api/ai/gemini", async (req, res) => {
-    const { prompt, history, images, systemInstruction: customSystem, model: requestedModel } = req.body;
-    const apiKey = req.headers['x-gemini-key'] as string || process.env.GEMINI_API_KEY;
+    const { prompt, history, images, systemInstruction: customSystem, model: requestedModel, responseMimeType } = req.body;
+    let apiKey = req.headers['x-gemini-key'] as string || process.env.GEMINI_API_KEY;
+    if (apiKey) apiKey = apiKey.trim();
+
+    console.log(`[Gemini Proxy] Key present: ${!!apiKey}, Model: ${requestedModel}, MimeType: ${responseMimeType}`);
 
     if (!apiKey) {
       return res.status(500).json({ error: "Gemini API key missing on server" });
@@ -371,7 +378,10 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
     try {
       const ai = new GoogleGenAI({ apiKey });
-      const modelName = requestedModel || "gemini-3.1-flash-preview";
+      let modelName = requestedModel || "gemini-2.5-flash";
+      if (modelName === "gemini-3.5-flash") {
+        modelName = "gemini-2.5-flash";
+      }
       
       const contents = [
         ...history.map((h: any) => {
@@ -410,6 +420,7 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
         config: {
           systemInstruction: customSystem || undefined,
           temperature: 0.7,
+          responseMimeType: responseMimeType || undefined,
         }
       });
 

@@ -1,5 +1,6 @@
 {
   "name": "COOK IA - AI Website Builder",
   "description": "The world's most advanced AI website builder. Transform simple prompts into magnificent, high-end, and fully responsive digital products with elite design and performance.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

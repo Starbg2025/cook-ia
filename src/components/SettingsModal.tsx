@@ -84,7 +84,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onConnectGithub,
   isRealtimeEnabled = true,
   onToggleRealtime,
-  selectedModel = 'gemini-3-flash-preview',
+  selectedModel = 'gemini-2.5-flash',
   onSelectModel
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>(initialTab);
@@ -793,11 +793,32 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <div className="space-y-3">
               {[
                 { 
-                  id: 'gemini-3-flash-preview', 
-                  name: 'Gemini 3 Flash', 
+                  id: 'gemini-2.5-flash',
+                  name: 'Gemini 2.5 Flash', 
                   provider: 'Google', 
-                  desc: 'Le modèle le plus rapide et polyvalent. Idéal pour le design et le code React.', 
-                  badge: 'Recommandé' 
+                  desc: 'Modèle de production phare, rapide et intelligent. Idéal pour les clés API gratuites/standards.', 
+                  badge: 'Standard Free' 
+                },
+                { 
+                  id: 'gemini-2.0-flash',
+                  name: 'Gemini 2.0 Flash', 
+                  provider: 'Google', 
+                  desc: 'Modèle rapide avec d\'excellentes capacités de mise en page réactive et de design.', 
+                  badge: 'Rapide' 
+                },
+                { 
+                  id: 'gemini-1.5-flash',
+                  name: 'Gemini 1.5 Flash', 
+                  provider: 'Google', 
+                  desc: 'Modèle classique stable et ultra-robuste avec un grand contexte.', 
+                  badge: 'Stable' 
+                },
+                { 
+                  id: 'gemini-3.5-flash',
+                  name: 'Gemini 3.5 Flash', 
+                  provider: 'Google', 
+                  desc: 'Modèle expérimental de l\'infrastructure.', 
+                  badge: 'Expérimental' 
                 },
                 { 
                   id: 'zai-org/GLM-5.1-FP8', 
