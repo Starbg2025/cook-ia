@@ -1,5 +1,4 @@
 import express from "express";
-import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
 import fetch from "node-fetch";
 import helmet from "helmet";
@@ -827,6 +826,7 @@ Return the response EXCLUSIVELY in JSON format with three fields (do not include
 // Vite middleware for development
 async function startViteServer() {
   if (process.env.NODE_ENV !== "production") {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
