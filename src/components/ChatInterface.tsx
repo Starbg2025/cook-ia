@@ -453,7 +453,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
               <span className="opacity-0">{prompt}</span>
               {suggestion && (
                 <span className={`${isDark ? 'text-white/30' : 'text-slate-400/60'} animate-pulse`}>
-                  {suggestion}
+                  {(!prompt.endsWith(' ') && !suggestion.startsWith(' ') && !suggestion.startsWith(',') && !suggestion.startsWith('.') && !suggestion.startsWith('?') && !suggestion.startsWith('!') ? ' ' : '') + suggestion}
                 </span>
               )}
             </div>
@@ -476,11 +476,13 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
               onKeyDown={(e) => {
                 if (e.key === 'Tab' && suggestion) {
                   e.preventDefault();
-                  setPrompt(prompt + suggestion);
+                  const needsPaddedSpace = !prompt.endsWith(' ') && !suggestion.startsWith(' ') && !suggestion.startsWith(',') && !suggestion.startsWith('.') && !suggestion.startsWith('?') && !suggestion.startsWith('!');
+                  setPrompt(prompt + (needsPaddedSpace ? ' ' : '') + suggestion);
                   setSuggestion("");
                 } else if (e.key === 'ArrowRight' && suggestion && textareaRef.current && textareaRef.current.selectionStart === prompt.length) {
                   e.preventDefault();
-                  setPrompt(prompt + suggestion);
+                  const needsPaddedSpace = !prompt.endsWith(' ') && !suggestion.startsWith(' ') && !suggestion.startsWith(',') && !suggestion.startsWith('.') && !suggestion.startsWith('?') && !suggestion.startsWith('!');
+                  setPrompt(prompt + (needsPaddedSpace ? ' ' : '') + suggestion);
                   setSuggestion("");
                 } else if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
