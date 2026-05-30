@@ -68,10 +68,26 @@ Return the response EXCLUSIVELY in JSON format with three fields (do not include
 3. 'files': An array of objects, each with 'path' (e.g., "src/index.html") and 'content' (the file content).`;
 
 // Helper for proxy calls
+const getCustomHeaders = () => {
+  const headers: any = { "Content-Type": "application/json" };
+  try {
+    const saved = localStorage.getItem('user_secrets');
+    if (saved) {
+      const secrets = JSON.parse(saved);
+      const geminiKey = secrets.find((s: any) => s.key === 'GEMINI_API_KEY' || s.key === 'GEMINI_KEY');
+      if (geminiKey) headers['x-gemini-key'] = geminiKey.value;
+      
+      const groqKey = secrets.find((s: any) => s.key === 'GROQ_API_KEY' || s.key === 'GROQ_KEY');
+      if (groqKey) headers['x-groq-key'] = groqKey.value;
+    }
+  } catch (e) {}
+  return headers;
+};
+
 const callGeminiProxy = async (prompt: string, history: any[], systemInstruction?: string, model?: string, images?: any[]) => {
   const response = await fetch("/api/ai/gemini", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: getCustomHeaders(),
     body: JSON.stringify({ prompt, history, systemInstruction, model, images })
   });
 
@@ -94,9 +110,7 @@ const generateWithAIFallback = async (
 
   const response = await fetch("/api/ai/fallback", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
+    headers: getCustomHeaders(),
     body: JSON.stringify({
       prompt,
       history,

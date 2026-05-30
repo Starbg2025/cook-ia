@@ -106,7 +106,23 @@ export default function App() {
   const [prompts, setPrompts] = useState<string[]>([]);
   const [pendingSend, setPendingSend] = useState<boolean>(false);
   const [settingsTab, setSettingsTab] = useState<'publish' | 'versions' | 'secrets' | 'integrations' | 'github' | 'general' | 'account' | 'help'>('publish');
-  const [secrets, setSecrets] = useState<{ key: string; value: string }[]>([]);
+  const [secrets, setSecrets] = useState<{ key: string; value: string }[]>(() => {
+    try {
+      const saved = localStorage.getItem('user_secrets');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  
+  useEffect(() => {
+    try {
+      localStorage.setItem('user_secrets', JSON.stringify(secrets));
+    } catch (e) {
+      console.error("Failed to save secrets to localStorage:", e);
+    }
+  }, [secrets]);
+
   const [isLinkFullscreen, setIsLinkFullscreen] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
   const [selectedModel, setSelectedModel] = useState<string>(() => {
@@ -880,8 +896,8 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
       addAction('thought', "Erreur critique détectée. Tentative de diagnostic...");
       
       let errorMessage = "Désolé, une erreur est survenue lors de la génération. Veuillez réessayer.";
-      if (error.message?.includes("API key") || error.message?.includes("Clé API")) {
-        errorMessage = "Clé API Gemini invalide ou manquante. Si vous êtes sur Netlify, assurez-vous d'avoir ajouté GEMINI_API_KEY dans les variables d'environnement (Environment variables) de votre site.";
+      if (error.message?.includes("API key") || error.message?.includes("Clé API") || error.message?.includes("GEMINI_API_KEY")) {
+        errorMessage = "Clé API Gemini invalide ou manquante. Allez dans Réglages (Settings) > Secrets & API Keys pour ajouter GEMINI_API_KEY, ou configurez-la sur Netlify.";
       } else if (error.message?.includes("safety") || error.message?.includes("blocked")) {
         errorMessage = "Le contenu a été bloqué par les filtres de sécurité. Essayez une autre URL ou un autre prompt.";
       } else if (error.message?.includes("JSON")) {

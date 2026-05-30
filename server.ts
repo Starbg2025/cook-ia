@@ -213,9 +213,9 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
   // Agents Proxy
   app.post("/api/ai/agents", async (req, res) => {
     const { agentType, prompt, history, code } = req.body;
-    const groqKey = process.env.GROQ_API_KEY;
+    const groqKey = req.headers['x-groq-key'] as string || process.env.GROQ_API_KEY;
     const openRouterKey = process.env.OPENROUTER_API_KEY;
-    const geminiKey = process.env.GEMINI_API_KEY;
+    const geminiKey = req.headers['x-gemini-key'] as string || process.env.GEMINI_API_KEY;
 
     try {
       if (agentType === 'analyst') {
@@ -293,7 +293,7 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
       }
 
       if (agentType === 'planner') {
-        const apiKey = process.env.GEMINI_API_KEY;
+        const apiKey = geminiKey;
         if (!apiKey) return res.json({ plan: "Planification simplifiée.", isComplex: false, subAgents: [] });
         
         const ai = new GoogleGenAI({ apiKey });
@@ -363,7 +363,7 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
   // Standard Gemini Proxy
   app.post("/api/ai/gemini", async (req, res) => {
     const { prompt, history, images, systemInstruction: customSystem, model: requestedModel } = req.body;
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = req.headers['x-gemini-key'] as string || process.env.GEMINI_API_KEY;
 
     if (!apiKey) {
       return res.status(500).json({ error: "Gemini API key missing on server" });
@@ -582,7 +582,7 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
   // AI Fallback Proxy (Groq -> OpenRouter Free)
   app.post("/api/ai/fallback", async (req, res) => {
     const { prompt, history, images, targetModel } = req.body;
-    const groqKey = process.env.GROQ_API_KEY;
+    const groqKey = req.headers['x-groq-key'] as string || process.env.GROQ_API_KEY;
     const modalKey = process.env.MODAL_API_KEY;
     const openRouterKey = process.env.OPENROUTER_API_KEY;
 

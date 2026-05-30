@@ -14,12 +14,27 @@ export const shadowWatchdog = {
   }
 };
 
+const getCustomHeaders = () => {
+  const headers: any = { "Content-Type": "application/json" };
+  try {
+    const saved = localStorage.getItem('user_secrets');
+    if (saved) {
+      const secrets = JSON.parse(saved);
+      const geminiKey = secrets.find((s: any) => s.key === 'GEMINI_API_KEY' || s.key === 'GEMINI_KEY');
+      if (geminiKey) headers['x-gemini-key'] = geminiKey.value;
+      const groqKey = secrets.find((s: any) => s.key === 'GROQ_API_KEY' || s.key === 'GROQ_KEY');
+      if (groqKey) headers['x-groq-key'] = groqKey.value;
+    }
+  } catch (e) {}
+  return headers;
+};
+
 // Agent 1: Analyst
 export const analystReview = async (prompt: string, history: any[]) => {
   try {
     const response = await fetch("/api/ai/agents", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getCustomHeaders(),
       body: JSON.stringify({ agentType: 'analyst', prompt, history })
     });
     const data = await response.json();
@@ -41,7 +56,7 @@ export const plannerAgent = async (prompt: string, history: any[]) => {
   try {
     const response = await fetch("/api/ai/agents", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getCustomHeaders(),
       body: JSON.stringify({ agentType: 'planner', prompt, history })
     });
     const data = await response.json();
@@ -63,7 +78,7 @@ export const testerAgent = async (code: string, prompt: string) => {
   try {
     const response = await fetch("/api/ai/agents", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getCustomHeaders(),
       body: JSON.stringify({ agentType: 'tester', code, prompt })
     });
     return await response.json();
@@ -78,7 +93,7 @@ export const criticReview = async (prompt: string, generatedCode: string) => {
   try {
     const response = await fetch("/api/ai/agents", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getCustomHeaders(),
       body: JSON.stringify({ agentType: 'critic', prompt, code: generatedCode })
     });
     return await response.json();
