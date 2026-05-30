@@ -659,10 +659,10 @@ Return the response EXCLUSIVELY in JSON format with three fields (do not include
 
     const messages = [
       { role: "system", content: systemInstruction },
-      ...history.map((h: any) => {
+      ...(history || []).map((h: any) => {
         // Concatenate all text parts for each message
-        const textContent = h.parts
-          .filter((p: any) => p.text)
+        const textContent = (h.parts || [])
+          .filter((p: any) => p && p.text)
           .map((p: any) => p.text)
           .join("\n");
         
