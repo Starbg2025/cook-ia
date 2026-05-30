@@ -150,8 +150,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         });
 
         if (response.ok) {
-          const text = await response.text();
-          let cleaned = text.trim().replace(/^["'«“`]|["'»”`]$/g, "").trim();
+          const data = await response.json();
+          let cleaned = (data.text || "").trim().replace(/^["'«“`]|["'»”`]$/g, "").trim();
           
           if (cleaned.toLowerCase().startsWith(prompt.toLowerCase())) {
             cleaned = cleaned.substring(prompt.length).trim();

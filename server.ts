@@ -826,7 +826,8 @@ Return the response EXCLUSIVELY in JSON format with three fields (do not include
 // Vite middleware for development
 async function startViteServer() {
   if (process.env.NODE_ENV !== "production") {
-    const { createServer: createViteServer } = await import("vite");
+    const vitePkg = "vite";
+    const { createServer: createViteServer } = await import(vitePkg);
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
