@@ -840,13 +840,23 @@ Return the response EXCLUSIVELY in JSON format with three fields (do not include
 
 // Vite middleware for development
 async function startViteServer() {
+  const isServerless = process.env.NETLIFY || process.env.LAMBDA_TASK_ROOT;
+  if (isServerless) {
+    console.log("[Server] Running in serverless context (Netlify/Lambda). Custom server initialization skipped.");
+    return;
+  }
+
   if (process.env.NODE_ENV !== "production") {
-    const { createServer: createViteServer } = await eval('import("vite")');
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa",
-    });
-    app.use(vite.middlewares);
+    try {
+      const { createServer: createViteServer } = await eval('import("vite")');
+      const vite = await createViteServer({
+        server: { middlewareMode: true },
+        appType: "spa",
+      });
+      app.use(vite.middlewares);
+    } catch (e: any) {
+      console.warn("[Vite] Failed to start dev server middleware:", e.message);
+    }
   } else {
     app.use(express.static("dist"));
     app.get("*", (req, res) => {
@@ -855,7 +865,7 @@ async function startViteServer() {
   }
 
   // Only listen if not running in a serverless environment (like Netlify functions)
-  if (!process.env.NETLIFY && !process.env.LAMBDA_TASK_ROOT && process.env.NODE_ENV !== "test") {
+  if (process.env.NODE_ENV !== "test") {
     app.listen(PORT, "0.0.0.0", () => {
       console.log(`Server running on http://localhost:${PORT}`);
     });
