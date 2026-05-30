@@ -220,17 +220,21 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
     console.log(`[Agent] Type: ${agentType}, Gemini Keys present: ${!!geminiKey}, Groq Keys present: ${!!groqKey}`);
 
+    const safeHistory = history || [];
+    const formatHistory = (hist: any[]) => (hist || [])
+      .filter(h => h && h.parts && h.parts[0])
+      .map(h => `${h.role === "model" ? "Assistant" : "User"}: ${h.parts[0].text || ""}`)
+      .join("\n");
+
     try {
       if (agentType === 'analyst') {
-        const formatHistory = (hist: any[]) => hist.map(h => `${h.role === "model" ? "Assistant" : "User"}: ${h.parts[0].text}`).join("\n");
-        
         // 1. Try Gemini
         if (geminiKey) {
             try {
               const ai = new GoogleGenAI({ apiKey: geminiKey });
               const response = await ai.models.generateContent({
                 model: "gemini-2.5-flash",
-                contents: `You are the 'Analyst' for COOK IA. Ask 1-2 questions to refine the project. Return JSON: { "needsClarification": boolean, "questions": string[], "isTechnicalQuestion": boolean, "answer": string }\n\nHISTORY:\n${formatHistory(history.slice(-5))}\n\nCURRENT PROMPT: ${prompt}`,
+                contents: `You are the 'Analyst' for COOK IA. Ask 1-2 questions to refine the project. Return JSON: { "needsClarification": boolean, "questions": string[], "isTechnicalQuestion": boolean, "answer": string }\n\nHISTORY:\n${formatHistory(safeHistory.slice(-5))}\n\nCURRENT PROMPT: ${prompt}`,
                 config: { responseMimeType: "application/json" }
               });
               if (response.text) {
@@ -254,7 +258,7 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
                   model: "llama-3.3-70b-versatile",
                   messages: [
                     { role: "system", content: "You are the 'Analyst' for COOK IA. Ask 1-2 questions to refine the project or answer technical questions. Return JSON: { \"needsClarification\": boolean, \"questions\": string[], \"isTechnicalQuestion\": boolean, \"answer\": string }" },
-                    { role: "user", content: `HISTORY:\n${formatHistory(history.slice(-5))}\n\nCURRENT PROMPT: ${prompt}` }
+                    { role: "user", content: `HISTORY:\n${formatHistory(safeHistory.slice(-5))}\n\nCURRENT PROMPT: ${prompt}` }
                   ],
                   response_format: { type: "json_object" }
                 })
@@ -301,12 +305,10 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
         
         const ai = new GoogleGenAI({ apiKey });
         
-        const formatHistory = (hist: any[]) => hist.map(h => `${h.role === "model" ? "Assistant" : "User"}: ${h.parts[0].text}`).join("\n");
-        
         try {
           const response = await ai.models.generateContent({
             model: "gemini-2.5-flash",
-            contents: `You are the 'Planner' for COOK IA. Break down the user's request into a detailed technical plan. Return JSON: { "plan": "string", "isComplex": boolean, "subAgents": string[] }\n\nUSER REQUEST: ${prompt}\n\nHISTORY:\n${formatHistory(history.slice(-3))}`,
+            contents: `You are the 'Planner' for COOK IA. Break down the user's request into a detailed technical plan. Return JSON: { "plan": "string", "isComplex": boolean, "subAgents": string[] }\n\nUSER REQUEST: ${prompt}\n\nHISTORY:\n${formatHistory(safeHistory.slice(-3))}`,
             config: { responseMimeType: "application/json" }
           });
           return res.json(JSON.parse(response.text));
