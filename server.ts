@@ -383,10 +383,10 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
       }
       
       const contents = [
-        ...history.map((h: any) => {
+        ...(history || []).map((h: any) => {
           return {
             role: h.role, // role must be 'user' or 'model'
-            parts: h.parts.map((p: any) => {
+            parts: (h.parts || []).map((p: any) => {
               if (p.text) return { text: p.text };
               if (p.inlineData) return {
                 inlineData: {

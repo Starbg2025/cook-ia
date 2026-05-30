@@ -90,6 +90,88 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   setIsFocusMode,
   onFeedback,
 }) => {
+  const [suggestion, setSuggestion] = React.useState<string>("");
+  const mirrorRef = React.useRef<HTMLDivElement>(null);
+  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+
+  React.useEffect(() => {
+    if (!prompt) {
+      setSuggestion("");
+      return;
+    }
+
+    const trimmed = prompt.trim().toLowerCase();
+    if (trimmed.length < 2) {
+      setSuggestion("");
+      return;
+    }
+
+    // 1. Local Smart Suggestion Map (French and English)
+    const localTemplates: Record<string, string> = {
+      "cré": "er une landing page moderne et responsive",
+      "cre": "ate a stunning dark theme landing page",
+      "mod": "ifier la barre de navigation pour ajouter un logo",
+      "ajo": "uter une section de témoignages clients",
+      "add": " a clean test suite and build pipeline",
+      "fai": "s un audit complet des performances SEO",
+      "gen": "érer des maquettes de présentation haut de gamme",
+      "gén": "érer un superbe menu pour restaurant",
+      "com": "ment connecter mon application à une base de données Firebase ?",
+      "le m": "odèle d'une clé API gratuite pour tester le projet",
+      "le mo": "dèle d'une clé API gratuite pour tester",
+      "peux": "-tu corriger les avertissements et adapter la mise en page",
+      "how": " to deploy this application on Netlify or Vercel"
+    };
+
+    const keys = Object.keys(localTemplates);
+    const foundKey = keys.find(k => k.startsWith(trimmed));
+    if (foundKey) {
+      const typedLen = prompt.length;
+      if (typedLen <= foundKey.length) {
+        const remainingInKey = foundKey.slice(typedLen);
+        setSuggestion(remainingInKey + localTemplates[foundKey]);
+        return;
+      }
+    }
+
+    // 2. Real-time Gemini prediction (Debounced at 700ms)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(async () => {
+      try {
+        const response = await fetch("/api/ai/gemini", {
+          method: "POST",
+          signal: controller.signal,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            prompt: `Suggère une courte complétion en français (entre 2 et 5 mots) pour continuer ou terminer naturellement la phrase de l'utilisateur. L'utilisateur écrit : "${prompt}". Ne renvoie QUE la partie complétée (la suite de la phrase), pas toute la saisie, ni de remarques ou de guillemets. Garde cela simple et en minuscules. Ex: si l'utilisateur saisit "comment faire ", renvoie "une tarte aux pommes".`,
+            systemInstruction: "Tu es un assistant d'autocomplétion en ligne ultra-rapide. Renvoie uniquement la suite directe de la phrase en français, sans fioritures ni guillemets.",
+            model: "gemini-2.5-flash"
+          })
+        });
+
+        if (response.ok) {
+          const text = await response.text();
+          let cleaned = text.trim().replace(/^["'«“`]|["'»”`]$/g, "").trim();
+          
+          if (cleaned.toLowerCase().startsWith(prompt.toLowerCase())) {
+            cleaned = cleaned.substring(prompt.length).trim();
+          }
+          
+          if (cleaned && cleaned.length < 50) {
+            setSuggestion(cleaned);
+          }
+        }
+      } catch (err) {
+        // Suppress abort errors on keystrokes
+      }
+    }, 700);
+
+    return () => {
+      clearTimeout(timeoutId);
+      controller.abort();
+    };
+  }, [prompt]);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isListening, setIsListening] = React.useState(false);
   const recognitionRef = useRef<any>(null);
@@ -357,13 +439,64 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
             </div>
           )}
 
-          <textarea 
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())}
-            placeholder="Type your prompt here..."
-            className={`w-full bg-transparent p-4 pr-32 text-sm focus:outline-none resize-none h-24 scrollbar-hide ${isDark ? 'text-white placeholder:text-white/20' : 'text-slate-900 placeholder:text-slate-400'}`}
-          />
+          <div className="relative w-full h-24">
+            {/* Mirrored backdrop for displaying suggestions perfectly stacked underneath */}
+            <div 
+              ref={mirrorRef}
+              className={`absolute inset-0 p-4 pr-32 text-sm pointer-events-none select-none whitespace-pre-wrap break-words overflow-y-auto scrollbar-hide`}
+              style={{ 
+                fontFamily: 'inherit',
+                lineHeight: '1.25rem',
+                fontSize: '0.875rem'
+              }}
+            >
+              <span className="opacity-0">{prompt}</span>
+              {suggestion && (
+                <span className={`${isDark ? 'text-white/30' : 'text-slate-400/60'} animate-pulse`}>
+                  {suggestion}
+                </span>
+              )}
+            </div>
+
+            <textarea 
+              ref={textareaRef}
+              value={prompt}
+              onScroll={(e) => {
+                if (mirrorRef.current) {
+                  mirrorRef.current.scrollTop = e.currentTarget.scrollTop;
+                  mirrorRef.current.scrollLeft = e.currentTarget.scrollLeft;
+                }
+              }}
+              onChange={(e) => {
+                setPrompt(e.target.value);
+                if (mirrorRef.current) {
+                  mirrorRef.current.scrollTop = e.target.scrollTop;
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Tab' && suggestion) {
+                  e.preventDefault();
+                  setPrompt(prompt + suggestion);
+                  setSuggestion("");
+                } else if (e.key === 'ArrowRight' && suggestion && textareaRef.current && textareaRef.current.selectionStart === prompt.length) {
+                  e.preventDefault();
+                  setPrompt(prompt + suggestion);
+                  setSuggestion("");
+                } else if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  setSuggestion("");
+                  handleSend();
+                }
+              }}
+              placeholder="Type your prompt here..."
+              className={`absolute inset-0 w-full bg-transparent p-4 pr-32 text-sm focus:outline-none resize-none h-full scrollbar-hide ${isDark ? 'text-white placeholder:text-white/20' : 'text-slate-900 placeholder:text-slate-400'}`}
+              style={{
+                fontFamily: 'inherit',
+                lineHeight: '1.25rem',
+                fontSize: '0.875rem'
+              }}
+            />
+          </div>
           
           <div className="absolute left-3 bottom-3 flex items-center gap-1">
             <button 
@@ -417,7 +550,16 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
             </button>
           </div>
 
-          <div className="absolute right-3 bottom-3 flex items-center gap-2">
+           <div className="absolute right-3 bottom-3 flex items-center gap-2">
+            {suggestion && (
+              <span className={`hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold transition-all ${
+                isDark 
+                  ? 'bg-orange-primary/10 text-orange-primary hover:bg-orange-primary/20 border border-orange-primary/20' 
+                  : 'bg-orange-50 text-orange-600 border border-orange-100'
+              } animate-pulse`}>
+                Tab ⇥ pour compléter
+              </span>
+            )}
             <button
               onClick={() => setIsFocusMode?.(!isFocusMode)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold transition-all ${
