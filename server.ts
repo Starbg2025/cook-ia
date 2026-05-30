@@ -369,7 +369,12 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
   app.post("/api/ai/gemini", async (req, res) => {
     const { prompt, history, images, systemInstruction: customSystem, model: requestedModel, responseMimeType } = req.body;
     let apiKey = req.headers['x-gemini-key'] as string || process.env.GEMINI_API_KEY;
-    if (apiKey) apiKey = apiKey.trim();
+    if (apiKey) {
+      apiKey = apiKey.trim();
+      if ((apiKey.startsWith('"') && apiKey.endsWith('"')) || (apiKey.startsWith("'") && apiKey.endsWith("'"))) {
+        apiKey = apiKey.slice(1, -1).trim();
+      }
+    }
 
     console.log(`[Gemini Proxy] Key present: ${!!apiKey}, Model: ${requestedModel}, MimeType: ${responseMimeType}`);
 
@@ -593,12 +598,19 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
   // AI Fallback Proxy (Groq -> OpenRouter Free)
   app.post("/api/ai/fallback", async (req, res) => {
-    const { prompt, history, images, targetModel } = req.body;
-    const groqKey = req.headers['x-groq-key'] as string || process.env.GROQ_API_KEY;
-    const modalKey = process.env.MODAL_API_KEY;
-    const openRouterKey = process.env.OPENROUTER_API_KEY;
+    try {
+      const { prompt, history, images, targetModel } = req.body;
+      let groqKey = req.headers['x-groq-key'] as string || process.env.GROQ_API_KEY;
+      if (groqKey) {
+        groqKey = groqKey.trim();
+        if ((groqKey.startsWith('"') && groqKey.endsWith('"')) || (groqKey.startsWith("'") && groqKey.endsWith("'"))) {
+          groqKey = groqKey.slice(1, -1).trim();
+        }
+      }
+      const modalKey = process.env.MODAL_API_KEY;
+      const openRouterKey = process.env.OPENROUTER_API_KEY;
 
-    const systemInstruction = `You are COOK IA, a world-class senior web engineer and elite product designer. 
+      const systemInstruction = `You are COOK IA, a world-class senior web engineer and elite product designer. 
 Your mission is to transform even the simplest user prompt into a "magnificent", high-end, and fully functional website that feels like a premium digital product.
 
 PROACTIVE GUIDANCE & TECHNICAL SUPPORT:
@@ -659,87 +671,88 @@ Return the response EXCLUSIVELY in JSON format with three fields (do not include
 2. 'preview_code': The complete, production-ready single-file HTML/CSS/JS code for immediate preview.
 3. 'files': An array of objects, each with 'path' (e.g., "src/index.html") and 'content' (the file content).`;
 
-    const messages = [
-      { role: "system", content: systemInstruction },
-      ...(history || []).map((h: any) => {
-        // Concatenate all text parts for each message
-        const textContent = (h.parts || [])
-          .filter((p: any) => p && p.text)
-          .map((p: any) => p.text)
-          .join("\n");
-        
-        return {
-          role: h.role === "model" ? "assistant" : "user",
-          content: textContent || (h.role === "user" ? "[Image/Media content]" : "Processing...")
-        };
-      })
-    ];
+      const messages = [
+        { role: "system", content: systemInstruction },
+        ...(history || []).map((h: any) => {
+          if (!h) return { role: "user", content: "" };
+          // Concatenate all text parts for each message
+          const textContent = (h.parts || [])
+            .filter((p: any) => p && p.text)
+            .map((p: any) => p.text)
+            .join("\n");
+          
+          return {
+            role: h.role === "model" ? "assistant" : "user",
+            content: textContent || (h.role === "user" ? "[Image/Media content]" : "Processing...")
+          };
+        })
+      ];
 
-    const userContent: any[] = [{ type: "text", text: prompt }];
-    if (images && images.length > 0) {
-      images.forEach((img: any) => {
-        userContent.push({
-          type: "image_url",
-          image_url: {
-            url: `data:${img.mimeType};base64,${img.data}`
+      const userContent: any[] = [{ type: "text", text: prompt || "" }];
+      if (images && images.length > 0) {
+        images.forEach((img: any) => {
+          if (img && img.mimeType && img.data) {
+            userContent.push({
+              type: "image_url",
+              image_url: {
+                url: `data:${img.mimeType};base64,${img.data}`
+              }
+            });
           }
         });
-      });
-    }
-    messages.push({ role: "user", content: userContent as any });
+      }
+      messages.push({ role: "user", content: userContent as any });
 
-    async function tryRequest(url: string, key: string, model: string, providerName: string, isJson: boolean = true) {
-      console.log(`[Fallback] Attempting ${providerName} (${model})...`);
-      const headers: any = {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${key}`
-      };
-      
-      if (providerName === "OpenRouter") {
-        headers["HTTP-Referer"] = "https://cook-ia.indevs.in";
-        headers["X-Title"] = "COOK IA";
+      async function tryRequest(url: string, key: string, model: string, providerName: string, isJson: boolean = true) {
+        console.log(`[Fallback] Attempting ${providerName} (${model})...`);
+        const headers: any = {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${key}`
+        };
+        
+        if (providerName === "OpenRouter") {
+          headers["HTTP-Referer"] = "https://cook-ia.indevs.in";
+          headers["X-Title"] = "COOK IA";
+        }
+
+        const body: any = {
+          model,
+          messages,
+          temperature: 0.7,
+          max_tokens: 8192
+        };
+
+        if (isJson) {
+          body.response_format = { type: "json_object" };
+        }
+
+        const response = await fetch(url, {
+          method: "POST",
+          headers,
+          body: JSON.stringify(body)
+        });
+
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({ error: response.statusText }));
+          throw new Error(`${providerName} Error (${response.status}): ${JSON.stringify(error)}`);
+        }
+
+        const data: any = await response.json();
+        const content = data.choices[0].message.content;
+        console.log(`[Fallback] ${providerName} succeeded!`);
+        
+        // Robust JSON Parsing
+        try {
+          const jsonMatch = content.match(/\{[\s\S]*\}/);
+          const jsonStr = jsonMatch ? jsonMatch[0] : content;
+          return { ...JSON.parse(jsonStr), _provider: providerName.toLowerCase() };
+        } catch (e) {
+          console.error(`[Fallback] ${providerName} returned invalid JSON:`, content.substring(0, 500));
+          throw new Error(`${providerName} returned invalid JSON format.`);
+        }
       }
 
-      const body: any = {
-        model,
-        messages,
-        temperature: 0.7,
-        max_tokens: 8192
-      };
-
-      if (isJson) {
-        body.response_format = { type: "json_object" };
-      }
-
-      const response = await fetch(url, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(body)
-      });
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({ error: response.statusText }));
-        throw new Error(`${providerName} Error (${response.status}): ${JSON.stringify(error)}`);
-      }
-
-      const data: any = await response.json();
-      const content = data.choices[0].message.content;
-      console.log(`[Fallback] ${providerName} succeeded!`);
-      
-      // Robust JSON Parsing
-      try {
-        const jsonMatch = content.match(/\{[\s\S]*\}/);
-        const jsonStr = jsonMatch ? jsonMatch[0] : content;
-        return { ...JSON.parse(jsonStr), _provider: providerName.toLowerCase() };
-      } catch (e) {
-        console.error(`[Fallback] ${providerName} returned invalid JSON:`, content.substring(0, 500));
-        throw new Error(`${providerName} returned invalid JSON format.`);
-      }
-    }
-
-
-    // Fallback Chain Execution
-    try {
+      // Fallback Chain Execution
       // 1. Try Groq (Priority 1)
       if (groqKey) {
         try {
@@ -780,8 +793,8 @@ Return the response EXCLUSIVELY in JSON format with three fields (do not include
         _provider: 'emergency-watchdog'
       });
     } catch (error: any) {
-      console.error("[Fallback] Final failure:", error.message);
-      res.status(500).json({ error: error.message });
+      console.error("[Fallback] Final failure:", error.stack || error.message);
+      return res.status(500).json({ error: error.message || "Unknown fallback error" });
     }
   });
 

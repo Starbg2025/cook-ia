@@ -183,13 +183,25 @@ const generateWithAIFallback = async (
     })
   });
 
+  const responseText = await response.text();
+
   if (!response.ok) {
-    const err = await response.json();
-    throw new Error(`AI Fallback Error: ${err.error || response.statusText}`);
+    let errMsg = "";
+    try {
+      const err = JSON.parse(responseText);
+      errMsg = err.error || err.message || JSON.stringify(err);
+    } catch (e) {
+      errMsg = responseText || response.statusText || `HTTP Status ${response.status}`;
+    }
+    throw new Error(`AI Fallback Error: ${errMsg}`);
   }
 
-  const result = await response.json();
-  return result;
+  try {
+    return JSON.parse(responseText);
+  } catch (error: any) {
+    console.error("Failed to parse fallback response as JSON. Content:", responseText);
+    throw new Error(`Invalid JSON response from fallback server: ${error.message}`);
+  }
 };
 
 export const convertToReact = async (htmlCode: string, framework: 'react' | 'nextjs' | 'python' | 'javascript') => {
