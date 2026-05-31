@@ -1126,9 +1126,15 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
            animate={{ opacity: 1 }}
            exit={{ opacity: 0, scale: 1.1, filter: "blur(20px)" }}
            transition={{ duration: 1, ease: "easeInOut" }}
-           className="fixed inset-0 z-[1000]"
+           className="fixed inset-0 z-[1000] overflow-y-auto"
         >
-          <LandingPage onEnter={() => setHasStarted(true)} />
+          <LandingPage onEnter={(initialPrompt?: string) => {
+            if (initialPrompt && initialPrompt.trim()) {
+              setPrompt(initialPrompt);
+              setPendingSend(true);
+            }
+            setHasStarted(true);
+          }} />
         </motion.div>
       ) : (
         <motion.div 
