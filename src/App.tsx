@@ -1409,6 +1409,10 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
               sectionEdit={sectionEdit}
               onSectionSelect={setSectionEdit}
               isDark={isDark}
+              onApplyPrompt={(p) => {
+                setPrompt(p);
+                setViewMode('chat');
+              }}
             />
           )}
 

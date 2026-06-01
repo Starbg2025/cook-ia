@@ -365,6 +365,64 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
     }
   });
 
+  // Groq Interactive Advisor Proxy
+  app.post("/api/ai/groq", async (req, res) => {
+    const { question, code, history } = req.body;
+    let groqKey = req.headers['x-groq-key'] as string || process.env.GROQ_API_KEY;
+    if (groqKey) {
+      groqKey = groqKey.trim();
+      if ((groqKey.startsWith('"') && groqKey.endsWith('"')) || (groqKey.startsWith("'") && groqKey.endsWith("'"))) {
+        groqKey = groqKey.slice(1, -1).trim();
+      }
+    }
+
+    if (!groqKey) {
+      return res.status(400).json({ error: "Clé API Groq manquante. Installez-la dans les secrets (GROQ_API_KEY) ou saisissez-la dans la barre latérale pour activer la puissance de Groq." });
+    }
+
+    try {
+      const messages = [
+        {
+          role: "system",
+          content: "Tu es un expert en ingénierie Web haut de gamme et l'assistant conseil Groq officiel de COOK IA. Ton rôle est d'analyser le code source fourni par l'utilisateur, répondre à ses questions techniques (ex: centrer un bouton, corriger un bug React/CSS, ajouter d'autres pages, optimiser les images), et lui proposer des idées de design créatives et de l'aide au diagnostic. Reste pro, direct, et donne des morceaux de code élégants, propres et directement exploitables."
+        },
+        ...(history || []).map((h: any) => ({
+          role: h.role === 'model' || h.role === 'assistant' ? 'assistant' : 'user',
+          content: h.content || ""
+        })),
+        {
+          role: "user",
+          content: `Voici le code du projet actuel :\n\n\`\`\`html\n${code || ""}\n\`\`\`\n\nQuestion / Problème technique de l'utilisateur : ${question}`
+        }
+      ];
+
+      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${groqKey}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: "llama-3.3-70b-versatile",
+          messages: messages,
+          temperature: 0.5,
+          max_tokens: 4096
+        })
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        return res.status(response.status).json({ error: `Groq API a retourné une erreur: ${errText}` });
+      }
+
+      const data: any = await response.json();
+      return res.json({ text: data.choices[0].message.content });
+    } catch (err: any) {
+      console.error("[Groq API Proxy] Exception:", err.message);
+      return res.status(500).json({ error: `Exception Groq Proxy: ${err.message}` });
+    }
+  });
+
   // Standard Gemini Proxy
   app.post("/api/ai/gemini", async (req, res) => {
     const { prompt, history, images, systemInstruction: customSystem, model: requestedModel, responseMimeType } = req.body;

@@ -1,7 +1,8 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Zap, RotateCcw, ExternalLink, Pencil, FileCode, Folder, Download, ChevronRight, ChevronDown, MousePointer2, FileSearch, History, X } from 'lucide-react';
+import { Zap, RotateCcw, ExternalLink, Pencil, FileCode, Folder, Download, ChevronRight, ChevronDown, MousePointer2, FileSearch, History, X, Sparkles } from 'lucide-react';
 import { ViewMode, ProjectFile, StyleConfig, SectionEditState } from '../types';
+import { ForgeStudio } from './ForgeStudio';
 
 interface PreviewProps {
   viewMode: ViewMode;
@@ -17,6 +18,7 @@ interface PreviewProps {
   sectionEdit?: SectionEditState;
   onSectionSelect?: (section: SectionEditState) => void;
   isDark?: boolean;
+  onApplyPrompt?: (promptText: string) => void;
 }
 
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -35,13 +37,15 @@ export const Preview: React.FC<PreviewProps> = ({
   styleConfig,
   sectionEdit,
   onSectionSelect,
-  isDark = true
+  isDark = true,
+  onApplyPrompt
 }) => {
   const [isVisualEditing, setIsVisualEditing] = React.useState(false);
   const [isSectionSelectionMode, setIsSectionSelectionMode] = React.useState(false);
   const [isElementSelectionMode, setIsElementSelectionMode] = React.useState(false);
   const [selectedFilePath, setSelectedFilePath] = React.useState<string | null>(null);
   const [showActionHistory, setShowActionHistory] = React.useState(false);
+  const [showForgeStudio, setShowForgeStudio] = React.useState(false);
 
   React.useEffect(() => {
     if (files.length > 0 && !selectedFilePath) {
@@ -317,6 +321,18 @@ export const Preview: React.FC<PreviewProps> = ({
             <Pencil size={15} />
           </button>
           <button 
+            onClick={() => setShowForgeStudio(!showForgeStudio)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all ${
+              showForgeStudio 
+                ? 'bg-orange-primary/25 border-orange-primary/40 text-orange-primary font-black shadow-[0_0_15px_rgba(255,107,0,0.25)]' 
+                : 'border-white/5 bg-gradient-to-r from-orange-primary/10 to-amber-500/10 hover:from-orange-primary/20 hover:to-amber-500/20 text-orange-primary font-black animate-pulse'
+            } text-[10px] uppercase tracking-wider`}
+            title="Open Forge Developer Studio"
+          >
+            <Sparkles size={13} />
+            <span className="hidden sm:inline">FORGE STUDIO ✨</span>
+          </button>
+          <button 
             onClick={onRefresh}
             className={`flex items-center gap-1 px-3 py-1.5 rounded-lg border border-white/5 bg-white/5 hover:bg-white/10 transition-all ${isDark ? 'text-white/60 hover:text-white font-bold' : 'text-slate-600 hover:text-slate-900 font-bold'} text-[10px] uppercase tracking-wider`}
             title="Reset to Original"
@@ -334,8 +350,9 @@ export const Preview: React.FC<PreviewProps> = ({
         </div>
       </div>
 
-      <div className={`flex-1 relative ${isDark ? 'bg-white' : 'bg-slate-50'} overflow-hidden`}>
-        <AnimatePresence mode="wait">
+      <div className={`flex-1 flex overflow-hidden relative ${isDark ? 'bg-white' : 'bg-slate-50'}`}>
+        <div className="flex-1 h-full min-w-0 flex flex-col relative overflow-hidden">
+          <AnimatePresence mode="wait">
           {viewMode === 'preview' ? (
             <motion.div 
               key="preview"
@@ -459,6 +476,28 @@ export const Preview: React.FC<PreviewProps> = ({
                   </SyntaxHighlighter>
                 </div>
               </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        </div>
+
+        {/* Forge Studio Panel Drawer */}
+        <AnimatePresence>
+          {showForgeStudio && (
+            <motion.div
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: 'auto', opacity: 1 }}
+              exit={{ width: 0, opacity: 0 }}
+              transition={{ duration: 0.25, ease: 'easeInOut' }}
+              className="h-full shrink-0 overflow-hidden flex"
+              id="forge-studio-drawer-outer"
+            >
+              <ForgeStudio 
+                code={generatedCode || ""}
+                isDark={isDark}
+                onClose={() => setShowForgeStudio(false)}
+                onApplyPrompt={(p) => onApplyPrompt?.(p)}
+              />
             </motion.div>
           )}
         </AnimatePresence>
