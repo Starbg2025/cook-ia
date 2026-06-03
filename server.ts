@@ -59,7 +59,7 @@ async function processTask(id: string) {
         await new Promise(resolve => setTimeout(resolve, 6000));
         const slug = task.payload.siteName.toLowerCase().replace(/\s+/g, '-') || 'site';
         task.result = { 
-          url: `https://${slug}.cook-ia.indevs.in`,
+          url: `https://cook-ia.indevs.in/${slug}`,
           status: "Live",
           deployedAt: new Date()
         };
@@ -169,7 +169,7 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
     
     try {
       const slug = siteName.toLowerCase().replace(/\s+/g, '-') || 'site';
-      const url = `https://${slug}.cook-ia.indevs.in`;
+      const url = `https://cook-ia.indevs.in/${slug}`;
       
       // Simulate real deployment steps
       console.log(`[Deployment] Step 1: Provisioning server for ${slug}...`);
