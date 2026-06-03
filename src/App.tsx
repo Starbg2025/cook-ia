@@ -1017,6 +1017,14 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
     setTimeout(() => setIsCopied(false), 2000);
   };
 
+  const openPublishModal = () => {
+    if (!siteName || siteName.trim() === '' || siteName === 'monsite' || siteName === 'votre-site') {
+      const randomId = Math.floor(10000 + Math.random() * 90000);
+      setSiteName(`projet-${randomId}`);
+    }
+    setIsPublishModalOpen(true);
+  };
+
   const [isPublishing, setIsPublishing] = useState(false);
   const [publishedUrl, setPublishedUrl] = useState<string | null>(null);
 
@@ -1279,7 +1287,7 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
         <div className="flex items-center gap-1.5 sm:gap-3">
           {generatedCode && (
             <button
-              onClick={() => setIsPublishModalOpen(true)}
+              onClick={openPublishModal}
               className="flex items-center gap-1 px-2 py-1.5 sm:px-3.5 sm:py-1.5 bg-gradient-to-r from-orange-primary to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-lg text-[10px] sm:text-xs font-bold transition-all shadow-[0_4px_12px_rgba(255,107,0,0.25)] animate-pulse hover:animate-none hover:scale-[1.03] active:scale-95 shrink-0"
               title="Déployez votre site web et mobile en direct"
               id="header-deploy-button"
@@ -1777,35 +1785,18 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
                     <div className="space-y-3">
                       <span className="text-[10px] font-mono uppercase tracking-widest text-zinc-500 font-bold block">Architecture de déploiement</span>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 font-mono text-[10px]">
-                        <div className="p-4 rounded-xl border border-white/5 bg-white/[0.01] space-y-2.5">
-                          <div className="flex items-center gap-1.5 text-orange-primary">
-                            <span className="w-1.5 h-1.5 rounded-full bg-orange-primary animate-ping" />
-                            <span className="font-bold">LIEN DE PARTAGE DIRECT</span>
-                          </div>
-                          <div className="space-y-1 text-zinc-500 leading-relaxed text-[9px]">
-                            <div>1. Clic sur Déployer</div>
-                            <div className="text-zinc-600">↓ Validation des paquets</div>
-                            <div>2. Cook IA crée <span className="text-zinc-400">"/{siteName || 'monsite'}"</span></div>
-                            <div className="text-zinc-600">↓ Enregistrement base de données</div>
-                            <div>3. Route de partage configurée</div>
-                            <div className="text-orange-primary font-bold mt-1">➔ cook-ia.indevs.in/{siteName || 'monsite'}</div>
-                          </div>
+                      <div className="p-4 rounded-xl border border-white/5 bg-white/[0.01] space-y-2.5 font-mono text-[10px]">
+                        <div className="flex items-center gap-1.5 text-orange-primary">
+                          <span className="w-1.5 h-1.5 rounded-full bg-orange-primary animate-ping" />
+                          <span className="font-bold">LIEN DE PARTAGE DIRECT & UNIQUE</span>
                         </div>
-
-                        <div className="p-4 rounded-xl border border-white/5 bg-white/[0.01] space-y-2.5">
-                          <div className="flex items-center gap-1.5 text-cyan-400">
-                            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
-                            <span className="font-bold font-mono">EDGE CDN DE SÉCURITÉ</span>
-                          </div>
-                          <div className="space-y-1 text-zinc-500 leading-relaxed text-[9px]">
-                            <div>1. Clic sur Déployer</div>
-                            <div className="text-zinc-600">↓ Transfert direct</div>
-                            <div>2. Envoi compilateur Vercel/Netlify</div>
-                            <div className="text-zinc-600">↓ Build automatique & SSL</div>
-                            <div>3. Génération serveur instantanée</div>
-                            <div className="text-cyan-400 font-bold mt-1">➔ https://{siteName || 'monsite'}.vercel.app</div>
-                          </div>
+                        <div className="space-y-1.5 text-zinc-500 leading-relaxed text-[9px]">
+                          <div>1. Clic sur Déployer</div>
+                          <div className="text-zinc-600">↓ Validation responsive & attribution de votre numéro unique</div>
+                          <div>2. Cook IA réserve la route unique <span className="text-zinc-400">"/{siteName || 'monsite'}"</span></div>
+                          <div className="text-zinc-600">↓ Enregistrement base de données</div>
+                          <div>3. Votre route de partage universelle est activée et sécurisée</div>
+                          <div className="text-orange-primary font-bold mt-1">➔ cook-ia.indevs.in/{siteName || 'monsite'}</div>
                         </div>
                       </div>
                     </div>
@@ -1855,8 +1846,8 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
                         { step: 1, label: "Utilisateur clique sur Déployer", desc: "Initiation du pipeline et des paramètres" },
                         { step: 2, label: `Création du site "${siteName || 'monsite'}"`, desc: "Réservation de l'ID d'instance " + siteName },
                         { step: 3, label: "Enregistrement sécurisé du projet", desc: "Génération du backup de code en base de données" },
-                        { step: 4, label: "Envoi à Vercel / Netlify", desc: "Transmissions sécurisées par tunnels API" },
-                        { step: 5, label: "Build automatique & Liens générés", desc: "Compilation finale et routage IP SSL" }
+                        { step: 4, label: "Compilation & optimisations Cook IA", desc: "Vérification des dépendances et compilation responsive" },
+                        { step: 5, label: "Déploiement & Route de partage active", desc: "Activation du lien de partage universel et du QR Code" }
                       ].map((item) => {
                         const isDone = publishStep > item.step;
                         const isActive = publishStep === item.step;
@@ -1911,21 +1902,23 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
                       <p className="text-xs text-zinc-500 max-w-md mx-auto">Votre code a été compilé, inspecté, puis synchronisé sur les réseaux internationaux.</p>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="max-w-md mx-auto">
                       {/* CARD A: COOK-IA DOMAIN */}
-                      <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.01] border border-white/5 flex flex-col justify-between hover:border-orange-primary/20 transition-all duration-300">
+                      <div className="p-5 sm:p-6 rounded-2xl bg-white/[0.01] border border-white/5 flex flex-col justify-between hover:border-orange-primary/20 transition-all duration-300 shadow-xl">
                         <div>
-                          <div className="flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider text-orange-primary font-bold mb-2">
+                          <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-orange-primary font-bold mb-3">
                             <span className="w-1.5 h-1.5 rounded-full bg-orange-primary animate-ping" />
-                            <span>Lien de partage direct</span>
+                            <span>Votre lien de partage Cook IA</span>
                           </div>
-                          <h4 className="text-xs font-mono font-black text-white mb-1 truncate">
+                          <h4 className="text-sm sm:text-base font-mono font-black text-white mb-2 break-all select-all">
                             cook-ia.indevs.in/{siteName}
                           </h4>
-                          <p className="text-[10px] text-zinc-500 leading-snug">Serveur DNS Sandbox de haute disponibilité. Temps de propagation de 0s.</p>
+                          <p className="text-[11px] text-zinc-400 leading-relaxed">
+                            Ce lien identifie de manière unique votre projet d'application web et mobile. Partagez-le avec vos utilisateurs pour un rendu instantané.
+                          </p>
                         </div>
 
-                        <div className="flex gap-2 mt-4 pt-4 border-t border-white/5">
+                        <div className="flex gap-3 mt-5 pt-4 border-t border-white/5">
                           <button 
                             onClick={() => {
                               const url = `https://cook-ia.indevs.in/${siteName}`;
@@ -1933,59 +1926,20 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
                               setIsCopied(true);
                               setTimeout(() => setIsCopied(false), 2000);
                             }}
-                            className="p-2 sm:px-3 sm:py-2 bg-white/5 hover:bg-white/10 rounded-xl text-[10px] font-mono text-zinc-300 flex items-center justify-center gap-1.5 transition-colors"
+                            className="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-mono text-zinc-300 flex items-center justify-center gap-2 transition-colors active:scale-95 shrink-0"
                           >
-                            {isCopied ? <Check size={11} className="text-emerald-500" /> : <Copy size={11} />}
-                            <span>Copier</span>
+                            {isCopied ? <Check size={13} className="text-emerald-500" /> : <Copy size={13} />}
+                            <span>{isCopied ? 'Copié !' : 'Copier'}</span>
                           </button>
                           
                           <a 
                             href={`https://cook-ia.indevs.in/${siteName}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex-1 py-1.5 bg-orange-primary hover:bg-orange-600 rounded-xl text-[10px] uppercase font-black text-white font-display text-center flex items-center justify-center gap-1 shadow-md"
+                            className="flex-1 py-2 bg-gradient-to-r from-orange-primary to-amber-500 hover:from-orange-600 hover:to-amber-600 rounded-xl text-xs uppercase font-black text-white font-display text-center flex items-center justify-center gap-2 shadow-md transition-all active:scale-95 hover:scale-[1.02]"
                           >
                             <span>Visiter</span>
-                            <ExternalLink size={10} />
-                          </a>
-                        </div>
-                      </div>
-
-                      {/* CARD B: VERCEL CDN */}
-                      <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.01] border border-white/5 flex flex-col justify-between hover:border-cyan-500/20 transition-all duration-300">
-                        <div>
-                          <div className="flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider text-cyan-400 font-bold mb-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
-                            <span>Vercel Deploy Pipeline</span>
-                          </div>
-                          <h4 className="text-xs font-mono font-black text-white mb-1 truncate">
-                            {siteName}.vercel.app
-                          </h4>
-                          <p className="text-[10px] text-zinc-500 leading-snug">Réseau CDN mondial sécurisé haute performance avec SSL automatique.</p>
-                        </div>
-
-                        <div className="flex gap-2 mt-4 pt-4 border-t border-white/5">
-                          <button 
-                            onClick={() => {
-                              const url = `https://${siteName}.vercel.app`;
-                              navigator.clipboard.writeText(url);
-                              setIsCopied(true);
-                              setTimeout(() => setIsCopied(false), 2000);
-                            }}
-                            className="p-2 sm:px-3 sm:py-2 bg-white/5 hover:bg-white/10 rounded-xl text-[10px] font-mono text-zinc-300 flex items-center justify-center gap-1.5 transition-colors"
-                          >
-                            {isCopied ? <Check size={11} className="text-emerald-500" /> : <Copy size={11} />}
-                            <span>Copier</span>
-                          </button>
-                          
-                          <a 
-                            href={`https://${siteName}.vercel.app`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex-1 py-1.5 bg-cyan-500 hover:bg-cyan-600 rounded-xl text-[10px] uppercase font-black text-white font-display text-center flex items-center justify-center gap-1 shadow-md animate-pulse"
-                          >
-                            <span>Ouvrir Edge</span>
-                            <ExternalLink size={10} />
+                            <ExternalLink size={12} />
                           </a>
                         </div>
                       </div>
