@@ -1118,6 +1118,8 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
   };
 
   const [isViewOnly, setIsViewOnly] = useState(false);
+  const [viewOnlyLoading, setViewOnlyLoading] = useState(false);
+  const [viewOnlyError, setViewOnlyError] = useState<string | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -1131,40 +1133,100 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
 
     if (siteSlug) {
       setIsViewOnly(true);
+      setViewOnlyLoading(true);
       const loadPublishedSite = async () => {
-        const { data } = await supabase
-          .from('published_sites')
-          .select('code')
-          .eq('slug', siteSlug)
-          .single();
-        
-        if (data?.code) {
-          setGeneratedCode(data.code);
-          setViewMode('preview');
+        try {
+          const { data, error } = await supabase
+            .from('published_sites')
+            .select('code')
+            .eq('slug', siteSlug)
+            .single();
+          
+          if (error) {
+            console.error("Supabase loadPublishedSite error details:", error);
+            throw error;
+          }
+          
+          if (data?.code) {
+            setGeneratedCode(data.code);
+            setViewMode('preview');
+          } else {
+            throw new Error("Aucun code de site web trouvé pour cette adresse.");
+          }
+        } catch (err: any) {
+          console.error("Error loading published site:", err);
+          setViewOnlyError(err.message || "Impossible d'accéder au site web demandé.");
+        } finally {
+          setViewOnlyLoading(false);
         }
       };
       loadPublishedSite();
     }
   }, []);
 
-  if (isViewOnly && generatedCode) {
+  if (isViewOnly) {
+    if (viewOnlyLoading) {
+      return (
+        <div className="fixed inset-0 bg-[#0A0A0A] flex flex-col items-center justify-center font-sans text-center px-4">
+          <div className="relative flex items-center justify-center mb-6">
+            <div className="absolute inset-0 w-24 h-24 bg-orange-primary/20 blur-xl rounded-full animate-pulse" />
+            <Loader2 className="w-12 h-12 text-orange-primary animate-spin z-10" />
+          </div>
+          <h2 className="text-xl font-bold text-white mb-2 tracking-tight">Chargement du site Cook IA...</h2>
+          <p className="text-zinc-500 text-xs font-mono max-w-sm">Dépêche en cours depuis notre CDN Sandbox...</p>
+        </div>
+      );
+    }
+
+    if (viewOnlyError) {
+      return (
+        <div className="fixed inset-0 bg-[#0A0A0A] flex flex-col items-center justify-center font-sans text-center px-4">
+          <div className="w-16 h-16 bg-red-500/10 rounded-2xl flex items-center justify-center border border-red-500/20 mb-6">
+            <X className="w-8 h-8 text-red-500" />
+          </div>
+          <h2 className="text-xl font-bold text-white mb-2">Impossible de charger le site</h2>
+          <div className="text-zinc-400 text-sm max-w-sm mb-6 font-mono leading-relaxed p-4 bg-white/[0.02] border border-white/5 rounded-xl">
+             Le site <span className="text-orange-primary font-bold">"{window.location.pathname.substring(1)}"</span> n'a pas encore été publié ou a expiré.
+          </div>
+          <button
+            onClick={() => {
+              window.location.href = "https://cook-ia.indevs.in";
+            }}
+            className="px-6 py-2.5 bg-gradient-to-r from-orange-primary to-amber-500 hover:scale-[1.02] active:scale-95 text-white rounded-xl text-xs font-bold transition-all shadow-[0_4px_12px_rgba(255,107,0,0.25)]"
+          >
+            Créer un nouveau site avec Cook IA
+          </button>
+        </div>
+      );
+    }
+
+    if (generatedCode) {
+      return (
+        <div className="fixed inset-0 bg-white">
+          <iframe 
+            srcDoc={generatedCode}
+            title="Published Site"
+            className="w-full h-full border-none"
+          />
+          <button 
+            onClick={() => {
+              window.location.href = "https://cook-ia.indevs.in";
+            }}
+            className="fixed bottom-6 right-6 bg-black/80 backdrop-blur-md border border-white/10 text-white px-4 py-2 rounded-full text-xs font-bold hover:bg-black transition-all z-50 shadow-2xl flex items-center gap-2"
+          >
+            <img src={LOGO_URL} alt="Logo" className="w-4 h-4 object-contain" />
+            Créé avec COOK IA
+          </button>
+          <CookieBanner />
+        </div>
+      );
+    }
+
+    // Default loading fallback
     return (
-      <div className="fixed inset-0 bg-white">
-        <iframe 
-          srcDoc={generatedCode}
-          title="Published Site"
-          className="w-full h-full border-none"
-        />
-        <button 
-          onClick={() => {
-            window.location.href = "https://cook-ia.indevs.in";
-          }}
-          className="fixed bottom-6 right-6 bg-black/80 backdrop-blur-md border border-white/10 text-white px-4 py-2 rounded-full text-xs font-bold hover:bg-black transition-all z-50 shadow-2xl flex items-center gap-2"
-        >
-          <img src={LOGO_URL} alt="Logo" className="w-4 h-4 object-contain" />
-          Créé avec COOK IA
-        </button>
-        <CookieBanner />
+      <div className="fixed inset-0 bg-[#0A0A0A] flex flex-col items-center justify-center font-sans text-center px-4">
+        <Loader2 className="w-12 h-12 text-orange-primary animate-spin mb-4" />
+        <h2 className="text-xl font-bold text-white mb-2">Initialisation de la vue...</h2>
       </div>
     );
   }
