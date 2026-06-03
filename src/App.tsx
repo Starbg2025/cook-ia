@@ -1011,7 +1011,7 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
   };
 
   const copyToClipboard = () => {
-    const url = `${siteName || 'votre-site'}.cook-ia.indevs.in`;
+    const url = `https://cook-ia.indevs.in/${siteName || 'votre-site'}`;
     navigator.clipboard.writeText(url);
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2000);
@@ -1756,19 +1756,19 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
                   <div className="space-y-6">
                     <div className="p-4 sm:p-5 bg-white/[0.01] border border-white/5 rounded-2xl relative overflow-hidden group hover:border-white/10 transition-colors">
                       <div className="absolute top-0 right-0 p-3 text-[10px] font-mono text-zinc-600 uppercase font-black tracking-widest">Configuration active</div>
-                      <h3 className="text-xs font-mono font-black uppercase tracking-widest text-orange-primary mb-1">Nom de domaine personnalisé</h3>
-                      <p className="text-xs text-zinc-500 mb-4 leading-relaxed">Définissez l'identifiant unique de votre site internet. Nous créerons automatiquement les routes de redirection.</p>
+                      <h3 className="text-xs font-mono font-black uppercase tracking-widest text-orange-primary mb-1">Chemin de partage personnalisé</h3>
+                      <p className="text-xs text-zinc-500 mb-4 leading-relaxed">Définissez l'identifiant unique de votre site internet. Nous créerons automatiquement un lien de partage direct.</p>
 
                       <div className="space-y-2">
-                        <div className="relative">
+                        <div className="relative flex items-center bg-black/80 border border-white/10 rounded-xl focus-within:border-orange-primary/50 transition-all shadow-inner overflow-hidden">
+                          <span className="p-4 pr-0 text-zinc-500 font-mono text-xs sm:text-sm select-none">cook-ia.indevs.in/</span>
                           <input 
                             type="text"
                             value={siteName}
                             onChange={(e) => setSiteName(e.target.value.toLowerCase().replace(/\s+/g, '-'))}
                             placeholder="nom-de-votre-site"
-                            className="w-full bg-black/80 border border-white/10 rounded-xl p-4 pr-32 text-xs sm:text-sm text-white font-mono placeholder-zinc-700 focus:outline-none focus:border-orange-primary/50 transition-all shadow-inner"
+                            className="w-full bg-transparent p-4 pl-1 text-xs sm:text-sm text-white font-mono placeholder-zinc-700 focus:outline-none"
                           />
-                          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-600 font-mono text-xs sm:text-sm">.cook-ia.indevs.in</span>
                         </div>
                       </div>
                     </div>
@@ -1781,15 +1781,15 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
                         <div className="p-4 rounded-xl border border-white/5 bg-white/[0.01] space-y-2.5">
                           <div className="flex items-center gap-1.5 text-orange-primary">
                             <span className="w-1.5 h-1.5 rounded-full bg-orange-primary animate-ping" />
-                            <span className="font-bold">DOMAINE RAPIDE INTÉGRÉ</span>
+                            <span className="font-bold">LIEN DE PARTAGE DIRECT</span>
                           </div>
                           <div className="space-y-1 text-zinc-500 leading-relaxed text-[9px]">
                             <div>1. Clic sur Déployer</div>
                             <div className="text-zinc-600">↓ Validation des paquets</div>
-                            <div>2. Cook IA crée <span className="text-zinc-400">"{siteName || 'monsite'}"</span></div>
+                            <div>2. Cook IA crée <span className="text-zinc-400">"/{siteName || 'monsite'}"</span></div>
                             <div className="text-zinc-600">↓ Enregistrement base de données</div>
-                            <div>3. Domaines DNS configurés</div>
-                            <div className="text-orange-primary font-bold mt-1">➔ https://{siteName || 'monsite'}.cook-ia.indevs.in</div>
+                            <div>3. Route de partage configurée</div>
+                            <div className="text-orange-primary font-bold mt-1">➔ cook-ia.indevs.in/{siteName || 'monsite'}</div>
                           </div>
                         </div>
 
@@ -1917,10 +1917,10 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
                         <div>
                           <div className="flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider text-orange-primary font-bold mb-2">
                             <span className="w-1.5 h-1.5 rounded-full bg-orange-primary animate-ping" />
-                            <span>Domaine Indépendant</span>
+                            <span>Lien de partage direct</span>
                           </div>
                           <h4 className="text-xs font-mono font-black text-white mb-1 truncate">
-                            {siteName}.cook-ia.indevs.in
+                            cook-ia.indevs.in/{siteName}
                           </h4>
                           <p className="text-[10px] text-zinc-500 leading-snug">Serveur DNS Sandbox de haute disponibilité. Temps de propagation de 0s.</p>
                         </div>
@@ -1928,7 +1928,7 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
                         <div className="flex gap-2 mt-4 pt-4 border-t border-white/5">
                           <button 
                             onClick={() => {
-                              const url = `https://${siteName}.cook-ia.indevs.in`;
+                              const url = `https://cook-ia.indevs.in/${siteName}`;
                               navigator.clipboard.writeText(url);
                               setIsCopied(true);
                               setTimeout(() => setIsCopied(false), 2000);
@@ -1940,7 +1940,7 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
                           </button>
                           
                           <a 
-                            href={`https://${siteName}.cook-ia.indevs.in`}
+                            href={`https://cook-ia.indevs.in/${siteName}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex-1 py-1.5 bg-orange-primary hover:bg-orange-600 rounded-xl text-[10px] uppercase font-black text-white font-display text-center flex items-center justify-center gap-1 shadow-md"
