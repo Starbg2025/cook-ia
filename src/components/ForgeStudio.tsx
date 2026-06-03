@@ -434,6 +434,11 @@ Renvoie UNIQUEMENT un objet JSON (sans bloc markdown) de la forme exacte suivant
               <p className={`text-[10px] ${isDark ? 'text-white/40' : 'text-slate-500'} leading-relaxed`}>
                 Alimenté par <span className="font-bold text-white">Llama 3.3 70B (Groq Connected)</span> pour corriger immédiatement les crashs, les bugs de styles, et formuler des idées de design.
               </p>
+              
+              <div className="p-2 sm:p-2.5 bg-blue-500/10 border border-blue-500/20 rounded-lg text-[9px] font-mono text-zinc-400 flex items-center gap-1.5 leading-snug">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse shrink-0" />
+                <span>💡 <strong>Note de sécurité :</strong> Poser une question ici <strong>ne modifiera pas</strong> votre site web de façon automatique. L'expert vous conseille et fournit du code à copier ou à insérer.</span>
+              </div>
 
               <AnimatePresence>
                 {showKeyInput && (
@@ -532,23 +537,28 @@ Renvoie UNIQUEMENT un objet JSON (sans bloc markdown) de la forme exacte suivant
               ))}
             </div>
 
-            {/* Chat Input */}
-            <div className="flex gap-2">
-              <input
-                type="text"
-                placeholder="Ex : Comment centrer verticalement mon hero..."
-                value={groqQuestion}
-                onChange={(e) => setGroqQuestion(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && askGroqAdvisor()}
-                className="flex-1 p-3 bg-black/60 text-xs rounded-xl border border-white/10 hover:border-white/20 focus:border-orange-primary text-white placeholder-zinc-600 focus:outline-none transition-all font-sans"
-              />
-              <button
-                onClick={askGroqAdvisor}
-                disabled={isGroqLoading || !groqQuestion.trim()}
-                className="p-3 bg-orange-primary hover:bg-orange-600 text-white rounded-xl flex items-center justify-center transition-all disabled:opacity-50"
-              >
-                <Send size={14} />
-              </button>
+             {/* Chat Input */}
+            <div className="space-y-1.5">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Ex : Comment centrer verticalement mon hero..."
+                  value={groqQuestion}
+                  onChange={(e) => setGroqQuestion(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && askGroqAdvisor()}
+                  className="flex-1 p-3 bg-black/60 text-xs rounded-xl border border-white/10 hover:border-white/20 focus:border-orange-primary text-white placeholder-zinc-700 focus:outline-none transition-all font-sans"
+                />
+                <button
+                  onClick={askGroqAdvisor}
+                  disabled={isGroqLoading || !groqQuestion.trim()}
+                  className="p-3 bg-orange-primary hover:bg-orange-600 text-white rounded-xl flex items-center justify-center transition-all disabled:opacity-50"
+                >
+                  <Send size={14} />
+                </button>
+              </div>
+              <p className="text-[9px] text-zinc-500 font-mono text-center">
+                🔒 Vos questions n'altèrent pas le code de votre site actuel.
+              </p>
             </div>
           </div>
         )}
