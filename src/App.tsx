@@ -1121,7 +1121,14 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const siteSlug = params.get('p');
+    let siteSlug = params.get('p');
+    
+    // Check if the path itself is a siteSlug (excluding known pages/assets/api)
+    const path = window.location.pathname;
+    if (!siteSlug && path && path !== '/' && !path.startsWith('/api') && !path.includes('.') && !path.startsWith('/assets')) {
+      siteSlug = decodeURIComponent(path.substring(1));
+    }
+
     if (siteSlug) {
       setIsViewOnly(true);
       const loadPublishedSite = async () => {
