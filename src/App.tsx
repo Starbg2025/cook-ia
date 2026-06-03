@@ -1223,70 +1223,70 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
       </a>
 
       {/* Header */}
-      <header className={`h-14 border-b flex items-center justify-between px-4 shrink-0 z-50 ${isDark ? 'bg-abyssal-deep border-white/5' : 'bg-white border-slate-200'}`}>
-        <div className="flex items-center gap-4">
+      <header className={`h-14 border-b flex items-center justify-between px-2 sm:px-4 shrink-0 z-50 ${isDark ? 'bg-abyssal-deep border-white/5' : 'bg-white border-slate-200'}`}>
+        <div className="flex items-center gap-1.5 sm:gap-4">
           <button 
             onClick={() => setIsHistoryOpen(!isHistoryOpen)}
-            className={`p-2 rounded-lg transition-colors ${isDark ? 'text-white/60 hover:bg-white/5 hover:text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}
+            className={`p-1.5 sm:p-2 rounded-lg transition-colors ${isDark ? 'text-white/60 hover:bg-white/5 hover:text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}
           >
-            <Menu size={20} />
+            <Menu size={18} />
           </button>
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-orange-primary rounded-md flex items-center justify-center shadow-[0_0_15px_rgba(255,107,0,0.4)]">
-              <Zap size={14} className="text-white fill-white" />
+          <div className="flex items-center gap-1.5">
+            <div className="w-5 h-5 sm:w-6 sm:h-6 bg-orange-primary rounded-md flex items-center justify-center shadow-[0_0_15px_rgba(255,107,0,0.4)]">
+              <Zap size={12} className="text-white fill-white sm:w-3.5 sm:h-3.5" />
             </div>
-            <span className={`font-display font-black text-sm tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>COOK IA</span>
+            <span className={`font-display font-black text-xs sm:text-sm tracking-tight ${isDark ? 'text-white' : 'text-slate-900'} hidden min-[360px]:inline`}>COOK IA</span>
           </div>
         </div>
 
         {/* View Mode Switcher */}
-        <div className={`flex items-center p-1 rounded-xl border ${isDark ? 'bg-[#141414] border-white/5' : 'bg-slate-50 border-slate-200'}`}>
+        <div className={`flex items-center p-0.5 sm:p-1 rounded-xl border ${isDark ? 'bg-[#141414] border-white/5' : 'bg-slate-50 border-slate-200'}`}>
           <button 
             onClick={() => setViewMode('chat')}
-            className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            className={`flex items-center gap-1 px-2 sm:px-4 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-bold transition-all ${
               viewMode === 'chat' 
                 ? (isDark ? 'bg-white/10 text-white shadow-lg' : 'bg-white text-slate-900 shadow-sm') 
                 : (isDark ? 'text-white/40 hover:text-white/60' : 'text-slate-400 hover:text-slate-600')
             }`}
           >
-            <MessageSquare size={14} />
-            Chat
+            <MessageSquare size={13} />
+            <span className="hidden min-[380px]:inline">Chat</span>
           </button>
           <button 
             onClick={() => setViewMode('code')}
-            className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            className={`flex items-center gap-1 px-2 sm:px-4 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-bold transition-all ${
               viewMode === 'code' 
                 ? (isDark ? 'bg-white/10 text-white shadow-lg' : 'bg-white text-slate-900 shadow-sm') 
                 : (isDark ? 'text-white/40 hover:text-white/60' : 'text-slate-400 hover:text-slate-600')
             }`}
           >
-            <Code size={14} />
-            Code
+            <Code size={13} />
+            <span className="hidden min-[420px]:inline">Code</span>
           </button>
           <button 
             onClick={() => setViewMode('preview')}
-            className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            className={`flex items-center gap-1 px-2 sm:px-4 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-bold transition-all ${
               viewMode === 'preview' 
                 ? (isDark ? 'bg-white/10 text-white shadow-lg' : 'bg-white text-slate-900 shadow-sm') 
                 : (isDark ? 'text-white/40 hover:text-white/60' : 'text-slate-400 hover:text-slate-600')
             }`}
           >
-            <Eye size={14} />
-            Preview
+            <Eye size={13} />
+            <span className="hidden min-[480px]:inline">Preview</span>
           </button>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-3">
           {generatedCode && (
             <button
               onClick={() => setIsPublishModalOpen(true)}
-              className="flex items-center gap-2 px-3.5 py-1.5 bg-gradient-to-r from-orange-primary to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-lg text-xs font-bold transition-all shadow-[0_4px_12px_rgba(255,107,0,0.25)] animate-pulse hover:animate-none hover:scale-[1.03] active:scale-95"
+              className="flex items-center gap-1 px-2 py-1.5 sm:px-3.5 sm:py-1.5 bg-gradient-to-r from-orange-primary to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-lg text-[10px] sm:text-xs font-bold transition-all shadow-[0_4px_12px_rgba(255,107,0,0.25)] animate-pulse hover:animate-none hover:scale-[1.03] active:scale-95 shrink-0"
               title="Déployez votre site web et mobile en direct"
               id="header-deploy-button"
             >
-              <Rocket size={14} className="fill-white" />
-              <span className="hidden md:inline">Déployer (Web & Mobile)</span>
-              <span className="md:hidden">Déployer</span>
+              <Rocket size={12} className="fill-white" />
+              <span className="hidden sm:inline">Déployer (Web & Mobile)</span>
+              <span className="sm:hidden">Déployer</span>
             </button>
           )}
           <a 
@@ -1717,7 +1717,7 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-2xl bg-[#0A0A0A] rounded-[32px] border border-white/10 p-6 sm:p-8 shadow-[0_50px_100px_rgba(0,0,0,0.9)] overflow-hidden"
+              className="relative w-full max-w-2xl bg-[#0A0A0A] rounded-[24px] sm:rounded-[32px] border border-white/10 p-5 sm:p-8 shadow-[0_50px_100px_rgba(0,0,0,0.9)] overflow-y-auto max-h-[90vh] focus:outline-none"
               id="publishing-wizard-modal"
             >
               {/* Top ambient status glow */}
@@ -1995,7 +1995,7 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
                     <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-500/5 to-teal-500/5 border border-emerald-500/10 flex flex-col sm:flex-row items-center gap-5">
                       <div className="w-24 h-24 bg-white p-1.5 rounded-xl flex items-center justify-center shrink-0 shadow-[0_10px_25px_rgba(0,0,0,0.5)] border border-white/10">
                         <img 
-                          src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(`https://${siteName}.vercel.app`)}`} 
+                          src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(`https://cook-ia.indevs.in/${siteName}`)}`} 
                           alt="Mobile QR Code" 
                           className="w-full h-full object-contain"
                           referrerPolicy="no-referrer"
