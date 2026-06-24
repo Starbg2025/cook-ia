@@ -581,6 +581,55 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </p>
                 </div>
 
+                {/* Cook IA Innovation Section */}
+                <div className={`mt-6 p-5 rounded-2xl border ${isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-slate-100/50 border-slate-200 text-slate-800'} space-y-4`}>
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="text-amber-500 shrink-0" size={18} />
+                    <h5 className="font-bold text-sm tracking-tight">
+                      {lang === 'fr' ? "Révolution de Conception : Cook IA Studio" : "Design Revolution: Cook IA Studio"}
+                    </h5>
+                  </div>
+                  
+                  <div className="space-y-3 text-xs leading-relaxed opacity-90">
+                    <div className="flex gap-2">
+                      <span className="text-amber-500">✦</span>
+                      <p>
+                        {lang === 'fr' 
+                          ? "Cook IA dessine comme sur un canvas interactif, mais c'est l'intelligence elle-même qui engendre et mature le design original de votre interface."
+                          : "Cook IA designs on an interactive canvas, but the core intelligence itself generates and matures the interface's original layout."
+                        }
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="text-blue-500">✦</span>
+                      <p>
+                        {lang === 'fr' 
+                          ? "Connectez ce design visuel à Cook IA Code, notre moteur d'écriture d'élite qui développe et code l'application complète directement à partir de l'esquisse."
+                          : "Connect this visual layout to Cook IA Code, our elite generation engine that compiles and codes the full application directly from the sketch."
+                        }
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="text-emerald-500">✦</span>
+                      <p>
+                        {lang === 'fr' 
+                          ? "Visualisez les points saillants et les étapes cinématiques pendant que l'IA code en temps réel, façonnant des sites que d'autres IA conventionnelles sont incapables de concevoir."
+                          : "Observe high-fidelity highlights and live cinematic steps as the AI codes in real-time, building websites that conventional AIs are simply unable to engineer."
+                        }
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="text-purple-500">✦</span>
+                      <p>
+                        {lang === 'fr' 
+                          ? "Cook IA intègre nativement les modèles 3D ultra-fluides de motionsites.ai pour animer et sublimer l'expérience utilisateur de vos applications."
+                          : "Cook IA natively integrates high-end 3D models from motionsites.ai to animate and enrich your user application experiences."
+                        }
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="mt-8 pt-8 border-t border-white/5 flex items-center justify-between">
                   <div className="flex flex-col">
                     <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Contact Direct</span>

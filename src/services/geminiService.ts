@@ -302,20 +302,46 @@ const isUserKeyOrQuotaError = (msg: string) => {
   );
 };
 
-const callGeminiProxy = async (prompt: string, history: any[], systemInstruction?: string, model?: string, images?: any[], responseMimeType?: string) => {
-  const response = await fetch("/api/ai/gemini", {
-    method: "POST",
-    headers: getCustomHeaders(),
-    body: JSON.stringify({ prompt, history, systemInstruction, model, images, responseMimeType })
-  });
+const callGeminiProxy = async (prompt: string, history: any[], systemInstruction?: string, model?: string, images?: any[], responseMimeType?: string): Promise<string> => {
+  const currentModel = model || "gemini-3.5-flash";
+  try {
+    const response = await fetch("/api/ai/gemini", {
+      method: "POST",
+      headers: getCustomHeaders(),
+      body: JSON.stringify({ prompt, history, systemInstruction, model: currentModel, images, responseMimeType })
+    });
 
-  if (!response.ok) {
-    const err = await response.json();
-    throw new Error(err.error || "Failed to call Gemini proxy");
+    if (!response.ok) {
+      const err = await response.json();
+      const errMsg = err.error || "Failed to call Gemini proxy";
+      
+      const isUnavailable = errMsg.toLowerCase().includes("demand") || 
+                            errMsg.toLowerCase().includes("unavailable") || 
+                            errMsg.toLowerCase().includes("503") ||
+                            response.status === 503;
+                            
+      if (isUnavailable && currentModel === "gemini-3.5-flash") {
+        console.warn("[Gemini Recovery] gemini-3.5-flash is experiencing high demand. Retrying with gemini-2.5-flash...");
+        return await callGeminiProxy(prompt, history, systemInstruction, "gemini-2.5-flash", images, responseMimeType);
+      }
+      
+      throw new Error(errMsg);
+    }
+
+    const result = await response.json();
+    return result.text;
+  } catch (error: any) {
+    const errMsg = error.message || "";
+    const isUnavailable = errMsg.toLowerCase().includes("demand") || 
+                          errMsg.toLowerCase().includes("unavailable") || 
+                          errMsg.toLowerCase().includes("503");
+                          
+    if (isUnavailable && currentModel === "gemini-3.5-flash") {
+      console.warn("[Gemini Recovery] gemini-3.5-flash is experiencing high demand/network error. Retrying with gemini-2.5-flash...");
+      return await callGeminiProxy(prompt, history, systemInstruction, "gemini-2.5-flash", images, responseMimeType);
+    }
+    throw error;
   }
-
-  const result = await response.json();
-  return result.text;
 };
 
 const generateWithAIFallback = async (

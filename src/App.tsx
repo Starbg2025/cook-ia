@@ -75,19 +75,43 @@ import { CookieBanner } from './components/CookieBanner';
 
 export default function App() {
   const [prompt, setPrompt] = useState('');
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: 'model',
-      content: "Cook IA, créé par Benit Madimba, est prêt à concevoir votre prochaine plateforme web ultra-moderne. Que souhaitez-vous construire aujourd'hui ?"
+  const [messages, setMessages] = useState<Message[]>(() => {
+    try {
+      const saved = localStorage.getItem('cook_ia_messages');
+      return saved ? JSON.parse(saved) : [
+        {
+          role: 'model',
+          content: "Cook IA, créé par Benit Madimba, est prêt à concevoir votre prochaine plateforme web ultra-moderne. Que souhaitez-vous construire aujourd'hui ?"
+        }
+      ];
+    } catch {
+      return [
+        {
+          role: 'model',
+          content: "Cook IA, créé par Benit Madimba, est prêt à concevoir votre prochaine plateforme web ultra-moderne. Que souhaitez-vous construire aujourd'hui ?"
+        }
+      ];
     }
-  ]);
+  });
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem('cook_ia_current_conv_id');
+    } catch {
+      return null;
+    }
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [loadingStatus, setLoadingStatus] = useState("Building your site...");
   const [currentActions, setCurrentActions] = useState<ActionHistory[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode | 'your-apps' | 'faq' | 'skills'>('chat');
-  const [generatedCode, setGeneratedCode] = useState<string>('');
+  const [generatedCode, setGeneratedCode] = useState<string>(() => {
+    try {
+      return localStorage.getItem('cook_ia_generated_code') || '';
+    } catch {
+      return '';
+    }
+  });
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
   const [isGithubModalOpen, setIsGithubModalOpen] = useState(false);
   const [githubToken, setGithubToken] = useState<string | null>(null);
@@ -149,15 +173,95 @@ export default function App() {
     }
   }, [secrets]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem('cook_ia_messages', JSON.stringify(messages));
+    } catch (e) {
+      console.warn("Failed to save messages to localStorage:", e);
+    }
+  }, [messages]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('cook_ia_generated_code', generatedCode);
+    } catch (e) {
+      console.warn("Failed to save generatedCode to localStorage:", e);
+    }
+  }, [generatedCode]);
+
+  useEffect(() => {
+    try {
+      if (currentConversationId) {
+        localStorage.setItem('cook_ia_current_conv_id', currentConversationId);
+      } else {
+        localStorage.removeItem('cook_ia_current_conv_id');
+      }
+    } catch (e) {
+      console.warn("Failed to save currentConversationId to localStorage:", e);
+    }
+  }, [currentConversationId]);
+
   const [isLinkFullscreen, setIsLinkFullscreen] = useState(false);
-  const [hasStarted, setHasStarted] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [hasStarted, setHasStarted] = useState<boolean>(false);
+  const [pendingLandingPrompt, setPendingLandingPrompt] = useState<string | null>(null);
+  const [pendingLandingTemplate, setPendingLandingTemplate] = useState<{ code: string, promptText: string } | null>(null);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('cook_ia_started', hasStarted ? 'true' : 'false');
+    } catch (e) {
+      console.warn("Storage access denied:", e);
+    }
+  }, [hasStarted]);
+
+  useEffect(() => {
+    if (user) {
+      if (pendingLandingPrompt !== null) {
+        const promptToRun = pendingLandingPrompt;
+        setPendingLandingPrompt(null);
+        if (promptToRun.trim()) {
+          setPrompt(promptToRun);
+          setPendingSend(true);
+        }
+        setHasStarted(true);
+      } else if (pendingLandingTemplate !== null) {
+        const { code, promptText } = pendingLandingTemplate;
+        setPendingLandingTemplate(null);
+        setGeneratedCode(code);
+        setPrompt("");
+        const newMsg = {
+          id: Math.random().toString(36).substr(2, 9),
+          role: 'user' as const,
+          content: promptText,
+          timestamp: new Date()
+        };
+        const systemMsg = {
+          id: Math.random().toString(36).substr(2, 9),
+          role: 'model' as const,
+          content: "Voici le site web cinématique généré sur la base de vos spécifications. Vous pouvez utiliser le volet de discussion pour y apporter des modifications de style ou de contenu.",
+          timestamp: new Date(),
+          files: [
+            {
+              path: 'index.html',
+              content: code
+            }
+          ]
+        };
+        setMessages([newMsg, systemMsg]);
+        setHasStarted(true);
+        setViewMode('preview');
+      }
+    }
+  }, [user, pendingLandingPrompt, pendingLandingTemplate]);
+
   const [selectedModel, setSelectedModel] = useState<string>(() => {
     try {
       const saved = localStorage.getItem('selectedModel');
-      return saved || 'gemini-3.5-flash';
+      return saved || 'gemini-2.5-flash';
     } catch (e) {
       console.warn("Storage access denied:", e);
-      return 'gemini-3.5-flash';
+      return 'gemini-2.5-flash';
     }
   });
   const [isRealtimeEnabled, setIsRealtimeEnabled] = useState(() => {
@@ -216,7 +320,6 @@ export default function App() {
     borderRadius: '1rem'
   });
   const [sectionEdit, setSectionEdit] = useState<SectionEditState>({ isActive: false });
-  const [user, setUser] = useState<any>(null);
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [selectedVideos, setSelectedVideos] = useState<string[]>([]);
   const [abortController, setAbortController] = useState<AbortController | null>(null);
@@ -273,6 +376,7 @@ export default function App() {
         setUser(null);
         setConversations([]);
         setCurrentConversationId(null);
+        setHasStarted(false);
         return;
       }
 
@@ -410,7 +514,26 @@ export default function App() {
       console.error("Error loading conversations:", error);
       return;
     }
-    if (data) setConversations(data);
+    if (data) {
+      setConversations(data);
+      try {
+        const started = localStorage.getItem('cook_ia_started');
+        if (data.length > 0 && !currentConversationId && started === 'true') {
+          const lastConv = data[0];
+          setCurrentConversationId(lastConv.id);
+          setMessages(lastConv.messages);
+          const lastModelMsg = [...lastConv.messages].reverse().find(m => m.role === 'model' && m.code);
+          if (lastModelMsg?.code) {
+            setGeneratedCode(lastModelMsg.code);
+            setViewMode('preview');
+          } else {
+            setGeneratedCode('');
+          }
+        }
+      } catch (e) {
+        console.warn("Storage auto-select failed:", e);
+      }
+    }
   };
 
   const handleSelectConversation = (id: string) => {
@@ -425,6 +548,7 @@ export default function App() {
       } else {
         setGeneratedCode('');
       }
+      setHasStarted(true);
     }
   };
 
@@ -1322,7 +1446,18 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
           <LandingPage 
             lang={lang}
             setLang={setLang}
-            onEnter={(initialPrompt?: string) => {
+            onEnter={(initialPrompt?: string, forceAuth?: boolean) => {
+              if (forceAuth) {
+                setHasStarted(true);
+                setIsAuthModalOpen(true);
+                return;
+              }
+              if (!user) {
+                setPendingLandingPrompt(initialPrompt || "");
+                setHasStarted(true);
+                setIsAuthModalOpen(true);
+                return;
+              }
               if (initialPrompt && initialPrompt.trim()) {
                 setPrompt(initialPrompt);
                 setPendingSend(true);
@@ -1330,6 +1465,12 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
               setHasStarted(true);
             }} 
             onLoadTemplate={(code: string, promptText: string) => {
+              if (!user) {
+                setPendingLandingTemplate({ code, promptText });
+                setHasStarted(true);
+                setIsAuthModalOpen(true);
+                return;
+              }
               setGeneratedCode(code);
               setPrompt("");
               const newMsg = {
@@ -1537,6 +1678,7 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
                   <div key={conv.id} className={`p-4 rounded-2xl border ${isDark ? 'border-white/10 bg-white/5' : 'border-slate-200 bg-slate-50'} cursor-pointer hover:border-blue-500 transition-all`} onClick={() => {
                     setCurrentConversationId(conv.id);
                     setMessages(conv.messages);
+                    setHasStarted(true);
                     setViewMode('chat');
                   }}>
                     <div className="aspect-video rounded-xl bg-slate-200 mb-4 overflow-hidden flex items-center justify-center p-4">
