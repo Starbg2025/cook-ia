@@ -6,8 +6,7 @@ import { shadowWatchdog } from '../services/multiAgentService';
 import { UnderwaterWelcome } from './UnderwaterWelcome';
 import { MessageActionOverlay } from './MessageActionOverlay';
 import { TypingIndicator } from './TypingIndicator';
-
-// ... (rest of the file remains largely the same, applying changes to message mapping logic)
+import { translations, Language } from '../translations';
 
 interface ChatInterfaceProps {
   messages: Message[];
@@ -32,6 +31,7 @@ interface ChatInterfaceProps {
   isFocusMode?: boolean;
   setIsFocusMode?: (val: boolean) => void;
   onFeedback?: (index: number, type: 'like' | 'dislike') => void;
+  lang?: Language;
 }
 
 const ActionHistoryItem: React.FC<{ action: ActionHistory; isDark: boolean }> = ({ action, isDark }) => {
@@ -89,7 +89,9 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   isFocusMode = false,
   setIsFocusMode,
   onFeedback,
+  lang = 'fr',
 }) => {
+  const t = translations[lang];
   const [suggestion, setSuggestion] = React.useState<string>("");
   const mirrorRef = React.useRef<HTMLDivElement>(null);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
@@ -145,7 +147,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
           body: JSON.stringify({
             prompt: `Suggère une courte complétion en français (entre 2 et 5 mots) pour continuer ou terminer naturellement la phrase de l'utilisateur. L'utilisateur écrit : "${prompt}". Ne renvoie QUE la partie complétée (la suite de la phrase), pas toute la saisie, ni de remarques ou de guillemets. Garde cela simple et en minuscules. Ex: si l'utilisateur saisit "comment faire ", renvoie "une tarte aux pommes".`,
             systemInstruction: "Tu es un assistant d'autocomplétion en ligne ultra-rapide. Renvoie uniquement la suite directe de la phrase en français, sans fioritures ni guillemets.",
-            model: "gemini-2.5-flash"
+            model: "gemini-3.5-flash"
           })
         });
 
@@ -230,17 +232,25 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   };
 
   return (
-    <aside className={`flex-1 flex flex-col h-full ${isDark ? 'bg-[#0A0A0A]' : 'bg-white'} overflow-hidden`}>
+    <aside className={`flex-1 flex flex-col h-full ${isDark ? 'bg-abyssal-deep' : 'bg-white'} overflow-hidden relative`}>
+      {/* Dynamic Cyber-glow backdrops */}
+      {isDark && (
+        <div className="absolute inset-0 pointer-events-none overflow-hidden select-none opacity-40">
+          <div className="absolute top-0 right-1/4 w-96 h-96 bg-orange-primary/5 rounded-full blur-[120px]" />
+          <div className="absolute bottom-1/4 left-1/4 w-[500px] h-[500px] bg-blue-600/5 rounded-full blur-[160px]" />
+        </div>
+      )}
+
       {/* Chat Header */}
-      <div className={`h-14 border-b flex items-center justify-between px-6 shrink-0 ${isDark ? 'border-white/5' : 'border-slate-100'}`}>
+      <div className={`h-14 border-b flex items-center justify-between px-6 shrink-0 relative z-10 ${isDark ? 'border-white/5 bg-abyssal-deep/60 backdrop-blur-md' : 'border-slate-100 bg-white/80'}`}>
         <div className="flex items-center gap-3">
-          <span className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>Chat</span>
-          <ChevronDown size={14} className="text-slate-400" />
+          <span className={`text-xs font-bold uppercase tracking-widest ${isDark ? 'text-white/80' : 'text-slate-950'}`}>Console Chat</span>
+          <div className={`w-1.5 h-1.5 rounded-full ${isDark ? 'bg-orange-primary animate-pulse shadow-[0_0_8px_#FF6B00]' : 'bg-orange-primary'}`} />
         </div>
         <div className="flex items-center gap-2">
           <button 
             onClick={() => onOpenSettings?.('publish')}
-            className={`p-2 rounded-lg transition-colors ${isDark ? 'text-white/60 hover:bg-white/5 hover:text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}
+            className={`p-2 rounded-lg transition-all ${isDark ? 'text-white/60 hover:bg-white/5 hover:text-white hover:scale-105' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 hover:scale-105'}`}
             title="Settings"
           >
             <Settings size={18} />
@@ -248,38 +258,60 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 lg:p-8 space-y-12 scrollbar-hide relative flex flex-col">
+      <div className="flex-1 overflow-y-auto p-4 lg:p-8 space-y-12 scrollbar-hide relative flex flex-col z-15">
         {messages.length <= 1 && !isLoading ? (
           <div className="flex-1 flex items-center justify-center min-h-full">
-            <div className="w-full max-w-2xl px-6 py-12 rounded-3xl border border-white/5 bg-white/[0.02] backdrop-blur-xl relative overflow-hidden group">
+            <div className="w-full max-w-2xl px-6 py-12 rounded-3xl border border-white/5 bg-white/[0.01] backdrop-blur-2xl relative overflow-hidden group shadow-2xl">
               {/* Subtle background glow */}
-              <div className="absolute -top-24 -left-24 w-48 h-48 bg-orange-primary/10 blur-[80px] rounded-full group-hover:bg-orange-primary/20 transition-colors" />
-              <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-orange-primary/10 blur-[80px] rounded-full group-hover:bg-orange-primary/20 transition-colors" />
+              <div className="absolute -top-24 -left-24 w-64 h-64 bg-orange-primary/10 blur-[90px] rounded-full group-hover:bg-orange-primary/15 transition-all duration-700" />
+              <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-blue-500/10 blur-[90px] rounded-full group-hover:bg-blue-500/15 transition-all duration-700" />
               
               <div className="relative z-10 flex flex-col items-center text-center">
-                <div className="w-16 h-16 bg-orange-primary rounded-2xl flex items-center justify-center shadow-lg mb-8">
-                  <Zap size={32} className="text-white fill-white" />
+                <div className="w-20 h-20 bg-gradient-to-tr from-orange-primary to-amber-500 rounded-2xl flex items-center justify-center shadow-[0_0_40px_rgba(255,107,0,0.3)] mb-8 transform group-hover:rotate-6 transition-transform duration-500">
+                  <Zap size={38} className="text-white fill-white" />
                 </div>
                 
-                <h2 className="font-display text-3xl md:text-5xl font-black text-white mb-4 tracking-tighter">
-                  VOTRE VISION, <span className="text-orange-primary">NOS EXPERTS.</span>
+                <h2 className="font-display text-4xl md:text-5xl font-black text-white mb-4 tracking-tighter leading-tight bg-gradient-to-r from-white via-white/90 to-white/60 bg-clip-text text-transparent">
+                  {lang === 'fr' ? (
+                    <>CONCEVEZ <span className="text-orange-primary bg-gradient-to-r from-orange-orange-primary to-amber-400 bg-clip-text">L'EXCELLENCE.</span></>
+                  ) : (
+                    <>DESIGN WITH <span className="text-orange-primary bg-gradient-to-r from-orange-orange-primary to-amber-400 bg-clip-text">EXCELLENCE.</span></>
+                  )}
                 </h2>
                 
                 <p className={`text-sm md:text-base ${isDark ? 'text-white/60' : 'text-slate-500'} mb-10 max-w-lg leading-relaxed`}>
-                  Décrivez votre projet web et laissez notre système multi-agents expert (GLM, Gemini, Llama) s'occuper de l'architecture, du design et du code.
+                  {lang === 'fr' 
+                    ? "Soumettez votre projet et laissez notre équipe d'agents IA experts forger un design d'élite, responsive et haut de gamme."
+                    : "Submit your vision and watch our expert AI agents forge an elite, high-end, and fully responsive digital masterpiece."
+                  }
                 </p>
                 
-                <div className="flex flex-wrap justify-center gap-2 mb-12">
-                   {['E-commerce', 'Dashboard', 'Landing Page', 'SaaS'].map(tag => (
-                     <span key={tag} className={`px-4 py-1.5 rounded-full border ${isDark ? 'bg-white/5 border-white/10 text-white/40' : 'bg-slate-50 border-slate-200 text-slate-400'} text-[10px] font-bold uppercase tracking-widest`}>
-                       {tag}
-                     </span>
+                <div className="flex flex-wrap justify-center gap-2.5 mb-12">
+                   {[
+                     { name: 'SaaS Dashboard', prompt: 'Crée un Dashboard SaaS moderne d\'analytics financiers avec graphiques interactifs multicolores et KPI' },
+                     { name: 'E-commerce', prompt: 'Construis un site E-commerce haut de gamme de montres de luxe avec panier dynamique, grille de produits et effets de survol élégants' },
+                     { name: 'Landing Page', prompt: 'Génère une Landing Page futuriste pour une agence d\'intelligence artificielle avec animations fluides de transition et design épuré' },
+                     { name: 'Portfolio', prompt: 'Crée un portfolio interactif de photographe avec galerie d\'images bento-grid, filtrage dynamique et transitions soignées' }
+                   ].map(tag => (
+                     <button 
+                       key={tag.name} 
+                       onClick={() => setPrompt(tag.prompt)}
+                       className={`px-4 py-2 rounded-xl border cursor-pointer hover:scale-105 active:scale-95 transition-all text-[10px] font-bold uppercase tracking-widest ${
+                         isDark 
+                           ? 'bg-white/5 border-white/5 text-white/50 hover:text-white hover:bg-orange-primary/10 hover:border-orange-primary/30 shadow-md shadow-black/10' 
+                           : 'bg-slate-50 border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-100 shadow-sm'
+                       }`}
+                     >
+                       {tag.name}
+                     </button>
                    ))}
                 </div>
 
-                <div className="flex flex-col items-center gap-2 text-orange-primary/60 animate-bounce">
-                  <span className="text-[10px] font-black uppercase tracking-[0.3em]">Posez votre question ci-dessous</span>
-                  <ChevronDown size={16} />
+                <div className="flex flex-col items-center gap-2 text-orange-primary/80 animate-bounce">
+                  <span className="text-[9px] font-black uppercase tracking-[0.4em]">
+                    {lang === 'fr' ? "RÉACTEUR DE CRÉATION CI-DESSOUS" : "CREATION REACTOR BELOW"}
+                  </span>
+                  <ChevronDown size={14} className="text-orange-primary" />
                 </div>
               </div>
             </div>
@@ -420,8 +452,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         <div ref={chatEndRef} />
       </div>
 
-      <div className={`p-4 lg:p-6 ${isDark ? 'bg-[#0A0A0A]' : 'bg-white'}`}>
-        <div className={`max-w-4xl mx-auto relative border ${isDark ? 'border-white/10 bg-[#141414]' : 'border-slate-200 bg-slate-50'} rounded-[24px] transition-all focus-within:border-blue-500/50 shadow-sm`}>
+      <div className={`p-4 lg:p-6 ${isDark ? 'bg-abyssal-deep bg-gradient-to-t from-black/80 to-transparent' : 'bg-white'}`}>
+        <div className={`max-w-4xl mx-auto relative border ${isDark ? 'border-white/10 bg-[#09111e]/90 backdrop-blur-xl' : 'border-slate-200 bg-slate-50'} rounded-[24px] transition-all duration-300 focus-within:border-orange-primary focus-within:ring-4 focus-within:ring-orange-primary/10 shadow-2xl`}>
           
           {selectedImages.length > 0 && (
             <div className="flex flex-wrap gap-2 p-3 border-b border-white/5">

@@ -30,7 +30,7 @@ interface HistorySidebarProps {
   onNewChat: () => void;
   onDeleteConversation: (id: string) => void;
   onOpenSettings: (tab?: any) => void;
-  onSelectView: (view: 'your-apps' | 'faq') => void;
+  onSelectView: (view: 'your-apps' | 'faq' | 'skills') => void;
   onCloneSite: () => void;
   onEcommerceProduct: () => void;
   currentView: string;
@@ -57,6 +57,7 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = ({
   const buildItems = [
     { id: 'your-apps', label: 'Your apps', icon: Zap },
     { id: 'faq', label: 'FAQ', icon: HelpCircle },
+    { id: 'skills', label: 'Skills de l\'IA', icon: LayoutGrid },
     { id: 'clone', label: 'Clone site', icon: Copy, action: onCloneSite },
     { id: 'ecommerce', label: 'E-commerce', icon: ShoppingBag, action: onEcommerceProduct },
   ];
@@ -158,7 +159,7 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = ({
               onClick={() => onOpenSettings('account')}
               className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-all flex-1 ${isDark ? 'hover:bg-white/5' : 'hover:bg-slate-50'}`}
             >
-              <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-xs shrink-0 overflow-hidden">
+              <div className={`w-8 h-8 rounded-full ${user.email === 'benit800@gmail.com' ? 'bg-gradient-to-r from-amber-400 to-yellow-600 text-black ring-2 ring-yellow-400 shadow-lg' : 'bg-blue-600 text-white'} flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden`}>
                 {user.user_metadata?.avatar_url ? (
                   <img src={user.user_metadata.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
                 ) : (
@@ -166,11 +167,17 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = ({
                 )}
               </div>
               <div className="flex flex-col items-start overflow-hidden">
-                <span className={`text-sm font-semibold truncate w-full ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                  {user.user_metadata?.username || user.email?.split('@')[0]}
+                <span className={`text-sm font-semibold truncate w-full ${isDark ? 'text-white' : 'text-slate-900'} flex items-center gap-1.5`}>
+                  {user.email === 'benit800@gmail.com' ? 'Welcome Admin' : (user.user_metadata?.username || user.email?.split('@')[0])}
+                  {user.email === 'benit800@gmail.com' && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse" />
+                  )}
                 </span>
-                <span className={`text-[10px] truncate w-full ${isDark ? 'text-white/40' : 'text-slate-400'}`}>
+                <span className={`text-[10px] truncate w-full ${isDark ? 'text-white/40' : 'text-slate-400'} flex items-center gap-1`}>
                   {user.email}
+                  {user.email === 'benit800@gmail.com' && (
+                    <span className="px-1 text-[8px] bg-amber-500/20 border border-amber-500/30 rounded text-yellow-500 font-extrabold scale-90">GOLD</span>
+                  )}
                 </span>
               </div>
             </button>

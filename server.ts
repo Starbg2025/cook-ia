@@ -7,9 +7,49 @@ import { GoogleGenAI } from "@google/genai";
 
 dotenv.config();
 
+// High-reliability Gemini helper with model fallback cascade for 503 and high demand errors
+async function generateGeminiContentWithFallback(ai: any, contents: any, config: any, baseModel: string = "gemini-3.5-flash") {
+  const modelList = [baseModel];
+  const backups = ["gemini-3.5-flash", "gemini-2.5-flash", "gemini-3.1-pro-preview", "gemini-3.1-flash-lite"];
+  
+  for (const b of backups) {
+    if (!modelList.includes(b)) {
+      modelList.push(b);
+    }
+  }
+
+  let response = null;
+  let lastErr = null;
+  
+  for (const m of modelList) {
+    try {
+      console.log(`[Gemini Helper] Attempting call with model: ${m}`);
+      const res = await ai.models.generateContent({
+        model: m,
+        contents: contents,
+        config: config
+      });
+      if (res && res.text) {
+        console.log(`[Gemini Helper] Success with model: ${m}`);
+        return res;
+      } else {
+        throw new Error(`Empty response from Gemini with model ${m}`);
+      }
+    } catch (err: any) {
+      console.warn(`[Gemini Helper] Model ${m} failed:`, err.message || err);
+      lastErr = err;
+    }
+  }
+  
+  throw lastErr || new Error("All Gemini models in fallback chain failed.");
+}
+
 const supabaseUrl = "https://bxsilckpxcpsgojrakfs.supabase.co";
 const supabaseAnonKey = "sb_publishable_LGb-62oHXiolJluDwsXUiw_ZxRfiUpT";
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY || supabaseAnonKey;
+const adminSupabase = createClient(supabaseUrl, supabaseServiceKey);
 
 // Watchdog Architecture: Background Task Queue
 interface WatchdogTask {
@@ -232,11 +272,12 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
         if (geminiKey) {
             try {
               const ai = new GoogleGenAI({ apiKey: geminiKey });
-              const response = await ai.models.generateContent({
-                model: "gemini-2.5-flash",
-                contents: `You are the 'Analyst' for COOK IA. Ask 1-2 questions to refine the project. Return JSON: { "needsClarification": boolean, "questions": string[], "isTechnicalQuestion": boolean, "answer": string }\n\nHISTORY:\n${formatHistory(safeHistory.slice(-5))}\n\nCURRENT PROMPT: ${prompt}`,
-                config: { responseMimeType: "application/json" }
-              });
+              const response = await generateGeminiContentWithFallback(
+                ai,
+                `You are the 'Analyst' for COOK IA. Ask 1-2 questions to refine the project. Return JSON: { "needsClarification": boolean, "questions": string[], "isTechnicalQuestion": boolean, "answer": string }\n\nHISTORY:\n${formatHistory(safeHistory.slice(-5))}\n\nCURRENT PROMPT: ${prompt}`,
+                { responseMimeType: "application/json" },
+                "gemini-3.5-flash"
+              );
               if (response.text) {
                 return res.json(JSON.parse(response.text));
               }
@@ -306,11 +347,12 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
         const ai = new GoogleGenAI({ apiKey });
         
         try {
-          const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: `You are the 'Planner' for COOK IA. Break down the user's request into a detailed technical plan. Return JSON: { "plan": "string", "isComplex": boolean, "subAgents": string[] }\n\nUSER REQUEST: ${prompt}\n\nHISTORY:\n${formatHistory(safeHistory.slice(-3))}`,
-            config: { responseMimeType: "application/json" }
-          });
+          const response = await generateGeminiContentWithFallback(
+            ai,
+            `You are the 'Planner' for COOK IA. Break down the user's request into a detailed technical plan. Return JSON: { "plan": "string", "isComplex": boolean, "subAgents": string[] }\n\nUSER REQUEST: ${prompt}\n\nHISTORY:\n${formatHistory(safeHistory.slice(-3))}`,
+            { responseMimeType: "application/json" },
+            "gemini-3.5-flash"
+          );
           return res.json(JSON.parse(response.text));
         } catch (error: any) {
              console.error("[Planner] Error:", error);
@@ -426,12 +468,18 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
   // Standard Gemini Proxy
   app.post("/api/ai/gemini", async (req, res) => {
     const { prompt, history, images, systemInstruction: customSystem, model: requestedModel, responseMimeType } = req.body;
-    let apiKey = req.headers['x-gemini-key'] as string || process.env.GEMINI_API_KEY;
+    let apiKey = req.headers['x-gemini-key'] as string;
     if (apiKey) {
       apiKey = apiKey.trim();
       if ((apiKey.startsWith('"') && apiKey.endsWith('"')) || (apiKey.startsWith("'") && apiKey.endsWith("'"))) {
         apiKey = apiKey.slice(1, -1).trim();
       }
+      const upperKey = apiKey.toUpperCase();
+      if (upperKey.startsWith("FREE") || upperKey.includes("GRATUITE") || upperKey.includes("INCLUSE") || upperKey === "GEMINI_API_KEY") {
+        apiKey = process.env.GEMINI_API_KEY || "";
+      }
+    } else {
+      apiKey = process.env.GEMINI_API_KEY || "";
     }
 
     console.log(`[Gemini Proxy] Key present: ${!!apiKey}, Model: ${requestedModel}, MimeType: ${responseMimeType}`);
@@ -442,10 +490,7 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
     try {
       const ai = new GoogleGenAI({ apiKey });
-      let modelName = requestedModel || "gemini-2.5-flash";
-      if (modelName === "gemini-3.5-flash") {
-        modelName = "gemini-2.5-flash";
-      }
+      let modelName = requestedModel || "gemini-3.5-flash";
       
       const contents = [
         ...(history || []).map((h: any) => {
@@ -478,15 +523,16 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
         });
       }
 
-      const response = await ai.models.generateContent({
-        model: modelName,
+      const response = await generateGeminiContentWithFallback(
+        ai,
         contents,
-        config: {
+        {
           systemInstruction: customSystem || undefined,
           temperature: 0.7,
           responseMimeType: responseMimeType || undefined,
-        }
-      });
+        },
+        modelName
+      );
 
       if (!response.text) {
         throw new Error("Empty response from Gemini");
@@ -498,29 +544,30 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
       if (error.message.includes("API key not valid") || error.message.includes("API_KEY_INVALID")) {
         res.status(400).json({ error: "Clé API Gemini invalide ou non configurée sur le serveur (ex. Netlify)." });
       } else {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: error.message || "Invalid response from Gemini" });
       }
     }
   });
 
   // Generic Supabase Proxy (Database operations)
   app.post("/api/supabase/db", async (req, res) => {
-    const { table, action, data, id, query } = req.body;
+    const { table, action, data, id, query, userEmail } = req.body;
     
     try {
+      const clientToUse = (userEmail === 'benit800@gmail.com' || userEmail?.includes('benit800')) ? adminSupabase : supabase;
       let result;
       switch (action) {
         case 'select':
-          result = await supabase.from(table).select(query || '*').order('created_at', { ascending: false });
+          result = await clientToUse.from(table).select(query || '*').order('created_at', { ascending: false });
           break;
         case 'insert':
-          result = await supabase.from(table).insert(data);
+          result = await clientToUse.from(table).insert(data);
           break;
         case 'update':
-          result = await supabase.from(table).update(data).eq('id', id);
+          result = await clientToUse.from(table).update(data).eq('id', id);
           break;
         case 'delete':
-          result = await supabase.from(table).delete().eq('id', id);
+          result = await clientToUse.from(table).delete().eq('id', id);
           break;
         default:
           throw new Error("Invalid action for Supabase proxy");
@@ -530,6 +577,80 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
       res.json(result.data);
     } catch (err: any) {
       console.error(`[Supabase DB Proxy] Error on ${table}/${action}:`, err.message);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Admin users-activity dashboard endpoint
+  app.post("/api/admin/users-activity", async (req, res) => {
+    const { adminEmail } = req.body;
+    
+    // Check if requester is Benit Madimba
+    if (!adminEmail || (adminEmail !== 'benit800@gmail.com' && !adminEmail.includes('benit800'))) {
+      return res.status(403).json({ error: "Access Denied: Only Benit Madimba can access system logs and users." });
+    }
+
+    try {
+      // Fetch all profiles
+      const { data: profiles, error: profilesErr } = await adminSupabase
+        .from('profiles')
+        .select('*');
+
+      // Fetch all conversations
+      const { data: conversations, error: convsErr } = await adminSupabase
+        .from('conversations')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (convsErr) {
+        throw new Error(`Failed to fetch conversations: ${convsErr.message}`);
+      }
+
+      // Merge and construct consolidated user objects
+      const usersMap: Record<string, any> = {};
+
+      // Initialize with profiles
+      if (profiles) {
+        profiles.forEach((p: any) => {
+          usersMap[p.id] = {
+            id: p.id,
+            username: p.username || 'Utilisateur Anonyme',
+            updatedAt: p.updated_at || null,
+            conversations: []
+          };
+        });
+      }
+
+      // Group conversations by user_id
+      if (conversations) {
+        conversations.forEach((c: any) => {
+          const userId = c.user_id;
+          if (userId) {
+            if (!usersMap[userId]) {
+              usersMap[userId] = {
+                id: userId,
+                username: `Utilisateur #${userId.substring(0, 5)}`,
+                updatedAt: c.created_at || null,
+                conversations: []
+              };
+            }
+            usersMap[userId].conversations.push({
+              id: c.id,
+              title: c.title || 'Sans titre',
+              createdAt: c.created_at,
+              messageCount: Array.isArray(c.messages) ? c.messages.length : 0,
+              latestPrompt: Array.isArray(c.messages) && c.messages.length > 1
+                ? (c.messages.find((m: any) => m.role === 'user')?.content || 'Pas de message')
+                : 'Nouveau chat'
+            });
+          }
+        });
+      }
+
+      const usersList = Object.values(usersMap);
+      res.json({ success: true, users: usersList });
+    } catch (err: any) {
+      console.error("[Admin Users Activity] Error:", err.message);
       res.status(500).json({ error: err.message });
     }
   });
@@ -665,8 +786,14 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
           groqKey = groqKey.slice(1, -1).trim();
         }
       }
+      let openRouterKey = req.headers['x-openrouter-key'] as string || process.env.OPENROUTER_API_KEY;
+      if (openRouterKey) {
+        openRouterKey = openRouterKey.trim();
+        if ((openRouterKey.startsWith('"') && openRouterKey.endsWith('"')) || (openRouterKey.startsWith("'") && openRouterKey.endsWith("'"))) {
+          openRouterKey = openRouterKey.slice(1, -1).trim();
+        }
+      }
       const modalKey = process.env.MODAL_API_KEY;
-      const openRouterKey = process.env.OPENROUTER_API_KEY;
 
       const systemInstruction = `You are COOK IA, a world-class senior web engineer and elite product designer. 
 Your mission is to transform even the simplest user prompt into a "magnificent", high-end, and fully functional website that feels like a premium digital product.
@@ -833,16 +960,55 @@ Return the response EXCLUSIVELY in JSON format with three fields (do not include
           const result = await tryRequest(
             "https://openrouter.ai/api/v1/chat/completions",
             openRouterKey,
-            "google/gemini-2.0-flash-001",
+            "google/gemini-2.5-flash:free",
             "OpenRouter"
           );
           return res.json(result);
         } catch (err: any) {
-          console.warn(`[Fallback] OpenRouter failed: ${err.message}`);
+          console.warn(`[Fallback] OpenRouter with free model failed: ${err.message}`);
+          try {
+            // Fallback second attempt with standard flash
+            const result = await tryRequest(
+              "https://openrouter.ai/api/v1/chat/completions",
+              openRouterKey,
+              "google/gemini-2.5-flash",
+              "OpenRouter"
+            );
+            return res.json(result);
+          } catch (err2: any) {
+            console.warn(`[Fallback] OpenRouter secondary attempt failed: ${err2.message}`);
+          }
         }
       }
 
-      // 3. Last Resort: Emergency JSON Recovery
+      // 3. Try Gemini Free/Standard API fallback (Priority 3)
+      const geminiApiKey = process.env.GEMINI_API_KEY;
+      if (geminiApiKey) {
+        try {
+          console.log("[Fallback] Attempting Gemini fallback using standard Free client...");
+          const ai = new GoogleGenAI({ apiKey: geminiApiKey });
+          const response = await generateGeminiContentWithFallback(
+            ai,
+            prompt,
+            {
+              systemInstruction: systemInstruction,
+              responseMimeType: "application/json",
+              temperature: 0.7,
+            },
+            "gemini-3.5-flash"
+          );
+          if (response && response.text) {
+            const jsonMatch = response.text.match(/\{[\s\S]*\}/);
+            const jsonStr = jsonMatch ? jsonMatch[0] : response.text;
+            const parsed = JSON.parse(jsonStr);
+            return res.json({ ...parsed, _provider: 'gemini-fallback' });
+          }
+        } catch (err: any) {
+          console.warn(`[Fallback] Gemini fallback client failed: ${err.message}`);
+        }
+      }
+
+      // 4. Last Resort: Emergency JSON Recovery
       console.error("[Fallback] All AI providers failed. Sending emergency recovery payload.");
       return res.json({
         explanation: "Mode Secours Extrême activé. Les serveurs de calcul sont temporairement surchargés. Voici une structure de base en attendant.",

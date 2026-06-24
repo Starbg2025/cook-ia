@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Zap, RotateCcw, ExternalLink, Pencil, FileCode, Folder, Download, ChevronRight, ChevronDown, MousePointer2, FileSearch, History, X, Sparkles } from 'lucide-react';
+import { Zap, RotateCcw, ExternalLink, Pencil, FileCode, Folder, Download, ChevronRight, ChevronDown, MousePointer2, FileSearch, History, X, Sparkles, Monitor, Tablet, Smartphone } from 'lucide-react';
 import { ViewMode, ProjectFile, StyleConfig, SectionEditState } from '../types';
 import { ForgeStudio } from './ForgeStudio';
 
@@ -46,6 +46,7 @@ export const Preview: React.FC<PreviewProps> = ({
   const [selectedFilePath, setSelectedFilePath] = React.useState<string | null>(null);
   const [showActionHistory, setShowActionHistory] = React.useState(false);
   const [showForgeStudio, setShowForgeStudio] = React.useState(false);
+  const [deviceMode, setDeviceMode] = React.useState<'desktop' | 'tablet' | 'mobile'>('desktop');
 
   React.useEffect(() => {
     if (files.length > 0 && !selectedFilePath) {
@@ -275,6 +276,43 @@ export const Preview: React.FC<PreviewProps> = ({
         </div>
 
         <div className={`flex items-center gap-4 ${isDark ? 'text-white/30' : 'text-slate-400'} w-auto justify-end`}>
+          {/* Device Switcher */}
+          <div className={`hidden sm:flex items-center p-0.5 rounded-lg border mr-2 ${isDark ? 'bg-[#111111] border-white/5' : 'bg-slate-100 border-slate-200'}`}>
+            <button
+              onClick={() => setDeviceMode('desktop')}
+              className={`p-1.5 rounded-md transition-all cursor-pointer ${
+                deviceMode === 'desktop'
+                  ? (isDark ? 'bg-white/10 text-white shadow-sm' : 'bg-white text-slate-950 shadow-sm')
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+              title="Desktop View"
+            >
+              <Monitor size={13} />
+            </button>
+            <button
+              onClick={() => setDeviceMode('tablet')}
+              className={`p-1.5 rounded-md transition-all cursor-pointer ${
+                deviceMode === 'tablet'
+                  ? (isDark ? 'bg-white/10 text-white shadow-sm' : 'bg-white text-slate-950 shadow-sm')
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+              title="Tablet View"
+            >
+              <Tablet size={13} />
+            </button>
+            <button
+              onClick={() => setDeviceMode('mobile')}
+              className={`p-1.5 rounded-md transition-all cursor-pointer ${
+                deviceMode === 'mobile'
+                  ? (isDark ? 'bg-white/10 text-white shadow-sm' : 'bg-white text-slate-950 shadow-sm')
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+              title="Mobile View"
+            >
+              <Smartphone size={13} />
+            </button>
+          </div>
+
           <button 
             onClick={() => setShowActionHistory(!showActionHistory)}
             className={`transition-all p-1 hover:scale-110 active:scale-95 ${showActionHistory ? 'text-blue-500' : isDark ? 'hover:text-white' : 'hover:text-slate-900'}`}
@@ -350,7 +388,7 @@ export const Preview: React.FC<PreviewProps> = ({
         </div>
       </div>
 
-      <div className={`flex-1 flex overflow-hidden relative ${isDark ? 'bg-white' : 'bg-slate-50'}`}>
+      <div className={`flex-1 flex overflow-hidden relative ${isDark ? 'bg-[#0A0A0A]' : 'bg-slate-50'}`}>
         <div className="flex-1 h-full min-w-0 flex flex-col relative overflow-hidden">
           <AnimatePresence mode="wait">
           {viewMode === 'preview' ? (
@@ -359,14 +397,31 @@ export const Preview: React.FC<PreviewProps> = ({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="w-full h-full"
+              className="w-full h-full flex items-center justify-center p-4 overflow-auto scrollbar-thin"
             >
               {generatedCode ? (
-                <iframe 
-                  ref={iframeRef}
-                  title="Preview"
-                  className="w-full h-full border-none"
-                />
+                <div 
+                  className={`transition-all duration-300 ease-out flex items-center justify-center relative ${
+                    deviceMode === 'desktop' 
+                      ? 'w-full h-full p-0 border-0 rounded-none shadow-none' 
+                      : deviceMode === 'tablet'
+                        ? 'w-[768px] max-w-full h-[95%] border-[10px] border-zinc-850 dark:border-zinc-800 rounded-[28px] shadow-2xl bg-zinc-950 overflow-hidden'
+                        : 'w-[375px] max-w-full h-[88%] border-[14px] border-zinc-850 dark:border-zinc-800 rounded-[42px] shadow-2xl bg-zinc-950 overflow-hidden'
+                  }`}
+                >
+                  {/* Speaker and Camera notch for mobile frame */}
+                  {deviceMode === 'mobile' && (
+                    <div className="absolute top-2.5 left-1/2 -translate-x-1/2 w-32 h-6 bg-zinc-900 rounded-full z-50 flex items-center justify-center gap-1.5 px-3 border border-white/5">
+                      <div className="w-10 h-1 bg-zinc-800 rounded-full" />
+                      <div className="w-2.5 h-2.5 bg-[#1a1a1a] rounded-full border border-zinc-800" />
+                    </div>
+                  )}
+                  <iframe 
+                    ref={iframeRef}
+                    title="Preview"
+                    className={`w-full h-full border-none bg-white ${deviceMode === 'mobile' ? 'pt-8' : ''}`}
+                  />
+                </div>
               ) : (
                 <div className={`w-full h-full flex flex-col items-center justify-center ${isDark ? 'bg-[#0A0A0A]' : 'bg-slate-50'} relative overflow-hidden`}>
                   <motion.div

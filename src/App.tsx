@@ -60,11 +60,14 @@ import { UrlInputModal } from './components/UrlInputModal';
 import { AuthModal } from './components/AuthModal';
 import { SettingsModal } from './components/SettingsModal';
 import { LandingPage } from './components/LandingPage';
+import { SkillsLibrary } from './components/SkillsLibrary';
+import { cinematicSpaceTemplate } from './data/cinematicSpaceTemplate';
 
 import { supabase, logErrorToSupabase } from './services/supabaseService';
 import { deployToNetlify } from './services/netlifyService';
 import JSZip from 'jszip';
 import { Palette, Braces } from 'lucide-react';
+import { translations, Language } from './translations';
 
 const LOGO_URL = "https://i.ibb.co/mC3M8SSN/logo.png";
 
@@ -83,7 +86,7 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingStatus, setLoadingStatus] = useState("Building your site...");
   const [currentActions, setCurrentActions] = useState<ActionHistory[]>([]);
-  const [viewMode, setViewMode] = useState<ViewMode | 'your-apps' | 'faq'>('chat');
+  const [viewMode, setViewMode] = useState<ViewMode | 'your-apps' | 'faq' | 'skills'>('chat');
   const [generatedCode, setGeneratedCode] = useState<string>('');
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
   const [isGithubModalOpen, setIsGithubModalOpen] = useState(false);
@@ -107,6 +110,22 @@ export default function App() {
   const [imageSearchContext, setImageSearchContext] = useState<'chat' | 'section'>('chat');
   const [isDeploying, setIsDeploying] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
+  const [lang, setLang] = useState<Language>(() => {
+    try {
+      const saved = localStorage.getItem('cook_ia_lang');
+      return (saved === 'fr' || saved === 'en') ? saved as Language : 'fr';
+    } catch {
+      return 'fr';
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('cook_ia_lang', lang);
+    } catch (e) {
+      console.warn(e);
+    }
+  }, [lang]);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [isProjectSettings, setIsProjectSettings] = useState(true);
   const [prompts, setPrompts] = useState<string[]>([]);
@@ -135,11 +154,10 @@ export default function App() {
   const [selectedModel, setSelectedModel] = useState<string>(() => {
     try {
       const saved = localStorage.getItem('selectedModel');
-      if (saved === 'gemini-3.5-flash') return 'gemini-2.5-flash';
-      return saved || 'gemini-2.5-flash';
+      return saved || 'gemini-3.5-flash';
     } catch (e) {
       console.warn("Storage access denied:", e);
-      return 'gemini-2.5-flash';
+      return 'gemini-3.5-flash';
     }
   });
   const [isRealtimeEnabled, setIsRealtimeEnabled] = useState(() => {
@@ -346,7 +364,9 @@ export default function App() {
       .eq('id', authUser.id)
       .single();
     
-    setUser({ ...authUser, profile });
+    const updatedUser = { ...authUser, profile };
+    setUser(updatedUser);
+    loadConversations();
   };
 
   useEffect(() => {
@@ -788,8 +808,9 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
     const controller = new AbortController();
     setAbortController(controller);
     setIsLoading(true);
-    setLoadingStatus("Analyse de votre demande...");
+    setLoadingStatus(lang === 'fr' ? "Initialisation du moteur Cook IA..." : "Initializing Cook IA engine...");
     setCurrentActions([]);
+    let codingInterval: any = null;
 
     const addAction = (type: 'read' | 'thought' | 'shell', content: string) => {
       const id = Math.random().toString(36).substr(2, 9);
@@ -872,7 +893,37 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
         enrichedUserMessage += "\n\nReference Images (URLs):\n" + urls.join('\n');
       }
 
-      const a5 = addAction('thought', "Génération des fichiers sources (HTML/JS/React)...");
+      const steps = lang === 'fr' ? [
+        "Planification : Analyse des composants requis et de la structure sémantique...",
+        "Réflexion : Définition de la palette de couleurs contemporaine et de l'ergonomie...",
+        "Working : Génération des pages HTML5 modulaires et intégration Tailwind CSS...",
+        "Styling : Conception des animations fluides Framer Motion & transitions...",
+        "Hacking : Audit de la sécurité des formulaires et injections de scripts de sécurité...",
+        "Optimisation : Compression des styles et configuration des métas SEO...",
+        "Vérification : Tests de responsivité sur mobile, tablette et écran large...",
+        "Finalisation : Liaison du badge Cook IA et compilation finale du package..."
+      ] : [
+        "Planning: Deconstructing guidelines and preparing content components...",
+        "Thinking: Specifying luxurious design guidelines and layout structures...",
+        "Working: Developing semantic responsive HTML pages and compounding Tailwind utilities...",
+        "Styling: Scripting polished micro-interactions and motion curves...",
+        "Hacking: Hardening forms, auditing packages, and sanitizing runtime components...",
+        "Optimizing: Bundling styles, minifying tags, and writing optimized metadata...",
+        "Reviewing: Performing cross-viewport responsiveness audits...",
+        "Finalizing: Affixing the Cook IA badge and completing build compilation..."
+      ];
+
+      let currentStepIndex = 0;
+      setLoadingStatus(steps[0]);
+      
+      codingInterval = setInterval(() => {
+        if (currentStepIndex < steps.length - 1) {
+          currentStepIndex++;
+          setLoadingStatus(steps[currentStepIndex]);
+        }
+      }, 2500);
+
+      const a5 = addAction('thought', lang === 'fr' ? "Génération des fichiers sources (HTML/JS/React)..." : "Generating source files (HTML/JS/React)...");
       let result = await generateWebsite(
         enrichedUserMessage, 
         history.slice(0, -1), 
@@ -880,6 +931,7 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
         videoParts.length > 0 ? videoParts : undefined,
         selectedModel
       );
+      if (codingInterval) clearInterval(codingInterval);
       completeAction(a5);
 
       const updatedMessages: Message[] = [...newMessages, { 
@@ -946,6 +998,7 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
         content: errorMessage
       }]);
     } finally {
+      if (codingInterval) clearInterval(codingInterval);
       setIsLoading(false);
       setAbortController(null);
     }
@@ -1208,15 +1261,15 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
             title="Published Site"
             className="w-full h-full border-none"
           />
-          <button 
-            onClick={() => {
-              window.location.href = "https://cook-ia.indevs.in";
-            }}
-            className="fixed bottom-6 right-6 bg-black/80 backdrop-blur-md border border-white/10 text-white px-4 py-2 rounded-full text-xs font-bold hover:bg-black transition-all z-50 shadow-2xl flex items-center gap-2"
+          <a 
+            href="https://cook-ia.indevs.in/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="fixed bottom-6 right-6 bg-black/80 backdrop-blur-md border border-white/10 text-white px-4 py-2 rounded-full text-xs font-bold hover:bg-black hover:scale-105 active:scale-95 transition-all z-50 shadow-2xl flex items-center gap-2"
           >
             <img src={LOGO_URL} alt="Logo" className="w-4 h-4 object-contain" />
             Créé avec COOK IA
-          </button>
+          </a>
           <CookieBanner />
         </div>
       );
@@ -1262,24 +1315,53 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
            key="landing"
            initial={{ opacity: 0 }}
            animate={{ opacity: 1 }}
-           exit={{ opacity: 0, scale: 1.1, filter: "blur(20px)" }}
-           transition={{ duration: 1, ease: "easeInOut" }}
+           exit={{ opacity: 0 }}
+           transition={{ duration: 0.4, ease: "easeInOut" }}
            className="fixed inset-0 z-[1000] overflow-y-auto"
         >
-          <LandingPage onEnter={(initialPrompt?: string) => {
-            if (initialPrompt && initialPrompt.trim()) {
-              setPrompt(initialPrompt);
-              setPendingSend(true);
-            }
-            setHasStarted(true);
-          }} />
+          <LandingPage 
+            lang={lang}
+            setLang={setLang}
+            onEnter={(initialPrompt?: string) => {
+              if (initialPrompt && initialPrompt.trim()) {
+                setPrompt(initialPrompt);
+                setPendingSend(true);
+              }
+              setHasStarted(true);
+            }} 
+            onLoadTemplate={(code: string, promptText: string) => {
+              setGeneratedCode(code);
+              setPrompt("");
+              const newMsg = {
+                id: Math.random().toString(36).substr(2, 9),
+                role: 'user' as const,
+                content: promptText,
+                timestamp: new Date()
+              };
+              const systemMsg = {
+                id: Math.random().toString(36).substr(2, 9),
+                role: 'model' as const,
+                content: "Voici le site web cinématique généré sur la base de vos spécifications. Vous pouvez utiliser le volet de discussion pour y apporter des modifications de style ou de contenu.",
+                timestamp: new Date(),
+                files: [
+                  {
+                    path: 'index.html',
+                    content: code
+                  }
+                ]
+              };
+              setMessages([newMsg, systemMsg]);
+              setHasStarted(true);
+              setViewMode('preview');
+            }}
+          />
         </motion.div>
       ) : (
         <motion.div 
           key="app"
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3 }}
           className={`flex flex-col h-screen ${isDark ? 'bg-abyssal-deep text-white' : 'bg-[#F8F9FA] text-slate-900'} overflow-hidden font-sans transition-colors duration-500`}
         >
           {showAnnouncement && (
@@ -1509,61 +1591,84 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
                 </div>
               </div>
             </div>
-          ) : viewMode === 'chat' ? (
-            <ChatInterface 
+          ) : viewMode === 'skills' ? (
+            <SkillsLibrary 
               isDark={isDark}
-              messages={messages}
-              isLoading={isLoading}
-              loadingStatus={loadingStatus}
-              actions={currentActions}
-              prompt={prompt}
-              setPrompt={setPrompt}
-              handleSend={handleSend}
-              onAbort={handleAbort}
-              chatEndRef={chatEndRef}
-              logoUrl={LOGO_URL}
-              selectedImages={selectedImages}
-              setSelectedImages={setSelectedImages}
-              selectedVideos={selectedVideos}
-              setSelectedVideos={setSelectedVideos}
-              onOpenImageSearch={() => {
-                setImageSearchContext('chat');
-                setIsImageSearchOpen(true);
-              }}
-              onOpenSettings={(tab) => {
-                setSettingsTab(tab || 'publish');
-                setIsProjectSettings(true);
-                setIsSettingsModalOpen(true);
-              }}
-              onCloneSite={handleCloneSite}
-              onEcommerceProduct={handleEcommerceProduct}
-              isFocusMode={isFocusMode}
-              setIsFocusMode={setIsFocusMode}
-              onFeedback={handleFeedback}
-            />
-          ) : (
-            <Preview 
-              viewMode={viewMode}
-              generatedCode={generatedCode}
-              files={[...messages].reverse().find(m => m.role === 'model' && m.files)?.files || []}
-              iframeRef={iframeRef}
-              onRefresh={handleRefresh}
-              onExpand={handleExpand}
-              onEdit={() => setViewMode('code')}
-              onCodeChange={(newCode) => {
-                skipIframeUpdate.current = true;
-                setGeneratedCode(newCode);
-              }}
-              onDownloadZip={handleDownloadZip}
-              styleConfig={styleConfig}
-              sectionEdit={sectionEdit}
-              onSectionSelect={setSectionEdit}
-              isDark={isDark}
-              onApplyPrompt={(p) => {
+              onInjectPrompt={(p) => {
                 setPrompt(p);
                 setViewMode('chat');
               }}
             />
+          ) : (
+            <div className="flex-1 flex overflow-hidden w-full h-full">
+              <div className={`flex-1 flex overflow-hidden w-full h-full ${viewMode === 'chat' && generatedCode ? 'flex-col md:flex-row' : 'flex-col'}`}>
+                {/* Chat Panel */}
+                {(viewMode === 'chat' || !generatedCode) && (
+                  <div className={`flex-1 h-full min-w-0 ${viewMode === 'chat' && generatedCode ? 'md:max-w-[460px] lg:max-w-[500px] xl:max-w-[550px] md:border-r border-slate-200 dark:border-white/5' : ''}`}>
+                    <ChatInterface 
+                      lang={lang}
+                      isDark={isDark}
+                      messages={messages}
+                      isLoading={isLoading}
+                      loadingStatus={loadingStatus}
+                      actions={currentActions}
+                      prompt={prompt}
+                      setPrompt={setPrompt}
+                      handleSend={handleSend}
+                      onAbort={handleAbort}
+                      chatEndRef={chatEndRef}
+                      logoUrl={LOGO_URL}
+                      selectedImages={selectedImages}
+                      setSelectedImages={setSelectedImages}
+                      selectedVideos={selectedVideos}
+                      setSelectedVideos={setSelectedVideos}
+                      onOpenImageSearch={() => {
+                        setImageSearchContext('chat');
+                        setIsImageSearchOpen(true);
+                      }}
+                      onOpenSettings={(tab) => {
+                        setSettingsTab(tab || 'publish');
+                        setIsProjectSettings(true);
+                        setIsSettingsModalOpen(true);
+                      }}
+                      onCloneSite={handleCloneSite}
+                      onEcommerceProduct={handleEcommerceProduct}
+                      isFocusMode={isFocusMode}
+                      setIsFocusMode={setIsFocusMode}
+                      onFeedback={handleFeedback}
+                    />
+                  </div>
+                )}
+
+                {/* Preview/Code Panel (Live split rendering on PC, toggles on mobile) */}
+                {generatedCode && (viewMode !== 'chat' || viewMode === 'chat') && (
+                  <div className={`flex-1 h-full min-w-0 ${viewMode === 'chat' ? 'hidden md:flex' : 'flex'}`}>
+                    <Preview 
+                      viewMode={viewMode === 'chat' ? 'preview' : viewMode}
+                      generatedCode={generatedCode}
+                      files={[...messages].reverse().find(m => m.role === 'model' && m.files)?.files || []}
+                      iframeRef={iframeRef}
+                      onRefresh={handleRefresh}
+                      onExpand={handleExpand}
+                      onEdit={() => setViewMode('code')}
+                      onCodeChange={(newCode) => {
+                        skipIframeUpdate.current = true;
+                        setGeneratedCode(newCode);
+                      }}
+                      onDownloadZip={handleDownloadZip}
+                      styleConfig={styleConfig}
+                      sectionEdit={sectionEdit}
+                      onSectionSelect={setSectionEdit}
+                      isDark={isDark}
+                      onApplyPrompt={(p) => {
+                        setPrompt(p);
+                        setViewMode('chat');
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
           )}
 
           {/* Mobile View Switcher */}
@@ -2091,6 +2196,7 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
         secrets={secrets}
         onAddSecret={handleAddSecret}
         onRemoveSecret={handleRemoveSecret}
+        lang={lang}
         isLinkFullscreen={isLinkFullscreen}
         onToggleLinkFullscreen={setIsLinkFullscreen}
         onConnectGithub={handleGithubClick}

@@ -24,9 +24,13 @@ import {
   ShieldCheck,
   Users,
   CheckCircle,
-  Sparkles
+  Sparkles,
+  Activity,
+  Search,
+  Eye
 } from 'lucide-react';
 import { supabase } from '../services/supabaseService';
+import { translations, Language } from '../translations';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -55,9 +59,10 @@ interface SettingsModalProps {
   onToggleRealtime?: (val: boolean) => void;
   selectedModel?: string;
   onSelectModel?: (model: string) => void;
+  lang?: Language;
 }
 
-type TabType = 'publish' | 'versions' | 'secrets' | 'integrations' | 'github' | 'general' | 'account' | 'help' | 'founder' | 'collaboration' | 'models';
+type TabType = 'publish' | 'versions' | 'secrets' | 'integrations' | 'github' | 'general' | 'account' | 'help' | 'founder' | 'collaboration' | 'models' | 'admin';
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ 
   isOpen, 
@@ -84,8 +89,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onConnectGithub,
   isRealtimeEnabled = true,
   onToggleRealtime,
-  selectedModel = 'gemini-2.5-flash',
-  onSelectModel
+  selectedModel = 'gemini-3.5-flash',
+  onSelectModel,
+  lang = 'fr'
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>(initialTab);
   const [accessLevel, setAccessLevel] = useState('Restricted: Only people you specify can access');
@@ -99,6 +105,47 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [isSending, setIsSending] = useState(false);
   const [sendSuccess, setSendSuccess] = useState(false);
   const [localProjectName, setLocalProjectName] = useState(projectName);
+
+  // Admin section states
+  const [adminUsers, setAdminUsers] = useState<any[]>([]);
+  const [adminLoading, setAdminLoading] = useState(false);
+  const [adminError, setAdminError] = useState<string | null>(null);
+  const [adminSearchText, setAdminSearchText] = useState('');
+  const [expandedUserIds, setExpandedUserIds] = useState<string[]>([]);
+
+  const fetchAdminActivity = async () => {
+    if (user?.email !== 'benit800@gmail.com') return;
+    setAdminLoading(true);
+    setAdminError(null);
+    try {
+      const response = await fetch('/api/admin/users-activity', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminEmail: user.email })
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erreur de communication');
+      }
+      const data = await response.json();
+      if (data.success) {
+        setAdminUsers(data.users || []);
+      } else {
+        throw new Error(data.error || "Impossible de récupérer les rapports.");
+      }
+    } catch (err: any) {
+      console.error(err);
+      setAdminError(err.message || "Erreur lors de la récupération.");
+    } finally {
+      setAdminLoading(false);
+    }
+  };
+
+  const toggleUserExpanded = (userId: string) => {
+    setExpandedUserIds(prev => 
+      prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]
+    );
+  };
 
   const currentUrl = typeof window !== 'undefined' ? window.location.href : 'https://cook-ia.indevs.in';
 
@@ -166,6 +213,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     { id: 'general', label: 'Settings', icon: Settings },
     { id: 'models', label: 'AI Models', icon: Sparkles },
     { id: 'account', label: 'Account', icon: User },
+    ...(user?.email === 'benit800@gmail.com' ? [{ id: 'admin', label: 'Super Admin', icon: Activity }] : []),
     { id: 'founder', label: 'Fondateur', icon: ShieldCheck },
     { id: 'help', label: 'Help', icon: HelpCircle },
   ];
@@ -176,6 +224,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setLocalProjectName(projectName);
     }
   }, [isOpen, initialTab, projectName]);
+
+  React.useEffect(() => {
+    if ((activeTab === 'admin' || activeTab === 'account') && user?.email === 'benit800@gmail.com') {
+      fetchAdminActivity();
+    }
+  }, [activeTab, user]);
 
   const renderContent = () => {
     switch (activeTab) {
@@ -349,8 +403,67 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         return (
           <div className="space-y-6 p-2">
             <div className="flex flex-col gap-1">
-              <h3 className={`text-lg font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>Secrets & API Keys</h3>
-              <p className="text-xs text-slate-400">Ces clés sont stockées en toute sécurité et ne seront jamais montrées en public.</p>
+              <h3 className={`text-lg font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>{lang === 'fr' ? "Secrets & Clés API" : "Secrets & API Keys"}</h3>
+              <p className="text-xs text-slate-400">{lang === 'fr' ? "Ces clés sont stockées en toute sécurité et ne seront jamais montrées en public." : "These keys are stored securely and will never be shown in public."}</p>
+            </div>
+            
+            {/* Clé API Gemini Gratuite Card */}
+            <div className={`p-4 rounded-xl border ${
+              isDark 
+                ? 'bg-orange-500/5 border-orange-500/20 text-white' 
+                : 'bg-orange-50 border-orange-200 text-slate-900'
+            }`}>
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-orange-primary rounded-lg text-white shrink-0">
+                  <Sparkles size={16} />
+                </div>
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-bold uppercase tracking-wider text-orange-primary">
+                      {lang === 'fr' ? "Clé API Gemini Gratuite" : "Free Gemini API Key"}
+                    </h4>
+                    {secrets.some(s => s.key === 'GEMINI_API_KEY') ? (
+                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-emerald-500/20 text-emerald-500 border border-emerald-500/30">
+                        <CheckCircle size={10} />
+                        {lang === 'fr' ? "Active" : "Active"}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-amber-500/20 text-amber-500 border border-amber-500/30">
+                        {lang === 'fr' ? "Non configurée" : "Not configured"}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    {lang === 'fr' 
+                      ? "Vous pouvez activer instantanément notre clé API Gemini gratuite incluse pour forger vos projets. Aucune carte de crédit requise, prêt en un clic."
+                      : "You can instantly activate our included free Gemini API key to forge your projects. No credit card required, ready in one click."
+                    }
+                  </p>
+                  
+                  {!secrets.some(s => s.key === 'GEMINI_API_KEY') && (
+                    <button
+                      onClick={() => {
+                        onAddSecret?.('GEMINI_API_KEY', 'FREE_TRIAL_KEY');
+                      }}
+                      className="mt-1 px-4 py-2 bg-gradient-to-r from-orange-primary to-amber-500 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:shadow-lg transition-all"
+                    >
+                      {lang === 'fr' ? "Activer la Clé Gratuite" : "Activate Free Key"}
+                    </button>
+                  )}
+                  
+                  <div className="text-[10px] text-slate-500 flex items-center gap-1 pt-1">
+                    <span>{lang === 'fr' ? "Ou créez votre clé personnelle sur" : "Or get your own personal key on"}</span>
+                    <a 
+                      href="https://aistudio.google.com/" 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="text-orange-primary hover:underline font-bold"
+                    >
+                      Google AI Studio
+                    </a>
+                  </div>
+                </div>
+              </div>
             </div>
             
             <div className="space-y-4">
@@ -494,7 +607,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
             <div className={`p-6 rounded-3xl border ${isDark ? 'border-white/10 bg-white/5' : 'border-slate-100 bg-slate-50'}`}>
               <div className="flex items-center gap-6 mb-8">
-                <div className="w-20 h-20 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-2xl overflow-hidden shadow-2xl">
+                <div className={`w-20 h-20 rounded-full ${user?.email === 'benit800@gmail.com' ? 'bg-gradient-to-r from-amber-400 to-yellow-600 text-black ring-4 ring-yellow-400 shadow-2xl' : 'bg-blue-600 text-white'} flex items-center justify-center font-bold text-2xl overflow-hidden shadow-2xl`}>
                   {user?.user_metadata?.avatar_url ? (
                     <img src={user.user_metadata.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
                   ) : (
@@ -502,13 +615,30 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   )}
                 </div>
                 <div className="flex flex-col gap-1">
-                  <h4 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                    {user?.user_metadata?.username || user?.email?.split('@')[0]}
+                  <h4 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-slate-900'} flex items-center gap-2`}>
+                    {user?.email === 'benit800@gmail.com' ? 'Welcome Admin' : (user?.user_metadata?.username || user?.email?.split('@')[0])}
+                    {user?.email === 'benit800@gmail.com' && (
+                      <span className="w-2.5 h-2.5 rounded-full bg-yellow-400 animate-pulse shadow-[0_0_8px_#f59e0b]" />
+                    )}
                   </h4>
                   <p className="text-sm text-slate-400">{user?.email}</p>
                   <div className="flex items-center gap-2 mt-2">
-                    <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 text-[10px] font-bold uppercase tracking-widest">Plan Gratuit</span>
-                    <span className="px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 text-[10px] font-bold uppercase tracking-widest">Actif</span>
+                    {user?.email === 'benit800@gmail.com' ? (
+                      <>
+                        <span className="px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-400/20 to-yellow-500/20 text-yellow-500 border border-yellow-500/30 text-[10px] font-bold uppercase tracking-widest flex items-center gap-1 shadow-lg shadow-yellow-500/5">
+                          <Sparkles size={10} className="animate-pulse" />
+                          Membre Gold
+                        </span>
+                        <span className="px-2.5 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20 text-[10px] font-bold uppercase tracking-widest">
+                          Super Admin
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 text-[10px] font-bold uppercase tracking-widest">Plan Gratuit</span>
+                        <span className="px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 text-[10px] font-bold uppercase tracking-widest">Actif</span>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -523,6 +653,121 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <span className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>0 MB</span>
                 </div>
               </div>
+
+              {user?.email === 'benit800@gmail.com' && (
+                <div className="mt-6 border-t border-dashed border-white/10 pt-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className={`text-sm font-bold ${isDark ? 'text-white' : 'text-slate-900'} flex items-center gap-2`}>
+                      <Activity size={16} className="text-yellow-500 animate-pulse" />
+                      Activités Réseau (Super Admin)
+                    </h4>
+                    <button 
+                      onClick={fetchAdminActivity}
+                      disabled={adminLoading}
+                      className="text-xs text-yellow-500 hover:underline font-bold"
+                    >
+                      {adminLoading ? "Actualisation..." : "Actualiser ↻"}
+                    </button>
+                  </div>
+                  
+                  {adminLoading && adminUsers.length === 0 ? (
+                    <div className="flex items-center gap-2 text-slate-400 text-xs py-2">
+                      <Loader2 className="animate-spin" size={14} />
+                      Chargement en direct de l'activité utilisateur...
+                    </div>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className={`p-3 rounded-xl border ${isDark ? 'border-white/5 bg-black/40' : 'border-slate-200 bg-white shadow-sm'}`}>
+                          <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400 block mb-1">Membres</span>
+                          <span className={`text-lg font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>{adminUsers.length}</span>
+                        </div>
+                        <div className={`p-3 rounded-xl border ${isDark ? 'border-white/5 bg-black/40' : 'border-slate-200 bg-white shadow-sm'}`}>
+                          <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400 block mb-1">Projets / Conversations</span>
+                          <span className={`text-lg font-black ${isDark ? 'text-yellow-500' : 'text-yellow-600'}`}>
+                            {adminUsers.reduce((acc, u) => acc + (u.conversations?.length || 0), 0)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Search Bar inside Account tab */}
+                      <div className="relative mt-2">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                        <input
+                          type="text"
+                          value={adminSearchText}
+                          onChange={(e) => setAdminSearchText(e.target.value)}
+                          placeholder="Rechercher un utilisateur ou projet..."
+                          className={`w-full pl-9 pr-4 py-1.5 text-xs rounded-xl border focus:outline-none focus:ring-1 ${
+                            isDark 
+                              ? 'border-white/10 bg-black/45 text-white focus:border-yellow-500 focus:ring-yellow-500' 
+                              : 'border-slate-200 bg-white text-slate-900 focus:border-amber-500 focus:ring-amber-500'
+                          }`}
+                        />
+                      </div>
+
+                      {/* Interactive expandable user list of ALL users */}
+                      <div className="space-y-2 mt-2 max-h-[350px] overflow-y-auto pr-1">
+                        <span className="text-[9.5px] uppercase tracking-wider font-extrabold text-slate-500 block mb-1">Tous les Utilisateurs & Actions :</span>
+                        {adminUsers
+                          .filter(u => 
+                            u.username?.toLowerCase().includes(adminSearchText.toLowerCase()) ||
+                            u.id?.toLowerCase().includes(adminSearchText.toLowerCase()) ||
+                            u.conversations?.some((c: any) => c.title?.toLowerCase().includes(adminSearchText.toLowerCase()))
+                          )
+                          .map(u => {
+                            const isExpanded = expandedUserIds.includes(u.id);
+                            const userConvs = u.conversations || [];
+                            return (
+                              <div key={u.id} className={`rounded-xl border text-[11px] transition-all overflow-hidden ${isDark ? 'border-white/5 bg-black/30' : 'border-slate-200/60 bg-white shadow-sm'}`}>
+                                <button 
+                                  onClick={() => toggleUserExpanded(u.id)}
+                                  className="w-full flex items-center justify-between p-2.5 text-left hover:bg-white/5 transition-all"
+                                >
+                                  <div>
+                                    <span className={`font-black ${isDark ? 'text-white' : 'text-slate-800'}`}>{u.username || 'Utilisateur Anonyme'}</span>
+                                    <span className="text-[8px] font-mono text-slate-400 block">ID: {u.id}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[9px] font-mono text-slate-400 bg-blue-500/10 px-1.5 py-0.5 rounded font-bold">
+                                      {userConvs.length} {userConvs.length === 1 ? 'projet' : 'projets'}
+                                    </span>
+                                    <span className="text-[9px] text-slate-400">{isExpanded ? '▲' : '▼'}</span>
+                                  </div>
+                                </button>
+                                
+                                {isExpanded && (
+                                  <div className={`p-2.5 border-t ${isDark ? 'border-white/5 bg-black/20' : 'border-slate-100 bg-slate-50'} space-y-2`}>
+                                    {userConvs.length === 0 ? (
+                                      <p className="text-slate-500 italic text-[10px]">Aucun projet démarré</p>
+                                    ) : (
+                                      userConvs.map((conv: any) => (
+                                        <div key={conv.id} className={`p-2 rounded border text-[10px] ${isDark ? 'border-white/5 bg-zinc-900/50' : 'border-slate-200 bg-white'}`}>
+                                          <div className="flex justify-between font-bold text-slate-400 mb-1">
+                                            <span className={isDark ? 'text-yellow-400/90' : 'text-amber-700'}>{conv.title}</span>
+                                            <span className="text-[8px] font-mono">{conv.createdAt ? new Date(conv.createdAt).toLocaleDateString('fr-FR') : ''}</span>
+                                          </div>
+                                          <div className={`p-1.5 rounded text-[10px] font-mono bg-black/20 text-slate-300 max-h-20 overflow-y-auto whitespace-pre-wrap border ${isDark ? 'border-white/5' : 'border-slate-100'}`}>
+                                            <span className="text-[8px] uppercase text-zinc-500 font-extrabold block scale-90 -ml-1">Dernière invite :</span>
+                                            {conv.latestPrompt || 'Aucun message'}
+                                          </div>
+                                          <div className="flex justify-between text-[8px] text-slate-500 mt-1">
+                                            <span>Messages: {conv.messageCount}</span>
+                                            <span>Model: {conv.modelName || 'Default'}</span>
+                                          </div>
+                                        </div>
+                                      ))
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="space-y-4">
@@ -603,6 +848,175 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 ))}
               </div>
             </div>
+          </div>
+        );
+      case 'admin':
+        const filteredUsers = adminUsers.filter(u => 
+          u.username?.toLowerCase().includes(adminSearchText.toLowerCase()) ||
+          u.id?.toLowerCase().includes(adminSearchText.toLowerCase()) ||
+          u.conversations?.some((c: any) => c.title?.toLowerCase().includes(adminSearchText.toLowerCase()))
+        );
+
+        return (
+          <div className="space-y-6 p-2 h-[80vh] overflow-y-auto pr-3">
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className={`text-lg font-bold flex items-center gap-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                    <Activity size={18} className="text-yellow-500 animate-pulse" />
+                    Panneau d'Activité Admin - Benit Madimba
+                  </h3>
+                  <p className="text-xs text-slate-400">Suivez les utilisateurs enregistrés et observez ce qu'ils créent en temps réel.</p>
+                </div>
+                <button 
+                  onClick={fetchAdminActivity}
+                  disabled={adminLoading}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                    isDark 
+                      ? 'bg-[#EAB308]/20 text-yellow-400 border border-yellow-500/30 hover:bg-yellow-500/35' 
+                      : 'bg-amber-100 text-amber-800 border border-amber-200 hover:bg-amber-200'
+                  }`}
+                >
+                  {adminLoading ? "Mise à jour..." : "Actualiser"}
+                </button>
+              </div>
+            </div>
+
+            {/* Stats Summary */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className={`p-4 rounded-2xl border ${isDark ? 'border-white/5 bg-white/5' : 'border-slate-100 bg-slate-50'}`}>
+                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Total Utilisateurs</span>
+                <p className={`text-xl font-extrabold ${isDark ? 'text-white' : 'text-slate-900'}`}>{adminUsers.length}</p>
+              </div>
+              <div className={`p-4 rounded-2xl border ${isDark ? 'border-white/5 bg-white/5' : 'border-slate-100 bg-slate-50'}`}>
+                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Total Projets / Designs</span>
+                <p className={`text-xl font-extrabold ${isDark ? 'text-yellow-500' : 'text-yellow-600'}`}>
+                  {adminUsers.reduce((acc, u) => acc + (u.conversations?.length || 0), 0)}
+                </p>
+              </div>
+              <div className={`p-4 rounded-2xl border ${isDark ? 'border-white/5 bg-white/5' : 'border-slate-100 bg-slate-50'}`}>
+                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Statut Serveur</span>
+                <div>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-green-500/20 text-green-400 border border-green-500/30">Connecté</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Search filter input */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+              <input
+                type="text"
+                value={adminSearchText}
+                onChange={(e) => setAdminSearchText(e.target.value)}
+                placeholder="Rechercher par nom d'utilisateur, ID, ou titre de conversation..."
+                className={`w-full pl-10 pr-4 py-2 text-sm rounded-xl border focus:outline-none focus:ring-1 ${
+                  isDark 
+                    ? 'border-white/10 bg-black/40 text-white focus:border-yellow-500 focus:ring-yellow-500' 
+                    : 'border-slate-200 bg-white text-slate-900 focus:border-amber-500 focus:ring-amber-500'
+                }`}
+              />
+            </div>
+
+            {adminError && (
+              <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs text-center">
+                {adminError}
+              </div>
+            )}
+
+            {adminLoading && adminUsers.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 gap-3 text-slate-400">
+                <Loader2 className="animate-spin" size={24} />
+                <span className="text-xs">Chargement sécurisé de la base de données...</span>
+              </div>
+            ) : filteredUsers.length === 0 ? (
+              <div className="text-center py-12 text-slate-400 text-xs">
+                Aucun utilisateur ou projet correspondant trouvé.
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {filteredUsers.map((userObj) => {
+                  const isExpanded = expandedUserIds.includes(userObj.id);
+                  const totalConvs = userObj.conversations?.length || 0;
+                  return (
+                    <div 
+                      key={userObj.id} 
+                      className={`rounded-2xl border transition-all ${
+                        isDark 
+                          ? 'border-white/5 bg-zinc-900/60 hover:bg-zinc-900' 
+                          : 'border-slate-100 bg-white shadow-sm hover:shadow-md'
+                      }`}
+                    >
+                      {/* User Header Accordion Toggle */}
+                      <button 
+                        onClick={() => toggleUserExpanded(userObj.id)}
+                        className="w-full flex items-center justify-between p-4 text-left"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`w-9 h-9 rounded-full bg-slate-500/20 flex items-center justify-center font-bold text-sm ${isDark ? 'text-white' : 'text-slate-800'}`}>
+                            {userObj.username?.[0]?.toUpperCase() || 'U'}
+                          </div>
+                          <div>
+                            <h4 className={`text-sm font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                              {userObj.username}
+                            </h4>
+                            <p className="text-[10px] text-slate-400 font-mono">ID: {userObj.id}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 text-[10px] font-bold">
+                            {totalConvs} {totalConvs > 1 ? 'projets' : 'projet'}
+                          </span>
+                          <span className={`text-xs transition-transform ${isExpanded ? 'rotate-180' : ''}`}>▼</span>
+                        </div>
+                      </button>
+
+                      {/* Conversations details drawer */}
+                      {isExpanded && (
+                        <div className={`px-4 pb-4 pt-1 border-t ${isDark ? 'border-white/5' : 'border-slate-100'}`}>
+                          {totalConvs === 0 ? (
+                            <p className="text-xs text-slate-400 italic py-2">Aucune conversation active pour le moment.</p>
+                          ) : (
+                            <div className="space-y-3 mt-2">
+                              <p className="text-[10px] uppercase tracking-wider font-extrabold text-slate-400 mb-1">Historique des Prompts et Créations :</p>
+                              {userObj.conversations.map((conv: any) => (
+                                <div 
+                                  key={conv.id} 
+                                  className={`p-3 rounded-xl border ${
+                                    isDark ? 'border-white/5 bg-black/30' : 'border-slate-200/60 bg-slate-50'
+                                  }`}
+                                >
+                                  <div className="flex items-center justify-between mb-1.5">
+                                    <h5 className={`text-xs font-black ${isDark ? 'text-white' : 'text-slate-800'} flex items-center gap-1.5`}>
+                                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                      {conv.title}
+                                    </h5>
+                                    <span className="text-[9px] font-mono text-slate-400">
+                                      {conv.createdAt ? new Date(conv.createdAt).toLocaleString('fr-FR') : 'Date inconnue'}
+                                    </span>
+                                  </div>
+                                  
+                                  <div className={`p-2 rounded bg-black/10 border ${isDark ? 'border-white/5' : 'border-slate-200'} text-xs font-mono max-h-32 overflow-y-auto whitespace-pre-wrap`}>
+                                    <span className="text-[9px] uppercase text-zinc-500 font-black block mb-1">Dernière action de l'utilisateur :</span>
+                                    <p className={isDark ? 'text-zinc-300' : 'text-zinc-800'}>{conv.latestPrompt}</p>
+                                  </div>
+
+                                  <div className="flex items-center justify-between mt-2 text-[10px] text-slate-500 font-semibold">
+                                    <span>Messages échangés: <b>{conv.messageCount}</b></span>
+                                    <span className="font-mono scale-90">ID: {conv.id}</span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         );
       case 'help':
@@ -819,13 +1233,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   provider: 'Google', 
                   desc: 'Modèle expérimental de l\'infrastructure.', 
                   badge: 'Expérimental' 
-                },
-                { 
-                  id: 'zai-org/GLM-5.1-FP8', 
-                  name: 'GLM 5.1', 
-                  provider: 'Zhipu AI (via Modal)', 
-                  desc: 'Modèle ultra-performant pour le raisonnement logique et les structures complexes.', 
-                  badge: 'Nouveau' 
                 },
               ].map((m) => (
                 <button

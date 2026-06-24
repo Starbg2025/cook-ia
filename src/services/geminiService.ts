@@ -76,17 +76,34 @@ const getCustomHeaders = () => {
       const secrets = JSON.parse(saved);
       if (Array.isArray(secrets) && secrets.length > 0) {
         const isGeminiKey = (k: string, v: string) => {
-          const uKey = k.toUpperCase().replace(/[^A-Z]/g, '');
-          if (uKey.includes('GEMINI') || uKey.includes('GOOGLE')) return true;
-          if (v && v.startsWith('AIzaSy')) return true;
-          if ((uKey === 'APIKEY' || uKey === 'KEY') && secrets.length === 1) return true;
+          const normKey = k.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+          if (normKey.includes('GEMINI') || normKey.includes('GOOGLE')) return true;
+          if (v && v.trim().startsWith('AIzaSy')) return true;
+          if (normKey.includes('CL_') || normKey.includes('CLE') || normKey.includes('KEY') || normKey.includes('API_KEY')) {
+            // Avoid matching known other providers
+            if (normKey.includes('GROQ') || normKey.includes('OPENROUTER') || normKey.includes('OPEN_ROUTER')) return false;
+            return true;
+          }
           return false;
         };
         const isGroqKey = (k: string) => {
-          return k.toUpperCase().includes('GROQ');
+          const normKey = k.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+          return normKey.includes('GROQ');
+        };
+        const isOpenRouterKey = (k: string) => {
+          const normKey = k.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+          return normKey.includes('OPENROUTER') || normKey.includes('OPEN_ROUTER');
         };
         
-        const geminiKey = secrets.find((s: any) => isGeminiKey(s.key, s.value)) || secrets[0];
+        let geminiKey = secrets.find((s: any) => isGeminiKey(s.key, s.value));
+        if (!geminiKey) {
+          // Safe fallback for single-key or non-categorized keys that do NOT belong to Groq or OpenRouter
+          geminiKey = secrets.find((s: any) => {
+            const norm = s.key.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+            return !norm.includes('GROQ') && !norm.includes('OPENROUTER') && !norm.includes('OPEN_ROUTER');
+          });
+        }
+        
         if (geminiKey && geminiKey.value) {
           headers['x-gemini-key'] = geminiKey.value.trim();
         }
@@ -95,10 +112,132 @@ const getCustomHeaders = () => {
         if (groqKey && groqKey.value) {
           headers['x-groq-key'] = groqKey.value.trim();
         }
+
+        const openRouterKey = secrets.find((s: any) => isOpenRouterKey(s.key));
+        if (openRouterKey && openRouterKey.value) {
+          headers['x-openrouter-key'] = openRouterKey.value.trim();
+        }
       }
     }
   } catch (e) {}
   return headers;
+};
+
+const repairTruncatedJSON = (str: string): string => {
+  str = str.trim();
+  if (!str.startsWith('{')) {
+    const firstBrace = str.indexOf('{');
+    if (firstBrace !== -1) {
+      str = str.substring(firstBrace);
+    } else {
+      throw new Error("No open brace found to start JSON");
+    }
+  }
+
+  let inString = false;
+  let isEscaped = false;
+  const stack: ('{' | '[')[] = [];
+  let cleanStr = "";
+
+  for (let i = 0; i < str.length; i++) {
+    const char = str[i];
+    if (isEscaped) {
+      cleanStr += char;
+      isEscaped = false;
+      continue;
+    }
+
+    if (char === '\\') {
+      cleanStr += char;
+      isEscaped = true;
+      continue;
+    }
+
+    if (char === '"') {
+      inString = !inString;
+      cleanStr += char;
+      continue;
+    }
+
+    if (inString) {
+      cleanStr += char;
+      continue;
+    }
+
+    if (char === '{') {
+      stack.push('{');
+    } else if (char === '[') {
+      stack.push('[');
+    } else if (char === '}') {
+      const last = stack.pop();
+    } else if (char === ']') {
+      const last = stack.pop();
+    }
+    cleanStr += char;
+  }
+
+  // Close unclosed string
+  if (inString) {
+    cleanStr += '"';
+  }
+
+  // Remove trailing comma if presents
+  let polished = cleanStr.trim();
+  if (polished.endsWith(',')) {
+    polished = polished.substring(0, polished.length - 1);
+  }
+
+  // Close unclosed structural objects/arrays
+  while (stack.length > 0) {
+    const last = stack.pop();
+    if (last === '{') {
+      polished += '}';
+    } else if (last === '[') {
+      polished += ']';
+    }
+  }
+
+  return polished;
+};
+
+const extractPayloadRegexFallback = (text: string) => {
+  const htmlRegex = /<!DOCTYPE html>[\s\S]*<\/html>/i;
+  let htmlMatch = text.match(htmlRegex);
+  
+  if (!htmlMatch) {
+    const htmlRegex2 = /<html[\s\S]*<\/html>/i;
+    htmlMatch = text.match(htmlRegex2);
+  }
+  
+  if (!htmlMatch) {
+    const looseRegex = /(<!DOCTYPE html>|<html)[\s\S]*/i;
+    htmlMatch = text.match(looseRegex);
+  }
+  
+  const preview_code = htmlMatch ? htmlMatch[0] : "";
+  
+  let explanation = "Création de site haut de gamme avec COOK IA. Le code a été extrait avec succès de la réponse de l'IA.";
+  const explanationRegex = /"explanation"\s*:\s*"([^"]+)"/;
+  const explanationMatch = text.match(explanationRegex);
+  if (explanationMatch && explanationMatch[1]) {
+    explanation = explanationMatch[1];
+  } else {
+    const paragraphs = text.split('\n\n').filter(p => !p.includes('{') && !p.includes('}') && p.length > 50 && p.length < 500);
+    if (paragraphs.length > 0) {
+      explanation = paragraphs[0];
+    }
+  }
+
+  return {
+    explanation,
+    preview_code,
+    files: [
+      {
+        path: "index.html",
+        content: preview_code
+      }
+    ]
+  };
 };
 
 const cleanAndParseJSON = (text: string) => {
@@ -119,14 +258,29 @@ const cleanAndParseJSON = (text: string) => {
   const start = cleaned.indexOf('{');
   const end = cleaned.lastIndexOf('}');
   
+  let target = cleaned;
   if (start !== -1 && end !== -1 && end > start) {
-    cleaned = cleaned.substring(start, end + 1);
+    target = cleaned.substring(start, end + 1);
   }
   
   try {
-    return JSON.parse(cleaned);
+    return JSON.parse(target);
   } catch (error: any) {
-    console.error("JSON parsing failed for cleaned text:", cleaned);
+    console.warn("Standard JSON parsing failed. Trying repair truncated JSON...", error.message);
+    try {
+      const repaired = repairTruncatedJSON(cleaned);
+      return JSON.parse(repaired);
+    } catch (repairError: any) {
+      console.warn("JSON repair failed, falling back to regex extraction...", repairError.message);
+      try {
+        const fallback = extractPayloadRegexFallback(text);
+        if (fallback.preview_code) {
+          return fallback;
+        }
+      } catch (regexError: any) {
+        console.error("Regex fallback extraction failed:", regexError.message);
+      }
+    }
     throw new Error(`Failed to parse AI response as JSON: ${error.message}`);
   }
 };
@@ -291,7 +445,7 @@ export const updateSection = async (
   sectionHtml: string,
   fullCode: string,
   history: any[],
-  model: string = "gemini-2.5-flash"
+  model: string = "gemini-3.5-flash"
 ) => {
   const systemInstruction = "You are an expert web developer specializing in targeted component updates.";
   const userPrompt = `TARGET SECTION HTML:
@@ -341,7 +495,7 @@ export const generateWebsite = async (
   history: { role: "user" | "model", parts: { text?: string, inlineData?: { mimeType: string, data: string } }[] }[],
   images?: { mimeType: string, data: string }[],
   videos?: { mimeType: string, data: string }[],
-  model: string = "gemini-2.5-flash"
+  model: string = "gemini-3.5-flash"
 ) => {
   const hasUserKey = !!getCustomHeaders()['x-gemini-key'];
   const isHealthy = shadowWatchdog.isHealthy();

@@ -85,14 +85,14 @@ export const UnderwaterWelcome: React.FC<UnderwaterWelcomeProps> = ({ isDark, on
   }, []);
 
   return (
-    <div className="relative w-full h-full flex flex-col items-center justify-center overflow-hidden bg-abyssal-deep">
+    <div className="relative w-full h-full flex flex-col items-center justify-center overflow-hidden bg-gradient-to-b from-[#150f35] via-[#040409] to-[#040409] text-white">
       <canvas 
         ref={canvasRef} 
         className="absolute inset-0 pointer-events-none opacity-20"
       />
       
       {/* Background Gradient */}
-      <div className="absolute inset-0 bg-radial-[at_50%_0%] from-abyssal-blue/30 via-abyssal-deep to-abyssal-deep opacity-80" />
+      <div className="absolute inset-0 bg-radial-[at_50%_0%] from-[#0b1a2f]/40 via-[#040409] to-[#040409] opacity-85" />
 
       <motion.div 
         initial={{ opacity: 0, y: 30 }}

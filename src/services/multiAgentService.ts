@@ -26,17 +26,34 @@ const getCustomHeaders = () => {
       const secrets = JSON.parse(saved);
       if (Array.isArray(secrets) && secrets.length > 0) {
         const isGeminiKey = (k: string, v: string) => {
-          const uKey = k.toUpperCase().replace(/[^A-Z]/g, '');
-          if (uKey.includes('GEMINI') || uKey.includes('GOOGLE')) return true;
-          if (v && v.startsWith('AIzaSy')) return true;
-          if ((uKey === 'APIKEY' || uKey === 'KEY') && secrets.length === 1) return true;
+          const normKey = k.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+          if (normKey.includes('GEMINI') || normKey.includes('GOOGLE')) return true;
+          if (v && v.trim().startsWith('AIzaSy')) return true;
+          if (normKey.includes('CL_') || normKey.includes('CLE') || normKey.includes('KEY') || normKey.includes('API_KEY')) {
+            // Avoid matching known other providers
+            if (normKey.includes('GROQ') || normKey.includes('OPENROUTER') || normKey.includes('OPEN_ROUTER')) return false;
+            return true;
+          }
           return false;
         };
         const isGroqKey = (k: string) => {
-          return k.toUpperCase().includes('GROQ');
+          const normKey = k.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+          return normKey.includes('GROQ');
+        };
+        const isOpenRouterKey = (k: string) => {
+          const normKey = k.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+          return normKey.includes('OPENROUTER') || normKey.includes('OPEN_ROUTER');
         };
         
-        const geminiKey = secrets.find((s: any) => isGeminiKey(s.key, s.value)) || secrets[0];
+        let geminiKey = secrets.find((s: any) => isGeminiKey(s.key, s.value));
+        if (!geminiKey) {
+          // Safe fallback for single-key or non-categorized keys that do NOT belong to Groq or OpenRouter
+          geminiKey = secrets.find((s: any) => {
+            const norm = s.key.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+            return !norm.includes('GROQ') && !norm.includes('OPENROUTER') && !norm.includes('OPEN_ROUTER');
+          });
+        }
+        
         if (geminiKey && geminiKey.value) {
           headers['x-gemini-key'] = geminiKey.value.trim();
         }
@@ -44,6 +61,11 @@ const getCustomHeaders = () => {
         const groqKey = secrets.find((s: any) => isGroqKey(s.key));
         if (groqKey && groqKey.value) {
           headers['x-groq-key'] = groqKey.value.trim();
+        }
+
+        const openRouterKey = secrets.find((s: any) => isOpenRouterKey(s.key));
+        if (openRouterKey && openRouterKey.value) {
+          headers['x-openrouter-key'] = openRouterKey.value.trim();
         }
       }
     }
