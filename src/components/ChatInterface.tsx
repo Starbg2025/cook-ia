@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Zap, Send, Loader2, ImagePlus, X, Image as ImageIcon, Copy, ShoppingBag, Video, Search, Layout, CheckCircle, User, Mic, Plus, Sparkles, Flag, ThumbsUp, ThumbsDown, Eye, RotateCcw, ChevronDown, FileText, Clock, Settings, Terminal, MessageSquare, Paintbrush, Trash2, ArrowUp, ArrowDown, Box, Play, Sliders } from 'lucide-react';
+import { Zap, Send, Loader2, ImagePlus, X, Image as ImageIcon, Copy, ShoppingBag, Video, Search, Layout, CheckCircle, User, Mic, Plus, Sparkles, Flag, ThumbsUp, ThumbsDown, Eye, RotateCcw, ChevronDown, FileText, Clock, Settings, Terminal, MessageSquare, Paintbrush, Trash2, ArrowUp, ArrowDown, Box, Play, Sliders, MoreVertical } from 'lucide-react';
 import { Message, ActionHistory } from '../types';
 import { shadowWatchdog } from '../services/multiAgentService';
 
@@ -435,42 +435,44 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         </div>
       )}
 
-      {/* Chat Header with Switchable Modes */}
+      {/* Chat Header */}
       <div className={`h-14 border-b flex items-center justify-between px-6 shrink-0 relative z-10 ${isDark ? 'border-white/5 bg-abyssal-deep/60 backdrop-blur-md' : 'border-slate-100 bg-white/80'}`}>
-        <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/5">
-          <button
-            onClick={() => setChatMode('chat')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              chatMode === 'chat'
-                ? 'bg-orange-primary text-white shadow-lg shadow-orange-primary/10'
-                : 'text-white/50 hover:text-white hover:bg-white/5'
-            }`}
-          >
-            <MessageSquare size={13} />
-            {lang === 'fr' ? 'Console Chat' : 'Chat Console'}
-          </button>
-          
-          <button
-            onClick={() => setChatMode('canvas')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer relative overflow-hidden ${
-              chatMode === 'canvas'
-                ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-600/20'
-                : 'text-white/50 hover:text-white hover:bg-white/5'
-            }`}
-          >
-            <Paintbrush size={13} />
-            {lang === 'fr' ? 'Cook IA Canvas' : 'Cook IA Canvas'}
-            <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-500 animate-ping" />
-          </button>
+        <div className="flex items-center gap-3">
+          <span className={`text-xs font-bold uppercase tracking-widest flex items-center gap-2 ${isDark ? 'text-white/80' : 'text-slate-950'}`}>
+            {chatMode === 'canvas' ? (
+              <span className="text-purple-400 flex items-center gap-2"><Paintbrush size={14} /> Cook IA Canvas</span>
+            ) : (
+              lang === 'fr' ? 'Console Chat' : 'Console Chat'
+            )}
+          </span>
+          <div className={`w-1.5 h-1.5 rounded-full ${isDark ? (chatMode === 'canvas' ? 'bg-purple-500 shadow-[0_0_8px_#A855F7] animate-pulse' : 'bg-orange-primary animate-pulse shadow-[0_0_8px_#FF6B00]') : (chatMode === 'canvas' ? 'bg-purple-500' : 'bg-orange-primary')}`} />
         </div>
-
-        <div className="flex items-center gap-2">
-          {chatMode === 'canvas' && (
-            <span className="hidden md:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-[10px] font-bold text-purple-400 uppercase tracking-widest">
-              <Box size={10} className="animate-spin text-purple-400" style={{ animationDuration: '3s' }} />
-              Design Studio Mode Only
-            </span>
-          )}
+        
+        <div className="flex items-center gap-2 relative">
+          <div className="relative group">
+            <button 
+              className={`p-2 rounded-lg transition-all ${isDark ? 'text-white/60 hover:bg-white/5 hover:text-white hover:scale-105' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 hover:scale-105'}`}
+              title="Plus d'options"
+            >
+              <MoreVertical size={18} />
+            </button>
+            <div className={`absolute right-0 top-full mt-1 w-48 rounded-xl border overflow-hidden opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all origin-top-right scale-95 group-hover:scale-100 ${isDark ? 'bg-[#0f1423] border-white/10 shadow-2xl shadow-black/50' : 'bg-white border-slate-200 shadow-xl'}`}>
+              <button
+                onClick={() => setChatMode(chatMode === 'chat' ? 'canvas' : 'chat')}
+                className={`w-full text-left px-4 py-3 flex items-center justify-between transition-colors ${isDark ? 'hover:bg-white/5 text-white/80' : 'hover:bg-slate-50 text-slate-700'}`}
+              >
+                <div className="flex items-center gap-2 text-xs font-medium">
+                  {chatMode === 'chat' ? (
+                    <><Paintbrush size={14} className="text-purple-400" /> Cook IA Canvas</>
+                  ) : (
+                    <><MessageSquare size={14} className="text-orange-primary" /> Retour au Chat</>
+                  )}
+                </div>
+                {chatMode === 'chat' && <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />}
+              </button>
+            </div>
+          </div>
+          
           <button 
             onClick={() => onOpenSettings?.('publish')}
             className={`p-2 rounded-lg transition-all ${isDark ? 'text-white/60 hover:bg-white/5 hover:text-white hover:scale-105' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 hover:scale-105'}`}

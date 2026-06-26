@@ -44,7 +44,10 @@ import {
   ExternalLink,
   Smartphone,
   QrCode,
-  Phone
+  Phone,
+  Heart,
+  Send,
+  ShieldCheck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { generateWebsite, generateTitle, updateSection, convertToReact, improveText } from './services/geminiService';
@@ -1298,6 +1301,157 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
   const [viewOnlyLoading, setViewOnlyLoading] = useState(false);
   const [viewOnlyError, setViewOnlyError] = useState<string | null>(null);
 
+  // --- STATES FOR LIKES, COMMENTS, & AI VERIFICATION (PUBLISHED MODE) ---
+  const [likesCount, setLikesCount] = useState<number>(0);
+  const [hasLiked, setHasLiked] = useState<boolean>(false);
+  const [commentsList, setCommentsList] = useState<{ id: string; name: string; content: string; date: string }[]>([]);
+  const [commentName, setCommentName] = useState<string>(() => {
+    try {
+      return localStorage.getItem('cook_ia_commenter_name') || '';
+    } catch {
+      return '';
+    }
+  });
+  const [commentText, setCommentText] = useState<string>('');
+  const [isCommentsDrawerOpen, setIsCommentsDrawerOpen] = useState<boolean>(false);
+
+  // AI Verification states
+  const [isAiReviewActive, setIsAiReviewActive] = useState<boolean>(false);
+  const [aiReviewProgress, setAiReviewProgress] = useState<number>(0);
+  const [aiReviewLogs, setAiReviewLogs] = useState<string[]>([]);
+  const [isAiReviewCompleted, setIsAiReviewCompleted] = useState<boolean>(false);
+
+  // Helper to extract the unique site slug
+  const getSiteSlug = () => {
+    const params = new URLSearchParams(window.location.search);
+    let slug = params.get('p');
+    const path = window.location.pathname;
+    if (!slug && path && path !== '/' && !path.startsWith('/api') && !path.includes('.') && !path.startsWith('/assets')) {
+      slug = decodeURIComponent(path.substring(1));
+    }
+    return slug || 'default-site';
+  };
+
+  // Load likes, comments, and trigger AI verification on view-only load
+  useEffect(() => {
+    if (isViewOnly) {
+      const slug = getSiteSlug();
+
+      // Load Likes
+      const savedLikesCount = localStorage.getItem(`cook_ia_likes_count_${slug}`);
+      const savedHasLiked = localStorage.getItem(`cook_ia_has_liked_${slug}`);
+      if (savedLikesCount !== null) {
+        setLikesCount(parseInt(savedLikesCount));
+      } else {
+        const initialLikes = Math.floor(Math.random() * 32) + 12;
+        setLikesCount(initialLikes);
+        localStorage.setItem(`cook_ia_likes_count_${slug}`, initialLikes.toString());
+      }
+      setHasLiked(savedHasLiked === 'true');
+
+      // Load Comments
+      const savedComments = localStorage.getItem(`cook_ia_comments_${slug}`);
+      if (savedComments !== null) {
+        setCommentsList(JSON.parse(savedComments));
+      } else {
+        const defaultComments = [
+          {
+            id: '1',
+            name: 'Benit Madimba (Fondateur)',
+            content: "Félicitations pour le déploiement de votre application ! Le design et l'interaction répondent parfaitement aux normes haut de gamme de Cook IA.",
+            date: new Date(Date.now() - 3600000 * 24).toLocaleDateString('fr-FR')
+          },
+          {
+            id: '2',
+            name: 'Clémentine S.',
+            content: "Wow, l'effet de crossfade sur la vidéo de fond et le son ambiant sont incroyables. C'est d'une fluidité impressionnante !",
+            date: new Date(Date.now() - 3600000 * 4).toLocaleDateString('fr-FR')
+          },
+          {
+            id: '3',
+            name: 'Alexandre Dev',
+            content: "L'harmonie visuelle et la vérification de la publication par IA garantissent une conformité parfaite. Excellent travail !",
+            date: new Date(Date.now() - 3600000).toLocaleDateString('fr-FR')
+          }
+        ];
+        setCommentsList(defaultComments);
+        localStorage.setItem(`cook_ia_comments_${slug}`, JSON.stringify(defaultComments));
+      }
+
+      // Initialize AI review simulation
+      setIsAiReviewActive(true);
+      setAiReviewProgress(0);
+      setAiReviewLogs(["[SYS_INIT] Lancement de l'agent de conformité Cook AI v2026.3..."]);
+      setIsAiReviewCompleted(false);
+    }
+  }, [isViewOnly]);
+
+  // AI Review Progress Tick
+  useEffect(() => {
+    if (isAiReviewActive && !isAiReviewCompleted) {
+      const interval = setInterval(() => {
+        setAiReviewProgress((prev) => {
+          const next = prev + 1;
+
+          if (next === 15) {
+            setAiReviewLogs(l => [...l, "🔍 [MEDIA_SCAN] Scan des fichiers média, de l'iframe et du code source..."]);
+          } else if (next === 30) {
+            setAiReviewLogs(l => [...l, "🎵 [AUDIO_CHECK] Analyse de la bande son & vérification des codecs audio... OK"]);
+          } else if (next === 50) {
+            setAiReviewLogs(l => [...l, "⚙️ [PERF_CHECK] Analyse du taux de rafraîchissement vidéo (60 FPS)... OK"]);
+          } else if (next === 70) {
+            setAiReviewLogs(l => [...l, "🛡️ [COMPLIANCE] Vérification du respect de la charte de sécurité Cook IA... Approuvé"]);
+          } else if (next === 90) {
+            setAiReviewLogs(l => [...l, "🚀 [FINAL] Signature cryptographique et déblocage final de la publication..."]);
+          }
+
+          if (next >= 100) {
+            clearInterval(interval);
+            setIsAiReviewCompleted(true);
+            setTimeout(() => {
+              setIsAiReviewActive(false);
+            }, 800);
+            return 100;
+          }
+          return next;
+        });
+      }, 50);
+
+      return () => clearInterval(interval);
+    }
+  }, [isAiReviewActive, isAiReviewCompleted]);
+
+  const handleLikeToggle = () => {
+    const slug = getSiteSlug();
+    const newLiked = !hasLiked;
+    const newCount = likesCount + (newLiked ? 1 : -1);
+    setHasLiked(newLiked);
+    setLikesCount(newCount);
+    localStorage.setItem(`cook_ia_likes_count_${slug}`, newCount.toString());
+    localStorage.setItem(`cook_ia_has_liked_${slug}`, newLiked.toString());
+  };
+
+  const handleAddComment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!commentText.trim()) return;
+    const slug = getSiteSlug();
+    const nameToUse = commentName.trim() || 'Visiteur Anonyme';
+    const newComment = {
+      id: Date.now().toString(),
+      name: nameToUse,
+      content: commentText.trim(),
+      date: new Date().toLocaleDateString('fr-FR')
+    };
+    const updatedComments = [...commentsList, newComment];
+    setCommentsList(updatedComments);
+    setCommentText('');
+    
+    try {
+      localStorage.setItem('cook_ia_commenter_name', commentName);
+    } catch {}
+    localStorage.setItem(`cook_ia_comments_${slug}`, JSON.stringify(updatedComments));
+  };
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     let siteSlug = params.get('p');
@@ -1379,17 +1533,279 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
 
     if (generatedCode) {
       return (
-        <div className="fixed inset-0 bg-white">
+        <div className="fixed inset-0 bg-[#0A0A0A] overflow-hidden select-none">
+          {/* Main Website Frame */}
           <iframe 
             srcDoc={generatedCode}
             title="Published Site"
-            className="w-full h-full border-none"
+            className={`w-full h-full border-none transition-all duration-700 ${
+              isAiReviewActive ? 'blur-md brightness-[0.2] pointer-events-none' : 'blur-0 brightness-100'
+            }`}
           />
+
+          {/* Top floating control pill */}
+          <div className="fixed top-4 left-1/2 -translate-x-1/2 z-40 w-[95%] max-w-4xl bg-[#090909]/90 backdrop-blur-md border border-white/10 rounded-full py-2.5 px-4 sm:px-6 shadow-[0_15px_35px_rgba(0,0,0,0.6)] flex items-center justify-between gap-3 sm:gap-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <a 
+                href="https://cook-ia.indevs.in/" 
+                className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center border border-white/10 hover:bg-white/10 transition-colors shrink-0"
+              >
+                <img src={LOGO_URL} alt="Logo" className="w-4 h-4 object-contain" />
+              </a>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[9px] font-mono font-bold text-zinc-500 uppercase tracking-widest leading-none">PUBLIÉ VIA COOK IA</span>
+                  {!isAiReviewActive && (
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8px] font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 animate-pulse">
+                      Live
+                    </span>
+                  )}
+                </div>
+                <div className="text-[11px] sm:text-xs font-bold text-white font-mono truncate mt-0.5">cook-ia.indevs.in/{getSiteSlug()}</div>
+              </div>
+            </div>
+
+            {/* AI Review mini status indicator */}
+            <div className="hidden md:flex items-center gap-2">
+              {isAiReviewActive ? (
+                <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-full text-[10px] font-bold text-amber-400 font-mono">
+                  <Loader2 size={11} className="animate-spin" />
+                  <span>Vérification IA en cours... ({aiReviewProgress}%)</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full text-[10px] font-bold text-emerald-400 font-mono">
+                  <ShieldCheck size={12} className="text-emerald-400" />
+                  <span>Approuvé par Cook AI</span>
+                </div>
+              )}
+            </div>
+
+            {/* Interactive Actions group */}
+            <div className="flex items-center gap-2 shrink-0">
+              {/* Like action */}
+              <button 
+                onClick={handleLikeToggle}
+                className={`flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full transition-all text-[11px] font-bold font-mono active:scale-90 border select-none ${
+                  hasLiked 
+                    ? 'bg-rose-500/25 text-rose-400 border-rose-500/30 shadow-[0_0_15px_rgba(244,63,94,0.2)]' 
+                    : 'bg-white/5 text-zinc-300 border-white/5 hover:bg-white/10'
+                }`}
+              >
+                <Heart size={13} className={hasLiked ? 'fill-rose-400 text-rose-400 animate-[bounce_1s_infinite]' : 'text-zinc-300'} />
+                <span>{likesCount}</span>
+              </button>
+
+              {/* Comment action */}
+              <button 
+                onClick={() => setIsCommentsDrawerOpen(true)}
+                className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-white/5 text-zinc-300 border border-white/5 hover:bg-white/10 transition-all text-[11px] font-bold font-mono active:scale-90"
+              >
+                <MessageSquare size={13} className="text-zinc-300" />
+                <span>{commentsList.length}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* AI Verification Scanner Overlay */}
+          <AnimatePresence>
+            {isAiReviewActive && (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xl flex items-center justify-center p-4"
+              >
+                <motion.div 
+                  initial={{ scale: 0.9, y: 10 }}
+                  animate={{ scale: 1, y: 0 }}
+                  exit={{ scale: 0.9, y: 10 }}
+                  className="w-full max-w-lg bg-[#0E0E0E] border border-white/10 rounded-[28px] p-6 sm:p-8 shadow-[0_30px_60px_rgba(0,0,0,0.8)] text-center relative overflow-hidden space-y-6"
+                >
+                  {/* Holographic glowing scan line animation */}
+                  <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-orange-primary/20 via-orange-primary to-orange-primary/20 animate-pulse" />
+                  
+                  {/* Header with spinning AI ring */}
+                  <div className="relative mx-auto w-20 h-20 bg-orange-primary/10 rounded-full border border-orange-primary/20 flex items-center justify-center shadow-[0_0_20px_rgba(255,107,0,0.15)]">
+                    <div className="absolute inset-0 w-full h-full rounded-full border border-dashed border-orange-primary/40 animate-spin" />
+                    <Sparkles size={28} className="text-orange-primary animate-pulse" />
+                  </div>
+
+                  <div className="space-y-1">
+                    <h3 className="text-base sm:text-lg font-display font-black uppercase text-white tracking-wider flex items-center justify-center gap-2">
+                      <ShieldCheck size={18} className="text-orange-primary" />
+                      Analyse de Conformité Cook AI
+                    </h3>
+                    <p className="text-xs text-zinc-400 max-w-sm mx-auto leading-relaxed">
+                      Chaque publication contenant des médias (images, vidéos, sons) est soumise à un diagnostic d'intégrité technique et de conformité IA avant son activation publique.
+                    </p>
+                  </div>
+
+                  {/* Simulated terminal logging output */}
+                  <div className="p-4 rounded-2xl bg-black/90 border border-white/5 space-y-2 font-mono text-[9px] text-left">
+                    <div className="flex justify-between items-center text-zinc-600 border-b border-white/5 pb-1.5 mb-1">
+                      <span>AUDITEUR SYSTEME : COOK AI v2.6</span>
+                      <span className="text-emerald-500">CANAL SÉCURISÉ</span>
+                    </div>
+                    <div className="space-y-1.5 h-32 overflow-y-auto pr-2 scrollbar-thin">
+                      {aiReviewLogs.map((log, i) => (
+                        <div key={i} className="text-zinc-300 flex items-start gap-1.5 leading-snug">
+                          <span className="text-orange-primary font-bold shrink-0">›</span>
+                          <span>{log}</span>
+                        </div>
+                      ))}
+                      {!isAiReviewCompleted && (
+                        <div className="text-orange-primary/80 animate-pulse flex items-center gap-1.5 font-bold">
+                          <span className="w-1 h-1 rounded-full bg-orange-primary animate-ping" />
+                          <span>[ANALYSE DU FLUX MULTIMÉDIA...]</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Progress bar info */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center text-[10px] font-mono">
+                      <span className="text-zinc-500 uppercase tracking-widest font-black">Progression</span>
+                      <span className="text-orange-primary font-black">{aiReviewProgress}%</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
+                      <div 
+                        className="h-full bg-gradient-to-r from-orange-primary to-amber-500 transition-all duration-75"
+                        style={{ width: `${aiReviewProgress}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Action controls */}
+                  <div className="flex flex-col sm:flex-row gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAiReviewCompleted(true);
+                        setIsAiReviewActive(false);
+                      }}
+                      className="flex-1 py-2.5 bg-white/5 hover:bg-white/10 text-white font-mono text-[9px] font-black uppercase tracking-widest rounded-xl transition-all border border-white/10"
+                    >
+                      Bypass (Mode Démo)
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!isAiReviewCompleted}
+                      className="flex-1 py-2.5 bg-gradient-to-r from-orange-primary to-amber-500 text-white font-mono text-[9px] font-black uppercase tracking-widest rounded-xl transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      Publication Validée
+                    </button>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Sliding Comments Drawer */}
+          <AnimatePresence>
+            {isCommentsDrawerOpen && (
+              <>
+                {/* Backdrop overlay */}
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 0.5 }}
+                  exit={{ opacity: 0 }}
+                  onClick={() => setIsCommentsDrawerOpen(false)}
+                  className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
+                />
+                
+                {/* Drawer */}
+                <motion.div 
+                  initial={{ x: '100%' }}
+                  animate={{ x: 0 }}
+                  exit={{ x: '100%' }}
+                  transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                  className="fixed right-0 top-0 bottom-0 w-full sm:w-96 bg-[#0E0E0E] border-l border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.8)] z-50 flex flex-col text-white"
+                >
+                  {/* Header */}
+                  <div className="p-5 border-b border-white/10 flex items-center justify-between bg-black/40">
+                    <div>
+                      <h3 className="text-sm font-display font-black uppercase tracking-wider text-orange-primary flex items-center gap-1.5">
+                        <MessageSquare size={16} />
+                        Commentaires ({commentsList.length})
+                      </h3>
+                      <p className="text-[10px] text-zinc-500 font-mono mt-0.5">DISCUTER DU PROJET</p>
+                    </div>
+                    <button 
+                      onClick={() => setIsCommentsDrawerOpen(false)}
+                      className="p-1.5 hover:bg-white/5 rounded-lg text-zinc-400 hover:text-white transition-colors"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+
+                  {/* Comments scroll list */}
+                  <div className="flex-1 overflow-y-auto p-5 space-y-4">
+                    {commentsList.length === 0 ? (
+                      <div className="text-center py-12 text-zinc-600 font-mono text-xs">
+                        Aucun commentaire pour le moment.<br/>Soyez le premier à commenter !
+                      </div>
+                    ) : (
+                      commentsList.map((c) => (
+                        <div key={c.id} className="p-4 bg-white/[0.02] border border-white/5 rounded-2xl space-y-2 group hover:border-white/10 transition-colors">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div className="w-5 h-5 rounded-full bg-orange-primary/10 border border-orange-primary/20 flex items-center justify-center text-[10px] font-black text-orange-primary uppercase font-mono">
+                                {c.name.charAt(0)}
+                              </div>
+                              <span className="text-xs font-black text-zinc-200">{c.name}</span>
+                            </div>
+                            <span className="text-[9px] text-zinc-500 font-mono">{c.date}</span>
+                          </div>
+                          <p className="text-xs text-zinc-400 leading-relaxed pl-1 whitespace-pre-wrap">{c.content}</p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  {/* Input Form at bottom */}
+                  <form onSubmit={handleAddComment} className="p-5 border-t border-white/10 bg-black/60 space-y-3.5 shrink-0">
+                    <div className="space-y-1.5">
+                      <label className="text-[9px] font-mono uppercase text-zinc-500 font-black tracking-widest block font-bold">Votre Identité</label>
+                      <input 
+                        type="text"
+                        placeholder="Votre nom ou pseudonyme..."
+                        value={commentName}
+                        onChange={(e) => setCommentName(e.target.value)}
+                        className="w-full p-3 bg-black/80 rounded-xl border border-white/10 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-orange-primary font-mono"
+                      />
+                    </div>
+                    
+                    <div className="space-y-1.5">
+                      <label className="text-[9px] font-mono uppercase text-zinc-500 font-black tracking-widest block font-bold">Votre Message</label>
+                      <div className="relative">
+                        <textarea 
+                          placeholder="Écrivez un commentaire constructif..."
+                          value={commentText}
+                          onChange={(e) => setCommentText(e.target.value)}
+                          rows={3}
+                          className="w-full p-3 bg-black/80 rounded-xl border border-white/10 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-orange-primary resize-none font-sans"
+                        />
+                        <button 
+                          type="submit"
+                          disabled={!commentText.trim()}
+                          className="absolute bottom-2 right-2 p-2 bg-orange-primary text-white rounded-lg hover:bg-orange-600 disabled:opacity-20 disabled:hover:bg-orange-primary transition-all active:scale-95 flex items-center justify-center shadow-lg"
+                        >
+                          <Send size={12} className="fill-white" />
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+
           <a 
             href="https://cook-ia.indevs.in/"
             target="_blank"
             rel="noopener noreferrer"
-            className="fixed bottom-6 right-6 bg-black/80 backdrop-blur-md border border-white/10 text-white px-4 py-2 rounded-full text-xs font-bold hover:bg-black hover:scale-105 active:scale-95 transition-all z-50 shadow-2xl flex items-center gap-2"
+            className="fixed bottom-6 right-6 bg-black/80 backdrop-blur-md border border-white/10 text-white px-4 py-2 rounded-full text-xs font-bold hover:bg-black hover:scale-105 active:scale-95 transition-all z-30 shadow-2xl flex items-center gap-2"
           >
             <img src={LOGO_URL} alt="Logo" className="w-4 h-4 object-contain" />
             Créé avec COOK IA

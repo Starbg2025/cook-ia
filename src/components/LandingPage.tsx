@@ -147,8 +147,8 @@ export const VideoBackground: React.FC = () => {
           onEnded={handleEnded}
         />
       </div>
-      {/* Premium semi-transparent white/glass overlay so that black and gray text has gorgeous, crystal clear contrast */}
-      <div className="absolute inset-0 bg-gradient-to-b from-white/60 via-white/70 to-white/85 backdrop-blur-[1px] pointer-events-none" />
+      {/* Premium dark glass overlay so that white text has gorgeous contrast */}
+      <div className="absolute inset-0 bg-gradient-to-b from-[#0a0f1c]/60 via-[#0a0f1c]/80 to-[#02050A] backdrop-blur-[2px] pointer-events-none" />
     </div>
   );
 };
@@ -181,14 +181,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter, lang, setLang
 
   return (
     <div 
-      className="relative w-full min-h-screen overflow-y-auto overflow-x-hidden bg-[#010101] text-black selection:bg-black/10 selection:text-black scroll-smooth"
+      className="relative w-full min-h-screen overflow-y-auto overflow-x-hidden bg-[#010101] text-white selection:bg-purple-500/30 selection:text-white scroll-smooth"
       id="landing-container"
     >
       {/* Custom Loop Video Background with Light Glass Overlay */}
       <VideoBackground />
 
       {/* STICKY NAVIGATION BAR */}
-      <header className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-md border-b border-black/5 shadow-sm">
+      <header className="sticky top-0 z-50 w-full bg-[#0a0f1c]/80 backdrop-blur-md border-b border-white/10">
         <nav 
           className="w-full max-w-7xl mx-auto px-6 md:px-[120px] py-[16px] flex items-center justify-between" 
           id="landing-navbar"
@@ -196,7 +196,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter, lang, setLang
           {/* Logo */}
           <div 
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-            className="font-schibsted font-semibold text-[24px] tracking-[-1px] md:tracking-[-1.44px] text-[#000000] cursor-pointer hover:opacity-80 transition-opacity"
+            className="font-schibsted font-semibold text-[24px] tracking-[-1px] md:tracking-[-1.44px] text-white cursor-pointer hover:opacity-80 transition-opacity"
             id="brand-logo"
           >
             Cook IA
@@ -206,7 +206,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter, lang, setLang
           <div className="hidden md:flex items-center gap-[34px]" id="desktop-nav-menu">
             <button
               onClick={() => handleScrollTo('platform')}
-              className="font-schibsted font-medium text-[16px] tracking-[-0.2px] text-[#000000] hover:text-black/70 transition-colors cursor-pointer"
+              className="font-schibsted font-medium text-[16px] tracking-[-0.2px] text-white hover:text-white/70 transition-colors cursor-pointer"
             >
               Platform
             </button>
@@ -215,7 +215,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter, lang, setLang
             <div className="relative">
               <button
                 onClick={() => setFeaturesDropdownOpen(!featuresDropdownOpen)}
-                className="font-schibsted font-medium text-[16px] tracking-[-0.2px] text-[#000000] hover:text-black/70 transition-colors flex items-center gap-1 cursor-pointer"
+                className="font-schibsted font-medium text-[16px] tracking-[-0.2px] text-white hover:text-white/70 transition-colors flex items-center gap-1 cursor-pointer"
               >
                 Features
                 <ChevronDown size={14} className={`transform transition-transform ${featuresDropdownOpen ? 'rotate-180' : ''}`} />
@@ -227,23 +227,23 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter, lang, setLang
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 10 }}
-                    className="absolute top-8 left-0 w-48 bg-white/95 backdrop-blur-lg rounded-xl shadow-lg border border-black/5 p-2 flex flex-col z-50"
+                    className="absolute top-8 left-0 w-48 bg-[#0a0f1c]/95 backdrop-blur-lg rounded-xl shadow-2xl border border-white/10 p-2 flex flex-col z-50"
                   >
                     <button
                       onClick={() => handleScrollTo('features')}
-                      className="px-3 py-2 text-left text-sm text-[#000000] hover:bg-black/5 rounded-lg transition-colors font-schibsted"
+                      className="px-3 py-2 text-left text-sm text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-colors font-schibsted"
                     >
                       AI Code Generation
                     </button>
                     <button
                       onClick={() => handleScrollTo('features')}
-                      className="px-3 py-2 text-left text-sm text-[#000000] hover:bg-black/5 rounded-lg transition-colors font-schibsted"
+                      className="px-3 py-2 text-left text-sm text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-colors font-schibsted"
                     >
                       Secure Database Sync
                     </button>
                     <button
                       onClick={() => handleScrollTo('features')}
-                      className="px-3 py-2 text-left text-sm text-[#000000] hover:bg-black/5 rounded-lg transition-colors font-schibsted"
+                      className="px-3 py-2 text-left text-sm text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-colors font-schibsted"
                     >
                       Live Canvas Studio
                     </button>
@@ -254,30 +254,30 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter, lang, setLang
 
             <button
               onClick={() => handleScrollTo('projects')}
-              className="font-schibsted font-medium text-[16px] tracking-[-0.2px] text-[#000000] hover:text-black/70 transition-colors cursor-pointer"
+              className="font-schibsted font-medium text-[16px] tracking-[-0.2px] text-white hover:text-white/70 transition-colors cursor-pointer"
             >
               Projects
             </button>
 
             <button
               onClick={() => handleScrollTo('community')}
-              className="font-schibsted font-medium text-[16px] tracking-[-0.2px] text-[#000000] hover:text-black/70 transition-colors cursor-pointer"
+              className="font-schibsted font-medium text-[16px] tracking-[-0.2px] text-white hover:text-white/70 transition-colors cursor-pointer"
             >
               Community
             </button>
 
             <button
               onClick={() => handleScrollTo('contact')}
-              className="font-schibsted font-medium text-[16px] tracking-[-0.2px] text-[#000000] hover:text-black/70 transition-colors cursor-pointer"
+              className="font-schibsted font-medium text-[16px] tracking-[-0.2px] text-white hover:text-white/70 transition-colors cursor-pointer"
             >
               Contact
             </button>
 
             <button
               onClick={() => onEnter()}
-              className="font-schibsted font-semibold text-[16px] tracking-[-0.2px] text-orange-600 hover:text-orange-700 transition-colors cursor-pointer flex items-center gap-1 bg-orange-500/10 px-3 py-1 rounded-full border border-orange-500/20 shadow-sm"
+              className="font-schibsted font-semibold text-[16px] tracking-[-0.2px] text-purple-400 hover:text-purple-300 transition-colors cursor-pointer flex items-center gap-1 bg-purple-500/10 px-3 py-1 rounded-full border border-purple-500/20 border border-white/5 group-hover:border-purple-400"
             >
-              <Sparkles size={14} className="text-orange-500 animate-pulse" />
+              <Sparkles size={14} className="text-purple-400 animate-pulse" />
               {lang === 'fr' ? 'Studio de Chat' : 'Chat Studio'}
             </button>
           </div>
@@ -286,13 +286,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter, lang, setLang
           <div className="hidden md:flex items-center gap-4" id="desktop-auth-buttons">
             <button
               onClick={() => onEnter(undefined, true)}
-              className="w-[82px] text-center font-schibsted font-medium text-[15px] text-[#000000] hover:text-black/70 transition-colors cursor-pointer py-2"
+              className="w-[82px] text-center font-schibsted font-medium text-[15px] text-white hover:text-white/70 transition-colors cursor-pointer py-2"
             >
               Sign Up
             </button>
             <button
               onClick={() => onEnter(undefined, true)}
-              className="w-[101px] h-[40px] rounded-lg bg-black text-white hover:bg-black/85 font-schibsted font-medium text-[15px] transition-all cursor-pointer shadow-sm active:scale-[0.98]"
+              className="w-[101px] h-[40px] rounded-lg bg-white/5 text-white/80 group-hover:bg-purple-500 group-hover:text-white font-schibsted font-medium text-[15px] transition-all cursor-pointer border border-white/5 group-hover:border-purple-400 active:scale-[0.98]"
             >
               Log In
             </button>
@@ -300,7 +300,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter, lang, setLang
             {/* Language toggle */}
             <button
               onClick={() => setLang(lang === 'fr' ? 'en' : 'fr')}
-              className="text-[10px] ml-2 px-2 py-1 rounded border border-black/10 text-black/60 hover:text-black transition-colors font-mono tracking-widest uppercase cursor-pointer"
+              className="text-[10px] ml-2 px-2 py-1 rounded border border-white/10 text-white/60 hover:text-white transition-colors font-mono tracking-widest uppercase cursor-pointer"
             >
               {lang}
             </button>
@@ -310,13 +310,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter, lang, setLang
           <div className="flex md:hidden items-center gap-3">
             <button
               onClick={() => setLang(lang === 'fr' ? 'en' : 'fr')}
-              className="text-[9px] px-1.5 py-0.5 rounded border border-black/10 text-[#000000]/60 hover:text-black transition-colors font-mono tracking-widest uppercase"
+              className="text-[9px] px-1.5 py-0.5 rounded border border-white/20 text-white/60 hover:text-white transition-colors font-mono tracking-widest uppercase"
             >
               {lang}
             </button>
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="text-[#000000] focus:outline-none cursor-pointer"
+              className="text-white focus:outline-none cursor-pointer p-1.5 hover:bg-white/10 rounded-lg transition-colors"
               aria-label="Toggle Menu"
             >
               {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
@@ -333,45 +333,45 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter, lang, setLang
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.3, ease: 'easeOut' }}
-            className="fixed top-16 left-4 right-4 z-50 md:hidden mobile-menu-glass rounded-2xl py-8 flex flex-col items-center gap-5"
+            className="fixed top-16 left-4 right-4 z-50 md:hidden bg-[#0a0f1c]/95 backdrop-blur-2xl border border-white/10 shadow-2xl shadow-purple-500/10 rounded-3xl py-8 flex flex-col items-center gap-5"
             id="mobile-nav-drawer"
           >
             <button
               onClick={() => handleScrollTo('platform')}
-              className="text-white/90 uppercase font-light tracking-[0.25em] text-sm hover:text-white transition-colors duration-200"
+              className="text-white/90 uppercase font-bold tracking-[0.2em] text-sm hover:text-purple-400 transition-colors duration-200"
             >
               Platform
             </button>
             <button
               onClick={() => handleScrollTo('features')}
-              className="text-white/90 uppercase font-light tracking-[0.25em] text-sm hover:text-white transition-colors duration-200"
+              className="text-white/90 uppercase font-bold tracking-[0.2em] text-sm hover:text-purple-400 transition-colors duration-200"
             >
               Features
             </button>
             <button
               onClick={() => handleScrollTo('projects')}
-              className="text-white/90 uppercase font-light tracking-[0.25em] text-sm hover:text-white transition-colors duration-200"
+              className="text-white/90 uppercase font-bold tracking-[0.2em] text-sm hover:text-purple-400 transition-colors duration-200"
             >
               Projects
             </button>
             <button
               onClick={() => handleScrollTo('community')}
-              className="text-white/90 uppercase font-light tracking-[0.25em] text-sm hover:text-white transition-colors duration-200"
+              className="text-white/90 uppercase font-bold tracking-[0.2em] text-sm hover:text-purple-400 transition-colors duration-200"
             >
               Community
             </button>
             <button
               onClick={() => handleScrollTo('contact')}
-              className="text-white/90 uppercase font-light tracking-[0.25em] text-sm hover:text-white transition-colors duration-200"
+              className="text-white/90 uppercase font-bold tracking-[0.2em] text-sm hover:text-purple-400 transition-colors duration-200"
             >
               Contact
             </button>
 
             <button
               onClick={() => { onEnter(); setMobileMenuOpen(false); }}
-              className="text-amber-400 font-semibold uppercase tracking-[0.2em] text-xs hover:text-amber-300 transition-colors duration-200 flex items-center gap-1 bg-amber-500/10 px-4 py-2 rounded-full border border-amber-500/25"
+              className="text-purple-300 font-bold uppercase tracking-[0.2em] text-xs hover:text-purple-200 transition-colors duration-200 flex items-center gap-1 bg-purple-500/20 px-5 py-2.5 rounded-full border border-purple-500/30"
             >
-              <Sparkles size={14} className="text-amber-400 animate-pulse" />
+              <Sparkles size={14} className="fill-white animate-pulse" />
               {lang === 'fr' ? 'Studio de Chat' : 'Chat Studio'}
             </button>
             
@@ -379,13 +379,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter, lang, setLang
             
             <button
               onClick={() => { onEnter(undefined, true); setMobileMenuOpen(false); }}
-              className="text-white bg-white/10 hover:bg-white/20 px-6 py-2.5 rounded-full text-xs font-semibold uppercase tracking-widest transition-all"
+              className="text-white bg-white/10 hover:bg-white/20 px-8 py-3 rounded-full text-xs font-bold uppercase tracking-widest transition-all"
             >
               Sign Up
             </button>
             <button
               onClick={() => { onEnter(undefined, true); setMobileMenuOpen(false); }}
-              className="text-black bg-white hover:bg-white/90 px-8 py-2.5 rounded-full text-xs font-bold uppercase tracking-widest transition-all"
+              className="text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 px-8 py-3 rounded-full text-xs font-bold uppercase tracking-widest transition-all shadow-lg shadow-purple-500/25"
             >
               Log In
             </button>
@@ -405,19 +405,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter, lang, setLang
             
             {/* Badge Component */}
             <div 
-              className="inline-flex items-center gap-2 bg-[#ffffff] border border-black/5 shadow-sm rounded-full p-1 pr-3 font-inter text-[14px] text-[#000000]"
+              className="inline-flex items-center gap-2 bg-white/5 border border-white/10 shadow-[0_0_20px_rgba(168,85,247,0.15)] backdrop-blur-xl rounded-full p-1 pr-3 font-inter text-[14px] text-white"
               id="badge-container"
             >
-              <span className="flex items-center gap-1 bg-[#0e1311] text-white rounded-full px-2.5 py-0.5 text-xs font-medium">
-                <Star size={12} className="fill-amber-400 text-amber-400" />
+              <span className="flex items-center gap-1 bg-purple-500 text-white rounded-full px-2.5 py-0.5 text-xs font-bold shadow-[0_0_10px_rgba(168,85,247,0.5)]">
+                <Sparkles size={12} className="fill-white" />
                 New
               </span>
-              <span className="font-normal text-black">Discover what's possible</span>
+              <span className="font-normal text-white/90">Discover what's possible</span>
             </div>
 
             {/* Main Headline (Responsive tracking to prevent overlapping) */}
             <h1 
-              className="font-fustat font-bold text-center tracking-[-1.5px] sm:tracking-[-3px] md:tracking-[-4.8px] leading-none text-[#000000] text-5xl sm:text-6xl md:text-[80px]"
+              className="font-fustat font-bold text-center tracking-[-1.5px] sm:tracking-[-3px] md:tracking-[-4.8px] leading-none text-white text-5xl sm:text-6xl md:text-[80px]"
               id="hero-title"
             >
               Transform Data Quickly
@@ -425,7 +425,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter, lang, setLang
 
             {/* Subtitle */}
             <p 
-              className="font-fustat font-medium text-center tracking-[-0.2px] md:tracking-[-0.4px] text-[#505050] text-base sm:text-lg md:text-[20px] max-w-[736px] w-full md:w-[542px]"
+              className="font-fustat font-medium text-center tracking-[-0.2px] md:tracking-[-0.4px] text-white/60 text-base sm:text-lg md:text-[20px] max-w-[736px] w-full md:w-[542px]"
               id="hero-subtitle"
             >
               Upload your information and get powerful insights right away. Work smarter and achieve goals effortlessly.
@@ -442,7 +442,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter, lang, setLang
                 {/* Top Row: Credit info */}
                 <div className="flex items-center justify-between font-schibsted font-medium text-[12px]">
                   <div className="flex items-center gap-2">
-                    <span className="opacity-95 text-white">60/450 credits</span>
+                    <span className="opacity-95 text-white/60">60/450 credits</span>
                     <button 
                       type="button"
                       onClick={() => onEnter("S'abonner / Upgrade credits")}
@@ -453,23 +453,23 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter, lang, setLang
                     </button>
                   </div>
                   <div className="flex items-center gap-1.5 opacity-95 text-white">
-                    <Sparkles size={12} className="text-amber-400 animate-pulse" />
+                    <Sparkles size={12} className="text-amber-500 animate-pulse" />
                     <span>Powered by GPT-4o</span>
                   </div>
                 </div>
 
                 {/* Main Input Area */}
-                <div className="bg-white rounded-[12px] p-2 flex items-center shadow-md justify-between border border-black/5">
+                <div className="bg-[#0a0f1c]/80 backdrop-blur-md rounded-[12px] p-2 flex items-center shadow-xl shadow-black/50 justify-between border border-white/10 group-focus-within:border-purple-500/50 transition-colors">
                   <input
                     type="text"
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value.slice(0, 3000))}
                     placeholder="Type question..."
-                    className="flex-1 bg-transparent border-none text-[#000000] placeholder-black/40 focus:outline-none text-[16px] px-3 py-1.5 font-inter font-normal"
+                    className="flex-1 bg-transparent border-none text-white placeholder-white/40 focus:outline-none text-[16px] px-3 py-1.5 font-inter font-normal"
                   />
                   <button
                     type="submit"
-                    className="w-[36px] h-[36px] rounded-full bg-black hover:bg-black/80 flex items-center justify-center text-white transition-all duration-300 shrink-0 cursor-pointer shadow-sm active:scale-95"
+                    className="w-[36px] h-[36px] rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 flex items-center justify-center text-white transition-all duration-300 shrink-0 cursor-pointer shadow-lg shadow-purple-500/25 active:scale-95"
                   >
                     <ArrowUp size={16} />
                   </button>
@@ -482,7 +482,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter, lang, setLang
                     <button
                       type="button"
                       onClick={() => alert(lang === 'fr' ? 'Sélectionnez un fichier à attacher.' : 'Select a file or document to attach.')}
-                      className="bg-[#f8f8f8] hover:bg-white text-[#505050] font-sans font-medium text-xs rounded-[6px] px-3 py-1.5 flex items-center gap-1.5 transition-colors cursor-pointer border-none"
+                      className="bg-white/5 hover:bg-white/10 text-white/80 font-sans font-medium text-xs rounded-[6px] px-3 py-1.5 flex items-center gap-1.5 transition-colors cursor-pointer border border-white/5"
                     >
                       <Paperclip size={12} />
                       Attach
@@ -490,7 +490,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter, lang, setLang
                     <button
                       type="button"
                       onClick={() => alert(lang === 'fr' ? "Entrée vocale en cours d'écoute..." : 'Voice input is listening...')}
-                      className="bg-[#f8f8f8] hover:bg-white text-[#505050] font-sans font-medium text-xs rounded-[6px] px-3 py-1.5 flex items-center gap-1.5 transition-colors cursor-pointer border-none"
+                      className="bg-white/5 hover:bg-white/10 text-white/80 font-sans font-medium text-xs rounded-[6px] px-3 py-1.5 flex items-center gap-1.5 transition-colors cursor-pointer border border-white/5"
                     >
                       <Mic size={12} />
                       Voice
@@ -498,7 +498,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter, lang, setLang
                     <button
                       type="button"
                       onClick={() => setInputValue(lang === 'fr' ? 'Optimise mon design de page' : 'Analyze my loaded dataset for trends.')}
-                      className="bg-[#f8f8f8] hover:bg-white text-[#505050] font-sans font-medium text-xs rounded-[6px] px-3 py-1.5 flex items-center gap-1.5 transition-colors cursor-pointer border-none"
+                      className="bg-white/5 hover:bg-white/10 text-white/80 font-sans font-medium text-xs rounded-[6px] px-3 py-1.5 flex items-center gap-1.5 transition-colors cursor-pointer border border-white/5"
                     >
                       <Search size={12} />
                       Prompts
@@ -506,7 +506,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter, lang, setLang
                   </div>
 
                   {/* Character Counter */}
-                  <div className="text-[12px] text-[#f8f8f8]/70 font-sans self-end sm:self-auto">
+                  <div className="text-[12px] text-white/60 font-sans self-end sm:self-auto">
                     {inputValue.length}/3,000
                   </div>
                 </div>
@@ -515,17 +515,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter, lang, setLang
             </form>
             
             {/* Elegant prompt-to-creation guide caption */}
-            <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-2 px-2 text-center sm:text-left">
-              <span className="font-schibsted font-medium text-xs text-slate-500 flex items-center gap-1.5 justify-center sm:justify-start">
-                <Sparkles size={12} className="text-orange-500 animate-pulse" />
+            <div className="mt-6 flex flex-col items-center justify-center gap-3 px-2 text-center w-full max-w-[600px] mx-auto">
+              <span className="font-schibsted font-medium text-xs sm:text-sm text-white/60 flex items-center gap-2 justify-center leading-relaxed">
+                <Sparkles size={14} className="text-purple-400 shrink-0 animate-pulse" />
                 {lang === 'fr' 
-                  ? "Saisissez votre prompt ci-dessus pour lancer Cook IA et générer votre site web de rêve instantanément !" 
-                  : "Type your prompt above to launch Cook IA and generate your dream website instantly!"
+                  ? "Saisissez votre prompt ci-dessus pour générer votre site web de rêve instantanément" 
+                  : "Type your prompt above to generate your dream website instantly"
                 }
               </span>
               <button
                 onClick={() => onEnter()}
-                className="font-schibsted font-bold text-xs text-orange-600 hover:text-orange-700 transition-colors flex items-center gap-1 bg-orange-500/10 px-3 py-1 rounded-full border border-orange-500/20 shadow-sm cursor-pointer"
+                className="font-schibsted font-bold text-xs sm:text-sm text-purple-400 hover:text-purple-300 transition-all flex items-center gap-2 bg-purple-500/10 hover:bg-purple-500/20 px-4 py-2 rounded-full border border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.1)] cursor-pointer active:scale-95"
               >
                 {lang === 'fr' ? "Accéder directement au Chat →" : "Access Chat Interface directly →"}
               </button>
@@ -533,11 +533,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter, lang, setLang
           </div>
 
           {/* Quick instructions indicator */}
-          <div className="mt-12 flex flex-col items-center gap-2 animate-bounce">
-            <span className="text-xs text-[#505050] uppercase tracking-widest font-mono">
+          <div className="mt-16 pb-8 flex flex-col items-center gap-2 animate-bounce">
+            <span className="text-[10px] sm:text-xs text-white/40 uppercase tracking-widest font-mono font-medium">
               {lang === 'fr' ? 'Défilez pour Explorer' : 'Scroll to Explore'}
             </span>
-            <ChevronDown size={16} className="text-[#505050]" />
+            <ChevronDown size={16} className="text-white/40" />
           </div>
 
         </div>
@@ -546,17 +546,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter, lang, setLang
       {/* SECTION 1: PLATFORM SHOWCASE (SCROLLABLE SECTION) */}
       <section 
         id="platform" 
-        className="relative z-10 w-full py-24 px-6 border-t border-black/5 bg-white text-black"
+        className="relative z-10 w-full py-24 px-6 border-t border-white/5 bg-[#02050A] text-white"
       >
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <span className="text-xs text-emerald-600 font-mono tracking-widest uppercase block mb-2">
+            <span className="text-xs text-purple-400 font-mono tracking-widest uppercase block mb-2">
               {lang === 'fr' ? 'PLATEFORME DE FORGE' : 'THE CORE PLATFORM'}
             </span>
-            <h2 className="font-fustat font-bold text-3xl sm:text-5xl tracking-tight text-black">
+            <h2 className="font-fustat font-bold text-3xl sm:text-5xl tracking-tight text-white">
               {lang === 'fr' ? 'Intelligence Modulaire Cook IA' : 'Cook IA Modular Engine'}
             </h2>
-            <p className="mt-4 text-[#505050] font-fustat font-medium text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
+            <p className="mt-4 text-white/60 font-fustat font-medium text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
               {lang === 'fr' 
                 ? 'Une architecture de développement pilotée par IA pour forger des interfaces exceptionnelles.'
                 : 'An intelligent development framework designed to design, refine, and deploy full-stack assets instantly.'
@@ -565,14 +565,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter, lang, setLang
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="bg-[#f8f8f8] border border-black/5 rounded-2xl p-8 hover:shadow-md transition-all duration-300">
+            <div className="bg-white/5 border border-white/5 rounded-2xl p-8 hover:shadow-md transition-all duration-300">
               <div className="w-12 h-12 rounded-xl bg-black text-white flex items-center justify-center mb-6">
                 <Code size={20} />
               </div>
-              <h3 className="font-fustat font-bold text-xl mb-3 text-black">
+              <h3 className="font-fustat font-bold text-xl mb-3 text-white">
                 {lang === 'fr' ? 'Génération de Code TS' : 'Strict TS Generation'}
               </h3>
-              <p className="text-[#505050] text-sm leading-relaxed">
+              <p className="text-white/60 text-sm leading-relaxed">
                 {lang === 'fr'
                   ? 'Génère du code React et TypeScript propre et modulaire, validé par des linters professionnels.'
                   : 'Compiles pristine modular React and TypeScript component structures, optimized for deployment.'
@@ -580,14 +580,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter, lang, setLang
               </p>
             </div>
 
-            <div className="bg-[#f8f8f8] border border-black/5 rounded-2xl p-8 hover:shadow-md transition-all duration-300">
+            <div className="bg-white/5 border border-white/5 rounded-2xl p-8 hover:shadow-md transition-all duration-300">
               <div className="w-12 h-12 rounded-xl bg-black text-white flex items-center justify-center mb-6">
                 <Layers size={20} />
               </div>
-              <h3 className="font-fustat font-bold text-xl mb-3 text-black">
+              <h3 className="font-fustat font-bold text-xl mb-3 text-white">
                 {lang === 'fr' ? 'Style Tailwind v4' : 'Tailwind v4 Aesthetics'}
               </h3>
-              <p className="text-[#505050] text-sm leading-relaxed">
+              <p className="text-white/60 text-sm leading-relaxed">
                 {lang === 'fr'
                   ? 'Designs contemporains soignés avec palettes de couleurs équilibrées, polices d\'élite et négatif réfléchi.'
                   : 'Stunning layouts mapped with modern palettes, premium typography, and fluid responsive spacing.'
@@ -595,14 +595,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter, lang, setLang
               </p>
             </div>
 
-            <div className="bg-[#f8f8f8] border border-black/5 rounded-2xl p-8 hover:shadow-md transition-all duration-300">
+            <div className="bg-white/5 border border-white/5 rounded-2xl p-8 hover:shadow-md transition-all duration-300">
               <div className="w-12 h-12 rounded-xl bg-black text-white flex items-center justify-center mb-6">
                 <Database size={20} />
               </div>
-              <h3 className="font-fustat font-bold text-xl mb-3 text-black">
+              <h3 className="font-fustat font-bold text-xl mb-3 text-white">
                 {lang === 'fr' ? 'Bases Relat. & Cloud' : 'Cloud Synchronization'}
               </h3>
-              <p className="text-[#505050] text-sm leading-relaxed">
+              <p className="text-white/60 text-sm leading-relaxed">
                 {lang === 'fr'
                   ? 'Synchronisation transparente avec les bases PostgreSQL et Firestore pour vos authentifications.'
                   : 'Direct, persistent bindings with relational schemas, OAuth authenticators, and live APIs.'
@@ -620,7 +620,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter, lang, setLang
       >
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <span className="text-xs text-amber-400 font-mono tracking-widest uppercase block mb-2">
+            <span className="text-xs text-purple-400 font-mono tracking-widest uppercase block mb-2">
               {lang === 'fr' ? 'FONCTIONNALITÉS CLÉS' : 'HIGH-PERFORMANCE FEATURES'}
             </span>
             <h2 className="font-fustat font-bold text-3xl sm:text-5xl tracking-tight">
@@ -634,7 +634,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter, lang, setLang
             {/* Box 1 (Big) */}
             <div className="md:col-span-8 bg-white/5 border border-white/10 rounded-3xl p-8 flex flex-col justify-between">
               <div>
-                <span className="text-[10px] text-amber-400 font-mono tracking-widest uppercase block mb-2">INTELLIGENT DECISIONS</span>
+                <span className="text-[10px] text-purple-400 font-mono tracking-widest uppercase block mb-2">INTELLIGENT DECISIONS</span>
                 <h3 className="font-fustat font-bold text-2xl mb-4">
                   {lang === 'fr' ? 'Décodage Analytique en Temps Réel' : 'Real-Time Analytic Parsing'}
                 </h3>
@@ -704,7 +704,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter, lang, setLang
               <div className="mt-8">
                 <button
                   onClick={() => onEnter()}
-                  className="inline-flex items-center gap-2 text-xs uppercase tracking-widest font-semibold hover:text-amber-300 transition-colors cursor-pointer bg-transparent border-none text-white"
+                  className="inline-flex items-center gap-2 text-xs uppercase tracking-widest font-semibold hover:text-purple-200 transition-colors cursor-pointer bg-transparent border-none text-white"
                 >
                   {lang === 'fr' ? 'Découvrir la Synergie' : 'Explore Synergy'}
                   <ChevronRight size={14} />
@@ -719,17 +719,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter, lang, setLang
       {/* SECTION 3: PROJECTS GALLERY (SCROLLABLE SECTION) */}
       <section 
         id="projects" 
-        className="relative z-10 w-full py-24 px-6 border-t border-black/5 bg-white text-black"
+        className="relative z-10 w-full py-24 px-6 border-t border-white/5 bg-[#02050A] text-white"
       >
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <span className="text-xs text-blue-600 font-mono tracking-widest uppercase block mb-2">
+            <span className="text-xs text-purple-400 font-mono tracking-widest uppercase block mb-2">
               {lang === 'fr' ? 'MODÈLES DE RÉFÉRENCE' : 'TEMPLATE REGISTRY'}
             </span>
-            <h2 className="font-fustat font-bold text-3xl sm:text-5xl tracking-tight">
+            <h2 className="font-fustat font-bold text-3xl sm:text-5xl tracking-tight text-white">
               {lang === 'fr' ? 'Projets Prêts à Forger' : 'Pre-Engineered Concepts'}
             </h2>
-            <p className="mt-4 text-[#505050] font-fustat font-medium text-base sm:text-lg max-w-2xl mx-auto">
+            <p className="mt-4 text-white/60 font-fustat font-medium text-base sm:text-lg max-w-2xl mx-auto">
               {lang === 'fr'
                 ? 'Sélectionnez l\'une de ces bases pour démarrer immédiatement votre projet d\'intelligence.'
                 : 'Accelerate development by selecting one of our high-fidelity, pre-tested application models.'
@@ -760,22 +760,22 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter, lang, setLang
             ].map((proj, i) => (
               <div 
                 key={i} 
-                className="bg-[#f8f8f8] border border-black/5 rounded-2xl p-6 hover:border-black/20 hover:shadow-md transition-all duration-300 flex flex-col justify-between"
+                className="bg-white border border-white/5 rounded-2xl p-6 hover:border-black/20 hover:shadow-lg transition-all duration-300 flex flex-col justify-between group"
               >
                 <div>
                   <div className="flex items-center justify-between mb-4">
-                    <span className="text-[10px] px-2.5 py-1 bg-black/5 text-black font-mono rounded-full uppercase border border-black/5 tracking-wider">
+                    <span className="text-[10px] px-2.5 py-1 bg-purple-500/10 text-purple-400 font-mono rounded-full uppercase border border-purple-500/20 tracking-wider">
                       {proj.badge}
                     </span>
-                    <Sparkle size={14} className="text-amber-500 animate-pulse" />
+                    <Sparkle size={14} className="text-purple-400 opacity-50 group-hover:opacity-100 group-hover:animate-pulse transition-all" />
                   </div>
-                  <h3 className="font-fustat font-bold text-lg text-black mb-2">{proj.title}</h3>
-                  <p className="text-[#505050] text-xs leading-relaxed mb-6">"{proj.desc}"</p>
+                  <h3 className="font-fustat font-bold text-lg text-white mb-2">{proj.title}</h3>
+                  <p className="text-white/60 text-xs leading-relaxed mb-6">"{proj.desc}"</p>
                 </div>
                 <button
                   type="button"
                   onClick={() => onEnter(proj.promptText)}
-                  className="w-full py-2.5 rounded-lg bg-black text-white hover:bg-black/85 text-xs font-semibold uppercase tracking-widest transition-all text-center cursor-pointer active:scale-98 border-none"
+                  className="w-full py-2.5 rounded-lg bg-white/5 text-white/80 group-hover:bg-purple-500 group-hover:text-white text-xs font-semibold uppercase tracking-widest transition-all text-center cursor-pointer active:scale-95 border border-white/5 group-hover:border-purple-400"
                 >
                   {lang === 'fr' ? 'Forger ce Modèle' : 'Forge Model'}
                 </button>
@@ -788,7 +788,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter, lang, setLang
       {/* SECTION 4: COMMUNITY & FEEDBACK (SCROLLABLE SECTION) */}
       <section 
         id="community" 
-        className="relative z-10 w-full py-24 px-6 border-t border-white/5 bg-black text-white"
+        className="relative z-10 w-full py-24 px-6 border-t border-white/5 bg-[#02050A] text-white"
       >
         <div className="max-w-6xl mx-auto text-center">
           <span className="text-xs text-purple-400 font-mono tracking-widest uppercase block mb-2">
@@ -806,16 +806,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter, lang, setLang
 
           <div className="flex flex-wrap justify-center gap-12 max-w-3xl mx-auto mt-6">
             <div className="text-center">
-              <span className="text-4xl sm:text-5xl font-bold font-fustat block mb-1">12K+</span>
-              <span className="text-xs text-white/50 font-mono uppercase tracking-widest">Active Forgers</span>
+              <span className="text-4xl sm:text-5xl font-bold font-fustat block mb-1 text-white">12K+</span>
+              <span className="text-xs text-white/60 font-mono uppercase tracking-widest">Active Forgers</span>
             </div>
             <div className="text-center">
-              <span className="text-4xl sm:text-5xl font-bold font-fustat block mb-1">245K+</span>
-              <span className="text-xs text-white/50 font-mono uppercase tracking-widest">Projects Created</span>
+              <span className="text-4xl sm:text-5xl font-bold font-fustat block mb-1 text-white">245K+</span>
+              <span className="text-xs text-white/60 font-mono uppercase tracking-widest">Projects Created</span>
             </div>
             <div className="text-center">
-              <span className="text-4xl sm:text-5xl font-bold font-fustat block mb-1">1.2M+</span>
-              <span className="text-xs text-white/50 font-mono uppercase tracking-widest">Sandbox Runs</span>
+              <span className="text-4xl sm:text-5xl font-bold font-fustat block mb-1 text-white">1.2M+</span>
+              <span className="text-xs text-white/60 font-mono uppercase tracking-widest">Sandbox Runs</span>
             </div>
           </div>
         </div>
@@ -824,11 +824,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter, lang, setLang
       {/* SECTION 5: CONTACT SECTION (SCROLLABLE SECTION) */}
       <section 
         id="contact" 
-        className="relative z-10 w-full py-24 px-6 border-t border-black/5 bg-white text-black"
+        className="relative z-10 w-full py-24 px-6 border-t border-white/5 bg-[#02050A] text-white"
       >
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-12">
-            <span className="text-xs text-emerald-600 font-mono tracking-widest uppercase block mb-2">
+            <span className="text-xs text-purple-400 font-mono tracking-widest uppercase block mb-2">
               {lang === 'fr' ? 'BESOIN D\'AIDE ?' : 'GET IN TOUCH'}
             </span>
             <h2 className="font-fustat font-bold text-3xl sm:text-4xl tracking-tight">
@@ -842,42 +842,42 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter, lang, setLang
               alert(lang === 'fr' ? 'Message envoyé avec succès !' : 'Message received! We will reach out shortly.');
               (e.target as HTMLFormElement).reset();
             }}
-            className="space-y-6 bg-[#f8f8f8] border border-black/5 p-8 rounded-3xl shadow-sm"
+            className="space-y-6 bg-white/5 border border-white/5 p-8 rounded-3xl border border-white/5 group-hover:border-purple-400"
           >
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div>
-                <label className="block text-xs font-semibold uppercase text-[#505050] tracking-wider mb-2">Name</label>
+                <label className="block text-xs font-semibold uppercase text-white/60 tracking-wider mb-2">Name</label>
                 <input 
                   type="text" 
                   required 
                   placeholder="John Doe" 
-                  className="w-full bg-white border border-black/10 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-black transition-colors font-sans text-black"
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-purple-500/50 transition-colors font-sans text-white"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold uppercase text-[#505050] tracking-wider mb-2">Email</label>
+                <label className="block text-xs font-semibold uppercase text-white/60 tracking-wider mb-2">Email</label>
                 <input 
                   type="email" 
                   required 
                   placeholder="john@example.com" 
-                  className="w-full bg-white border border-black/10 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-black transition-colors font-sans text-black"
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-purple-500/50 transition-colors font-sans text-white"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase text-[#505050] tracking-wider mb-2">Message</label>
+              <label className="block text-xs font-semibold uppercase text-white/60 tracking-wider mb-2">Message</label>
               <textarea 
                 rows={4} 
                 required 
                 placeholder="How can we help your team?" 
-                className="w-full bg-white border border-black/10 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-black transition-colors font-sans text-black"
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-purple-500/50 transition-colors font-sans text-white"
               />
             </div>
 
             <button 
               type="submit" 
-              className="w-full bg-black hover:bg-black/90 text-white font-schibsted font-medium text-sm uppercase tracking-widest py-4 rounded-xl transition-all shadow-md cursor-pointer active:scale-98 border-none"
+              className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-schibsted font-medium text-sm uppercase tracking-widest py-4 rounded-xl transition-all shadow-lg shadow-purple-500/25 cursor-pointer active:scale-95 border-none"
             >
               Send Message
             </button>

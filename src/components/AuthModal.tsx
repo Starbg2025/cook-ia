@@ -271,19 +271,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="relative w-full max-w-[440px] bg-[#141414] border border-white/10 rounded-2xl lg:rounded-[32px] p-6 lg:p-10 shadow-2xl text-white overflow-y-auto max-h-[90vh] scrollbar-hide"
+            className="relative w-full max-w-[440px] bg-[#0a0f1c]/90 backdrop-blur-3xl border border-white/10 rounded-2xl lg:rounded-[32px] p-6 lg:p-10 shadow-[0_0_50px_rgba(168,85,247,0.15)] text-white overflow-y-auto max-h-[90vh] scrollbar-hide"
           >
+            {/* Ambient glowing effect */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-32 bg-purple-500/20 blur-[60px] rounded-full pointer-events-none" />
+            
             {mode !== 'username_setup' && (
               <button 
                 onClick={onClose}
-                className="absolute top-4 lg:top-6 right-4 lg:right-6 p-2 hover:bg-white/5 rounded-full transition-colors text-white/40"
+                className="absolute top-4 lg:top-6 right-4 lg:right-6 p-2 hover:bg-white/10 rounded-full transition-colors text-white/40"
               >
                 <X size={20} />
               </button>
             )}
 
-            <div className="text-center mb-6 lg:mb-8">
-              <h2 className="text-2xl lg:text-[32px] font-semibold leading-tight mb-3 lg:mb-4 tracking-tight">
+            <div className="text-center mb-6 lg:mb-8 relative z-10">
+              <h2 className="text-2xl lg:text-[32px] font-semibold leading-tight mb-3 lg:mb-4 tracking-tight bg-gradient-to-r from-white to-white/70 bg-clip-text text-transparent">
                 {mode === 'username_setup' ? 'Choisissez un pseudo' : 
                  mode === 'signup' ? 'Créez votre compte' : 
                  mode === 'verify_otp' ? 'Vérifiez votre email' :
@@ -296,16 +299,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                  mode === 'verify_otp' ? `Nous avons envoyé un code de vérification à ${email}.` :
                  mode === 'forgot_password' ? 'Entrez votre email pour recevoir un code de réinitialisation.' :
                  mode === 'new_password' ? 'Choisissez un nouveau mot de passe sécurisé.' :
-                 'Vous recevrez un site web full-stack prêt à l\'emploi, avec une architecture moderne.'}
+                 mode === 'signup' ? 'Vous recevrez un site web full-stack prêt à l\'emploi, avec une architecture moderne.' :
+                 'Connectez-vous pour continuer à créer des expériences web exceptionnelles.'}
               </p>
             </div>
 
             {mode !== 'username_setup' && mode !== 'verify_otp' && mode !== 'forgot_password' && mode !== 'new_password' && (
-              <>
+              <div className="relative z-10">
                 <div className="space-y-3 mb-8">
                   <button 
                     onClick={() => handleOAuthLogin('google')}
-                    className="w-full flex items-center justify-center gap-3 border border-white/10 rounded-full py-3.5 px-6 hover:bg-white/5 transition-all font-medium text-[15px]"
+                    className="w-full flex items-center justify-center gap-3 border border-black/10 bg-white rounded-full py-3.5 px-6 hover:bg-white/10 transition-all font-medium text-[15px] shadow-sm text-white"
                   >
                     <Chrome size={20} className="text-[#4285F4]" />
                     Continuer avec Google
@@ -313,62 +317,62 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                   
                   <button 
                     onClick={() => handleOAuthLogin('github')}
-                    className="w-full flex items-center justify-center gap-3 border border-white/10 rounded-full py-3.5 px-6 hover:bg-white/5 transition-all font-medium text-[15px]"
+                    className="w-full flex items-center justify-center gap-3 border border-black/10 bg-white rounded-full py-3.5 px-6 hover:bg-white/10 transition-all font-medium text-[15px] shadow-sm text-white"
                   >
-                    <Github size={20} />
+                    <Github size={20} className="text-white" />
                     Continuer avec GitHub
                   </button>
                 </div>
 
-                <div className="relative flex items-center justify-center mb-8">
+                <div className="relative flex items-center justify-center mb-6 mt-2 h-6">
                   <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-white/5"></div>
+                    <div className="w-full border-t border-white/10"></div>
                   </div>
-                  <span className="relative bg-[#141414] px-4 text-[11px] font-bold uppercase tracking-widest text-white/30">OU</span>
+                  <span className="relative bg-white px-4 py-1 text-[11px] font-bold uppercase tracking-widest text-white/40 rounded-full border border-black/5 inline-block">OU</span>
                 </div>
-              </>
+              </div>
             )}
 
             {mode === 'username_setup' ? (
-              <form onSubmit={handleUsernameSetup} className="space-y-4">
-                <div className="relative">
-                  <User className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={18} />
+              <form onSubmit={handleUsernameSetup} className="space-y-4 relative z-10">
+                <div className="relative group">
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30 group-focus-within:text-purple-400 transition-colors" size={18} />
                   <input 
                     type="text"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     placeholder="Nom d'utilisateur"
-                    className="w-full bg-[#0A0A0A] border border-white/10 rounded-2xl p-4 pl-12 text-[15px] focus:outline-none focus:border-white/30 transition-all placeholder:text-white/30 text-white"
+                    className="w-full bg-[#0a0f1c]/90 backdrop-blur-3xl border border-white/10 rounded-2xl p-4 pl-12 text-[15px] focus:outline-none focus:border-purple-500/50 transition-all placeholder:text-white/30 text-white shadow-inner"
                     required
                   />
                 </div>
-                {errorMsg && <p className="text-red-500 text-xs text-center">{errorMsg}</p>}
+                {errorMsg && <p className="text-red-400 text-xs text-center font-medium bg-red-500/10 py-2 rounded-lg border border-red-500/20">{errorMsg}</p>}
                 <button 
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-white text-black py-4 rounded-full font-bold text-[15px] transition-all hover:bg-white/90 disabled:opacity-50"
+                  className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white py-4 rounded-full font-bold text-[15px] transition-all shadow-lg shadow-purple-500/25 active:scale-95 disabled:opacity-50"
                 >
                   {isLoading ? 'Enregistrement...' : 'Terminer'}
                 </button>
               </form>
             ) : mode === 'forgot_password' ? (
-              <form onSubmit={handleForgotPassword} className="space-y-4">
-                <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={18} />
+              <form onSubmit={handleForgotPassword} className="space-y-4 relative z-10">
+                <div className="relative group">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30 group-focus-within:text-purple-400 transition-colors" size={18} />
                   <input 
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="Adresse e-mail"
-                    className="w-full bg-[#0A0A0A] border border-white/10 rounded-2xl p-4 pl-12 text-[15px] focus:outline-none focus:border-white/30 transition-all placeholder:text-white/30 text-white"
+                    className="w-full bg-[#0a0f1c]/90 backdrop-blur-3xl border border-white/10 rounded-2xl p-4 pl-12 text-[15px] focus:outline-none focus:border-purple-500/50 transition-all placeholder:text-white/30 text-white shadow-inner"
                     required
                   />
                 </div>
-                {errorMsg && <p className="text-red-500 text-xs text-center">{errorMsg}</p>}
+                {errorMsg && <p className="text-red-400 text-xs text-center font-medium bg-red-500/10 py-2 rounded-lg border border-red-500/20">{errorMsg}</p>}
                 <button 
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-white text-black py-4 rounded-full font-bold text-[15px] transition-all hover:bg-white/90 disabled:opacity-50"
+                  className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white py-4 rounded-full font-bold text-[15px] transition-all shadow-lg shadow-purple-500/25 active:scale-95 disabled:opacity-50"
                 >
                   {isLoading ? 'Envoi...' : 'Envoyer le code'}
                 </button>
@@ -381,53 +385,53 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                 </button>
               </form>
             ) : mode === 'new_password' ? (
-              <form onSubmit={handleUpdatePassword} className="space-y-4">
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={18} />
+              <form onSubmit={handleUpdatePassword} className="space-y-4 relative z-10">
+                <div className="relative group">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30 group-focus-within:text-purple-400 transition-colors" size={18} />
                   <input 
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Nouveau mot de passe"
-                    className="w-full bg-[#0A0A0A] border border-white/10 rounded-2xl p-4 pl-12 pr-12 text-[15px] focus:outline-none focus:border-white/30 transition-all placeholder:text-white/30 text-white"
+                    className="w-full bg-[#0a0f1c]/90 backdrop-blur-3xl border border-white/10 rounded-2xl p-4 pl-12 pr-12 text-[15px] focus:outline-none focus:border-purple-500/50 transition-all placeholder:text-white/30 text-white shadow-inner"
                     required
                   />
                   <button 
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-white transition-colors"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 hover:text-white transition-colors"
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
-                {errorMsg && <p className="text-red-500 text-xs text-center">{errorMsg}</p>}
+                {errorMsg && <p className="text-red-400 text-xs text-center font-medium bg-red-500/10 py-2 rounded-lg border border-red-500/20">{errorMsg}</p>}
                 <button 
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-white text-black py-4 rounded-full font-bold text-[15px] transition-all hover:bg-white/90 disabled:opacity-50"
+                  className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white py-4 rounded-full font-bold text-[15px] transition-all shadow-lg shadow-purple-500/25 active:scale-95 disabled:opacity-50"
                 >
                   {isLoading ? 'Mise à jour...' : 'Changer le mot de passe'}
                 </button>
               </form>
             ) : mode === 'verify_otp' ? (
-              <form onSubmit={handleVerifyOtp} className="space-y-4">
-                <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={18} />
+              <form onSubmit={handleVerifyOtp} className="space-y-4 relative z-10">
+                <div className="relative group">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30 group-focus-within:text-purple-400 transition-colors" size={18} />
                   <input 
                     type="text"
                     value={otp}
                     onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 8))}
                     placeholder="Code de vérification"
-                    className="w-full bg-[#0A0A0A] border border-white/10 rounded-2xl p-4 pl-12 text-[15px] focus:outline-none focus:border-white/30 transition-all placeholder:text-white/30 text-white tracking-[0.3em] font-mono text-center"
+                    className="w-full bg-[#0a0f1c]/90 backdrop-blur-3xl border border-white/10 rounded-2xl p-4 pl-12 text-[15px] focus:outline-none focus:border-purple-500/50 transition-all placeholder:text-white/30 text-white tracking-[0.3em] font-mono text-center shadow-inner"
                     required
                     maxLength={8}
                   />
                 </div>
-                {errorMsg && <p className="text-red-500 text-xs text-center">{errorMsg}</p>}
+                {errorMsg && <p className="text-red-400 text-xs text-center font-medium bg-red-500/10 py-2 rounded-lg border border-red-500/20">{errorMsg}</p>}
                 <button 
                   type="submit"
                   disabled={isLoading || otp.length < 6}
-                  className="w-full bg-white text-black py-4 rounded-full font-bold text-[15px] transition-all hover:bg-white/90 disabled:opacity-50"
+                  className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white py-4 rounded-full font-bold text-[15px] transition-all shadow-lg shadow-purple-500/25 active:scale-95 disabled:opacity-50"
                 >
                   {isLoading ? 'Vérification...' : 'Vérifier le code'}
                 </button>
@@ -450,23 +454,23 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                 </div>
               </form>
             ) : mode === 'magic_link' ? (
-              <form onSubmit={handleEmailLogin} className="space-y-4">
-                <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={18} />
+              <form onSubmit={handleEmailLogin} className="space-y-4 relative z-10">
+                <div className="relative group">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30 group-focus-within:text-purple-400 transition-colors" size={18} />
                   <input 
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="Adresse e-mail"
-                    className="w-full bg-[#0A0A0A] border border-white/10 rounded-2xl p-4 pl-12 text-[15px] focus:outline-none focus:border-white/30 transition-all placeholder:text-white/30 text-white"
+                    className="w-full bg-[#0a0f1c]/90 backdrop-blur-3xl border border-white/10 rounded-2xl p-4 pl-12 text-[15px] focus:outline-none focus:border-purple-500/50 transition-all placeholder:text-white/30 text-white shadow-inner"
                     required
                   />
                 </div>
-                {errorMsg && <p className="text-red-500 text-xs text-center">{errorMsg}</p>}
+                {errorMsg && <p className="text-red-400 text-xs text-center font-medium bg-red-500/10 py-2 rounded-lg border border-red-500/20">{errorMsg}</p>}
                 <button 
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-white text-black py-4 rounded-full font-bold text-[15px] transition-all hover:bg-white/90 disabled:opacity-50"
+                  className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white py-4 rounded-full font-bold text-[15px] transition-all shadow-lg shadow-purple-500/25 active:scale-95 disabled:opacity-50"
                 >
                   {isLoading ? 'Envoi...' : 'Continuer avec Magic Link'}
                 </button>
@@ -479,54 +483,54 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                 </button>
               </form>
             ) : (
-              <form onSubmit={handlePasswordAuth} className="space-y-4">
+              <form onSubmit={handlePasswordAuth} className="space-y-4 relative z-10">
                 {mode === 'signup' && (
-                  <div className="relative">
-                    <User className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={18} />
+                  <div className="relative group">
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30 group-focus-within:text-purple-400 transition-colors" size={18} />
                     <input 
                       type="text"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
                       placeholder="Nom d'utilisateur"
-                      className="w-full bg-[#0A0A0A] border border-white/10 rounded-2xl p-4 pl-12 text-[15px] focus:outline-none focus:border-white/30 transition-all placeholder:text-white/30 text-white"
+                      className="w-full bg-[#0a0f1c]/90 backdrop-blur-3xl border border-white/10 rounded-2xl p-4 pl-12 text-[15px] focus:outline-none focus:border-purple-500/50 transition-all placeholder:text-white/30 text-white shadow-inner"
                       required
                     />
                   </div>
                 )}
-                <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={18} />
+                <div className="relative group">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30 group-focus-within:text-purple-400 transition-colors" size={18} />
                   <input 
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="Adresse e-mail"
-                    className="w-full bg-[#0A0A0A] border border-white/10 rounded-2xl p-4 pl-12 text-[15px] focus:outline-none focus:border-white/30 transition-all placeholder:text-white/30 text-white"
+                    className="w-full bg-[#0a0f1c]/90 backdrop-blur-3xl border border-white/10 rounded-2xl p-4 pl-12 text-[15px] focus:outline-none focus:border-purple-500/50 transition-all placeholder:text-white/30 text-white shadow-inner"
                     required
                   />
                 </div>
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={18} />
+                <div className="relative group">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30 group-focus-within:text-purple-400 transition-colors" size={18} />
                   <input 
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Mot de passe"
-                    className="w-full bg-[#0A0A0A] border border-white/10 rounded-2xl p-4 pl-12 pr-12 text-[15px] focus:outline-none focus:border-white/30 transition-all placeholder:text-white/30 text-white"
+                    className="w-full bg-[#0a0f1c]/90 backdrop-blur-3xl border border-white/10 rounded-2xl p-4 pl-12 pr-12 text-[15px] focus:outline-none focus:border-purple-500/50 transition-all placeholder:text-white/30 text-white shadow-inner"
                     required
                   />
                   <button 
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-white transition-colors"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 hover:text-white transition-colors"
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
-                {errorMsg && <p className="text-red-500 text-xs text-center">{errorMsg}</p>}
+                {errorMsg && <p className="text-red-400 text-xs text-center font-medium bg-red-500/10 py-2 rounded-lg border border-red-500/20">{errorMsg}</p>}
                 <button 
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-white text-black py-4 rounded-full font-bold text-[15px] transition-all hover:bg-white/90 disabled:opacity-50"
+                  className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white py-4 rounded-full font-bold text-[15px] transition-all shadow-lg shadow-purple-500/25 active:scale-95 disabled:opacity-50"
                 >
                   {isLoading ? 'Chargement...' : mode === 'signup' ? 'S\'inscrire' : 'Se connecter'}
                 </button>
@@ -558,7 +562,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
               </form>
             )}
 
-            <p className="mt-8 text-center text-[12px] text-white/40 leading-relaxed">
+            <p className="mt-8 text-center text-[12px] text-white/60 leading-relaxed">
               En continuant, vous acceptez nos <span 
                 onClick={() => setLegalModal({ isOpen: true, type: 'tos' })}
                 className="underline cursor-pointer hover:text-white transition-colors"
