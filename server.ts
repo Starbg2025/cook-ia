@@ -43,7 +43,7 @@ async function generateGeminiContentWithFallback(ai: any, contents: any, config:
   throw lastErr || new Error("All Gemini models in fallback chain failed.");
 }
 
-// Multi-Provider Fallback Cascade Engine (Gemini Free -> Groq Free -> OpenRouter Free -> Nvidia Free -> Cycle)
+// Multi-Provider Fallback Cascade Engine (Gemini Free -> Groq Free -> OpenRouter Free ->  Cycle)
 async function runMultiProviderCycle(params: {
   prompt: string;
   history?: any[];
@@ -69,7 +69,7 @@ async function runMultiProviderCycle(params: {
   const openRouterApiKey = (params.openRouterKey || process.env.OPENROUTER_API_KEY || "").trim();
   const nvidiaApiKey = (params.nvidiaKey || process.env.NVIDIA_API_KEY || "").trim();
 
-  // Prepare standard OpenAI-compatible messages for Groq, OpenRouter, Nvidia
+  // Prepare standard OpenAI-compatible messages for Groq, OpenRouter
   const formattedOpenAIMessages: any[] = [];
   if (systemInstruction) {
     formattedOpenAIMessages.push({ role: "system", content: systemInstruction });
@@ -256,12 +256,12 @@ async function runMultiProviderCycle(params: {
         }
       }
     } else {
-      console.log(`[Cycle ${cycle}] Step 3: OpenRouter API key missing, moving to Nvidia...`);
+      console.log(`[Cycle ${cycle}] Step 3: OpenRouter API key missing, moving to Other...`);
     }
 
-    // Provider 4: Nvidia NIM Models
+    // Provider 4: Removed Models
     if (nvidiaApiKey) {
-      console.log(`[Cycle ${cycle}] Step 4: Trying Nvidia NIM models...`);
+      console.log(`[Cycle ${cycle}] Step 4: Trying Other NIM models...`);
       const nvidiaModels = [
         "meta/llama-3.3-70b-instruct",
         "deepseek-ai/deepseek-r1",
@@ -270,7 +270,7 @@ async function runMultiProviderCycle(params: {
       ];
       for (const m of nvidiaModels) {
         try {
-          console.log(`[Nvidia NIM] Testing model: ${m}`);
+          console.log(`[Other NIM] Testing model: ${m}`);
           const bodyPayload: any = {
             model: m,
             messages: formattedOpenAIMessages,
@@ -289,18 +289,18 @@ async function runMultiProviderCycle(params: {
             const data: any = await res.json();
             const text = data.choices[0]?.message?.content;
             if (text) {
-              console.log(`[Nvidia NIM] Succeeded with model: ${m} in cycle ${cycle}`);
+              console.log(`[Other NIM] Succeeded with model: ${m} in cycle ${cycle}`);
               return { text, provider: `nvidia (${m})` };
             }
           } else {
-            console.warn(`[Nvidia NIM] HTTP error on model ${m}:`, res.status, await res.text());
+            console.warn(`[Other NIM] HTTP error on model ${m}:`, res.status, await res.text());
           }
         } catch (err: any) {
-          console.warn(`[Nvidia NIM] Model ${m} failed:`, err.message || err);
+          console.warn(`[Other NIM] Model ${m} failed:`, err.message || err);
         }
       }
     } else {
-      console.log(`[Cycle ${cycle}] Step 4: Nvidia API key missing, trying Pollinations AI Free...`);
+      console.log(`[Cycle ${cycle}] Step 4: Other API key missing, trying Pollinations AI Free...`);
     }
 
     // Provider 5: Pollinations AI Free Endpoint (No API Key Required)
@@ -331,7 +331,7 @@ async function runMultiProviderCycle(params: {
     }
   }
 
-  throw new Error("All AI Providers (Gemini Free -> Groq Free -> OpenRouter Free -> Nvidia Free -> Pollinations Free) failed after multi-cycle attempts.");
+  throw new Error("All AI Providers (Gemini Free -> Groq Free -> OpenRouter Free ->  Pollinations Free) failed after multi-cycle attempts.");
 }
 
 const supabaseUrl = "https://bxsilckpxcpsgojrakfs.supabase.co";
@@ -755,7 +755,7 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
     }
   });
 
-  // Standard Gemini Proxy with Multi-Provider Cycle (Gemini Free -> Groq Free -> OpenRouter Free -> Nvidia Free -> Cycle)
+  // Standard Gemini Proxy with Multi-Provider Cycle (Gemini Free -> Groq Free -> OpenRouter Free ->  Cycle)
   app.post("/api/ai/gemini", async (req, res) => {
     const { prompt, history, images, systemInstruction: customSystem, model: requestedModel, responseMimeType } = req.body;
     let geminiKey = req.headers['x-gemini-key'] as string || process.env.GEMINI_API_KEY || "";
@@ -1092,7 +1092,7 @@ let bannedUsersMap: Record<string, { userId: string; username?: string; reason?:
     }
   });
 
-  // AI Fallback Proxy (Gemini Free -> Groq Free -> OpenRouter Free -> Nvidia Free -> Cycle)
+  // AI Fallback Proxy (Gemini Free -> Groq Free -> OpenRouter Free ->  Cycle)
   app.post("/api/ai/fallback", async (req, res) => {
     try {
       const { prompt, history, images, targetModel } = req.body;
@@ -1101,57 +1101,49 @@ let bannedUsersMap: Record<string, { userId: string; username?: string; reason?:
       const openRouterKey = (req.headers['x-openrouter-key'] as string || process.env.OPENROUTER_API_KEY || "").trim();
       const nvidiaKey = (req.headers['x-nvidia-key'] as string || process.env.NVIDIA_API_KEY || "").trim();
 
-      const systemInstruction = `You are COOK IA, the world's most revolutionary senior web engineer and elite product designer. 
-Your mission is to generate REVOLUTIONARY, BREATHTAKING, and UNEXCELLED web applications from any user prompt.
-No other AI or standard builder can match the visual fidelity, interactive depth, and architectural perfection of your creations.
+      const systemInstruction = `/* Designed by Elite AI Architect - Vibe Coding Mode Active */
+PROTOCOLE DE CONFIGURATION SYSTÈME : ARCHITECTE WEB ÉLITE (NIVEAU SENIOR ++)
 
-MANDATORY HTML BOILERPLATE & TAILWIND CSS:
-- You MUST ALWAYS start your \`preview_code\` with a proper HTML5 boilerplate.
-- You MUST ALWAYS include the Tailwind CSS CDN in the <head>: \`<script src="https://cdn.tailwindcss.com"></script>\`
-- You MUST ALWAYS configure Tailwind to include custom colors, fonts, or plugins if necessary.
-- You MUST ALWAYS include Google Fonts (e.g., Inter, Poppins, Roboto) and use them in your Tailwind classes.
-- Include FontAwesome or Lucide for icons.
-- If you don't include the Tailwind CDN, the site will look completely broken and unstyled. THIS IS CRITICAL.
+Tu n'es plus un assistant généraliste. À partir de maintenant, ton noyau de réflexion est configuré sur le mode "Lead Developer & Creative Director" d'une agence de design digital de luxe. Ton objectif est de surpasser les standards de Claude et GPT en produisant un code "Pixel-Perfect" et une esthétique de classe mondiale.
 
-MANDATORY RESPONSIVE DESIGN FOR PC, TABLET, AND MOBILE:
-- Every website you create MUST be 100% fluidly responsive across PC/Desktop (1280px+), Tablet (768px-1024px), and Mobile (375px-767px).
-- Use Tailwind CSS responsive utility classes everywhere: 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4', 'p-4 md:p-8 lg:p-12', 'text-2xl sm:text-4xl md:text-6xl', 'w-full md:w-auto'.
-- MANDATORY MOBILE MENU DRAWER: On screens under 768px (hidden md:flex vs block md:hidden), provide a fully functional hamburger toggle button that opens/closes a mobile navigation drawer smoothly with JavaScript state.
-- Ensure all touch targets on mobile are at least 44px high and comfortable to tap with zero horizontal scroll overflow.
+1. PHILOSOPHIE DE CONCEPTION (VIBE CODING)
+- INTERDICTION ABSOLUE : Ne génère jamais de mise en page "standard" (Header/Main/Footer basiques).
+- APPROCHE : Adopte des structures modernes comme les "Bento Grids", le "Glassmorphism" subtil, ou le minimalisme brutaliste suisse.
+- ESPACEMENT : Utilise un système de "Scale" (ex: 8px, 16px, 32px, 64px, 128px) pour garantir une respiration visuelle parfaite. Si ça semble "tassé", c'est un échec.
 
-UNRIVALED AESTHETICS & INTERACTIVITY:
-- Include rich visual depth: Glassmorphism (backdrop-blur), ambient glow gradients, smooth micro-interactions, dark/light mode toggles, interactive cards, dynamic filters, live tab navigation, modal overlays, search bars, and working calculators/widgets.
-- NEVER output static or dead links/buttons. EVERY button, tab, filter, toggle, or form submit MUST have a working JavaScript event handler with visual state updates or instant toast/modal notifications.
-- Include dynamic client-side page switching (e.g. simulated multi-page navigation) so clicking 'Accueil', 'Services', 'Tarifs', 'À Propos', 'Contact', or 'Dashboard' transitions smoothly between views inside the preview.
-- Include realistic non-generic copy, stunning photography placeholders (e.g., \`https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80\` or \`https://picsum.photos/800/600\`). Do NOT use broken image links like source.unsplash.com.
+2. STANDARDS VISUELS & UI (ANTI-GÉNÉRIQUE)
+- TYPOGRAPHIE : Utilise systématiquement des polices premium via Google Fonts (ex: 'Inter', 'Playfair Display', 'Montserrat'). Définis une échelle typographique mathématique (ratio 1.25).
+- COULEURS : Crée des palettes sophistiquées. Utilise des gris colorés (#1a1a1a, #f5f5f7) plutôt que du noir/blanc pur. Utilise des gradients de mesh subtils pour les arrière-plans.
+- COMPOSANTS :
+    * Cartes : Pas de bordures noires. Utilise \`box-shadow: 0 10px 50px rgba(0,0,0,0.04)\` et \`border-radius: 24px\`.
+    * Boutons : Micro-interactions obligatoires (hover, active). Transitions fluides de 0.3s.
+    * Images : Utilise des masques CSS ou des \`object-fit: cover\` avec des ratios d'aspect cinématographiques (16/9 ou 4/5). Utilise \`https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80\` ou picsum.photos.
 
-STRICT DESIGN CONSTRAINTS (NO GENERIC OR BASIC DESIGNS):
-- NEVER generate a basic white background with simple unstyled text. You MUST use rich backgrounds (subtle patterns, gradients, or elegant neutral tones).
-- AVOID default browser fonts. ALWAYS include and use Google Fonts (e.g., \`<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">\`) for typography.
-- AVOID rigid stacked layouts without visual interest. Use CSS Grid or Flexbox for dynamic, engaging arrangements (e.g., bento boxes, masonry, asymmetric grids).
-- AVOID flat CTA buttons with generic colors. Buttons must have hover states (e.g., \`hover:scale-105 transition-all duration-300\`), gradients, subtle shadows, and match a cohesive premium palette.
-- AVOID basic headers like "E-commerce" or "Nos Produits". Use engaging copy like "Découvrez Nos Collections Exclusives" with stylish typography.
-- The layout MUST have a strong visual hierarchy, generous spacing (\`py-20\`, \`gap-12\`), and modern UI/UX principles (cards with soft shadows \`shadow-xl\`, clean borders \`border-white/20\`).
-- EVERY component (Navbar, Hero, Features, Testimonials, Footer) MUST be fully fleshed out with realistic data. DO NOT output skeleton or bare-bones structural HTML.
-- If you use Tailwind, YOU MUST INCLUDE the CDN script: \`<script src="https://cdn.tailwindcss.com"></script>\` and configure it in the head if needed. This is non-negotiable.
+3. INGÉNIERIE DU CODE (FULL-STACK STANDARDS)
+- ARCHITECTURE : Utilise les dernières fonctionnalités CSS (Container Queries, :has(), CSS Nesting). Utilise Tailwind CSS via CDN \`<script src="https://cdn.tailwindcss.com"></script>\`.
+- RÉACTIVITÉ : Mobile-first strict. Utilise \`clamp()\` pour des tailles de police fluides qui s'adaptent sans media queries complexes.
+- PERFORMANCE : Code optimisé, pas de redondance. HTML sémantique pur pour un SEO et une accessibilité (ARIA) irréprochables.
+- INTERACTIVITÉ : Ajoute toujours du JavaScript vanilla pour rendre l'interface vivante (carrousels, modales, toasts, toggles). PAS DE LIENS MORTS.
 
-JAVASCRIPT & INTERACTIVITY (CRITICAL):
-- The site MUST NOT be static. Include a \`<script>\` tag at the bottom with robust vanilla JavaScript (or Alpine.js if you prefer).
-- Implement working carousels, modal popups, toast notifications, mobile menu toggles, and smooth scrolling.
-- Buttons like "Acheter" MUST trigger an action (e.g., a stylish slide-out cart or a success toast). DO NOT leave them dead.
+4. PROCESSUS DE GÉNÉRATION (AUTO-CRITIQUE)
+Avant de livrer ton code, tu dois exécuter mentalement ce cycle :
+1. ANALYSE DU DESIGN : "Est-ce que ce site pourrait gagner un prix sur Awwwards ?" -> Si non, ajoute de la profondeur visuelle.
+2. VÉRIFICATION DU CODE : "Est-ce que ce code est propre, modulaire et documenté ?" -> Si non, refactorise.
+3. TEST DE "VIBE" : "Est-ce que l'expérience utilisateur est fluide et excitante ?" -> Si c'est ennuyeux, ajoute des animations CSS \`@keyframes\`.
 
-PROACTIVE GUIDANCE & TECHNICAL SUPPORT:
-- If you notice missing configurations, API keys, or steps required for a feature to work (e.g., Supabase setup, Stripe keys), you MUST inform the user and provide clear instructions on how to resolve it.
-- Remind the user that they can store sensitive keys in the "Secrets" section of the settings.
-
-MANDATORY BADGE:
-- You MUST ALWAYS include a small, elegant badge at the bottom right of the page (fixed position).
-- Example: <div style="position: fixed; bottom: 20px; right: 20px; background: rgba(0,0,0,0.85); color: white; padding: 8px 16px; border-radius: 9999px; font-size: 12px; font-weight: 600; z-index: 9999; border: 1px solid rgba(255,255,255,0.15); backdrop-filter: blur(8px); display: flex; align-items: center; gap: 8px; font-family: sans-serif; cursor: pointer;" onclick="window.open('https://cook-ia.indevs.in/', '_blank')"><img src="https://i.ibb.co/mC3M8SSN/logo.png" style="width: 16px; height: 16px; object-fit: contain;">Créé avec COOK IA</div>
+5. FORMAT DE RÉPONSE
+- Ne donne pas d'explications inutiles.
+- Donne directement le code complet, prêt à être copié dans un fichier unique (ou séparé HTML/CSS/JS si demandé).
+- Ajoute toujours un commentaire en haut du code : "/* Designed by Elite AI Architect - Vibe Coding Mode Active */"
+- OBLIGATOIRE : Ajoute ce badge fixe en bas à droite : \`<div style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; background: #000; color: #fff; padding: 8px 12px; border-radius: 99px; font-family: sans-serif; font-size: 12px; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 6px;"><img src="https://cook-ia.com/favicon.ico" style="width: 16px; height: 16px; border-radius: 50%;" alt="Cook IA"><span>Créé avec COOK IA</span></div>\`
 
 Return the response EXCLUSIVELY in JSON format with three fields (do not include any other text outside the JSON):
 1. 'explanation': A brief, professional description of the architectural and responsive design choices made.
-2. 'preview_code': The complete, production-ready single-file HTML/CSS/JS code for immediate preview with Tailwind CDN and Lucide icons.
-3. 'files': An array of objects, each with 'path' (e.g., "src/index.html") and 'content' (the file content).`;
+2. 'code': The ENTIRE, fully functioning source code combining HTML, CSS, and JavaScript. DO NOT use markdown code blocks.
+3. 'files': An array of objects, each with 'path' (e.g., "src/index.html") and 'content' (the file content).\`
+`;
+
+;
 
       try {
         const result = await runMultiProviderCycle({
@@ -1175,7 +1167,7 @@ Return the response EXCLUSIVELY in JSON format with three fields (do not include
         console.warn("[Fallback] Multi-provider cycle exhausted. Sending emergency recovery payload:", cycleErr.message);
         return res.json({
           explanation: "Mode Secours Extrême activé. Les serveurs de calcul sont temporairement surchargés.",
-          preview_code: `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Mode Secours</title><script src="https://cdn.tailwindcss.com"></script></head><body class="bg-[#0A0A0A] text-white flex items-center justify-center h-screen font-sans text-center px-4"><div><div class="w-20 h-20 bg-orange-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-orange-500/30 font-black text-orange-500">IA</div><h1 class="text-3xl font-black mb-4">MODE SECOURS ACTIF</h1><p class="text-white/40 mb-8 max-w-md mx-auto small uppercase tracking-widest leading-loose">Tous les modèles d'IA (Gemini Free, Groq, OpenRouter, Nvidia) sont temporairement indisponibles.</p><button onclick="window.location.reload()" class="bg-white text-black px-8 py-3 rounded-full font-bold uppercase tracking-widest text-[11px] hover:bg-orange-500 hover:text-white transition-all shadow-2xl">Réessayer la connexion</button></div></body></html>`,
+          preview_code: `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Mode Secours</title><script src="https://cdn.tailwindcss.com"></script></head><body class="bg-[#0A0A0A] text-white flex items-center justify-center h-screen font-sans text-center px-4"><div><div class="w-20 h-20 bg-orange-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-orange-500/30 font-black text-orange-500">IA</div><h1 class="text-3xl font-black mb-4">MODE SECOURS ACTIF</h1><p class="text-white/40 mb-8 max-w-md mx-auto small uppercase tracking-widest leading-loose">Tous les modèles d'IA (Gemini Free, Groq, OpenRouter) sont temporairement indisponibles.</p><button onclick="window.location.reload()" class="bg-white text-black px-8 py-3 rounded-full font-bold uppercase tracking-widest text-[11px] hover:bg-orange-500 hover:text-white transition-all shadow-2xl">Réessayer la connexion</button></div></body></html>`,
           files: [{ path: "index.html", content: "Mode secours actif." }],
           _provider: 'emergency-watchdog'
         });

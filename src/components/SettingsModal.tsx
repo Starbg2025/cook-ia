@@ -984,7 +984,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setAnnouncementMessage("Nouveau réseau de modèles IA 100% gratuits activé (Gemini, Groq, OpenRouter, Nvidia) !")}
+                  onClick={() => setAnnouncementMessage("Nouveau réseau de modèles IA 100% gratuits activé (Gemini, Groq, OpenRouter) !")}
                   className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20 hover:bg-amber-500/20 transition-all"
                 >
                   ⚡ Modèles IA Gratuits
@@ -1450,13 +1450,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   badge: '100% Gratuit' 
                 },
                 { 
-                  id: 'nvidia-llama-3.3-70b',
-                  name: 'Nvidia NIM Llama 3.3 70B (Gratuit)', 
-                  provider: 'Nvidia', 
-                  desc: 'Microservices Nvidia NIM haute performance gratuits.', 
-                  badge: '100% Gratuit' 
-                },
-                { 
                   id: 'gemini-1.5-flash',
                   name: 'Gemini 1.5 Flash (Gratuit)', 
                   provider: 'Google', 
@@ -1502,7 +1495,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <h5 className={`text-xs font-bold ${isDark ? 'text-amber-400' : 'text-amber-900'}`}>Cycle de Secours Automatique (Failover Multi-Fournisseurs)</h5>
                   <p className={`text-[11px] leading-relaxed ${isDark ? 'text-amber-300/80' : 'text-amber-800'}`}>
                     Tous les modèles ci-dessus sont 100% gratuits. Si votre modèle principal rencontre un pic de trafic, le cycle passe automatiquement la main : 
-                    <b className="block mt-1">🔄 Gemini Free ➔ Groq Free ➔ OpenRouter Free ➔ Nvidia NIM Free</b>
+                    <b className="block mt-1">🔄 Gemini Free ➔ Groq Free ➔ OpenRouter Free</b>
                   </p>
                 </div>
               </div>
