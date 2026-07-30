@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Zap, RotateCcw, ExternalLink, Pencil, FileCode, Folder, Download, ChevronRight, ChevronDown, MousePointer2, FileSearch, History, X, Sparkles } from 'lucide-react';
-import { ViewMode, ProjectFile, StyleConfig, SectionEditState } from '../types';
+import { Zap, RotateCcw, ExternalLink, Pencil, FileCode, Folder, Download, ChevronRight, ChevronDown, MousePointer2, FileSearch, History, X, Sparkles, Smartphone, Tablet, Monitor, Loader2 } from 'lucide-react';
+import { ViewMode, ProjectFile, StyleConfig, SectionEditState, ActionHistory } from '../types';
 import { ForgeStudio } from './ForgeStudio';
 
 interface PreviewProps {
@@ -19,6 +19,10 @@ interface PreviewProps {
   onSectionSelect?: (section: SectionEditState) => void;
   isDark?: boolean;
   onApplyPrompt?: (promptText: string) => void;
+  isLoading?: boolean;
+  loadingStatus?: string;
+  currentAgentStage?: string;
+  actions?: ActionHistory[];
 }
 
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -38,7 +42,11 @@ export const Preview: React.FC<PreviewProps> = ({
   sectionEdit,
   onSectionSelect,
   isDark = true,
-  onApplyPrompt
+  onApplyPrompt,
+  isLoading,
+  loadingStatus,
+  currentAgentStage,
+  actions
 }) => {
   const [isVisualEditing, setIsVisualEditing] = React.useState(false);
   const [isSectionSelectionMode, setIsSectionSelectionMode] = React.useState(false);
@@ -46,6 +54,7 @@ export const Preview: React.FC<PreviewProps> = ({
   const [selectedFilePath, setSelectedFilePath] = React.useState<string | null>(null);
   const [showActionHistory, setShowActionHistory] = React.useState(false);
   const [showForgeStudio, setShowForgeStudio] = React.useState(false);
+  const [deviceViewport, setDeviceViewport] = React.useState<'desktop' | 'tablet' | 'mobile'>('desktop');
 
   React.useEffect(() => {
     if (files.length > 0 && !selectedFilePath) {
@@ -260,8 +269,49 @@ export const Preview: React.FC<PreviewProps> = ({
           <div className="w-3 h-3 rounded-full bg-[#28C840] shadow-inner" />
         </div>
         
-        <div className={`flex-1 max-w-2xl ${isDark ? 'bg-[#0A0A0A] border-white/5' : 'bg-white border-slate-200'} px-4 py-1.5 rounded-xl border flex items-center justify-center gap-2 mx-4`}>
-          <span className={`text-[11px] font-mono ${isDark ? 'text-white/20' : 'text-slate-400'} select-none`}>localhost:3000/preview</span>
+        <div className={`flex-1 max-w-2xl ${isDark ? 'bg-[#0A0A0A] border-white/5' : 'bg-white border-slate-200'} px-4 py-1.5 rounded-xl border flex items-center justify-between gap-2 mx-4`}>
+          <span className={`text-[11px] font-mono ${isDark ? 'text-white/20' : 'text-slate-400'} select-none hidden sm:inline`}>localhost:3000/preview</span>
+          
+          {/* Responsive Device Viewport Switcher */}
+          <div className={`flex items-center gap-1 p-0.5 rounded-lg border ${isDark ? 'bg-[#141414] border-white/10' : 'bg-slate-100 border-slate-200'}`}>
+            <button
+              onClick={() => setDeviceViewport('desktop')}
+              className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold uppercase transition-all ${
+                deviceViewport === 'desktop'
+                  ? 'bg-orange-primary text-white shadow-sm'
+                  : isDark ? 'text-white/40 hover:text-white' : 'text-slate-500 hover:text-slate-900'
+              }`}
+              title="Aperçu PC / Bureau"
+            >
+              <Monitor size={13} />
+              <span className="hidden md:inline">PC</span>
+            </button>
+            <button
+              onClick={() => setDeviceViewport('tablet')}
+              className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold uppercase transition-all ${
+                deviceViewport === 'tablet'
+                  ? 'bg-orange-primary text-white shadow-sm'
+                  : isDark ? 'text-white/40 hover:text-white' : 'text-slate-500 hover:text-slate-900'
+              }`}
+              title="Aperçu Tablette (768px)"
+            >
+              <Tablet size={13} />
+              <span className="hidden md:inline">Tablette</span>
+            </button>
+            <button
+              onClick={() => setDeviceViewport('mobile')}
+              className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold uppercase transition-all ${
+                deviceViewport === 'mobile'
+                  ? 'bg-orange-primary text-white shadow-sm'
+                  : isDark ? 'text-white/40 hover:text-white' : 'text-slate-500 hover:text-slate-900'
+              }`}
+              title="Aperçu Mobile (375px)"
+            >
+              <Smartphone size={13} />
+              <span className="hidden md:inline">Mobile</span>
+            </button>
+          </div>
+
           {isVisualEditing && (
             <span className="text-[9px] bg-orange-primary/20 text-orange-primary px-2 py-0.5 rounded-full font-bold uppercase tracking-widest animate-pulse">
               Visual Edit Mode
@@ -269,7 +319,7 @@ export const Preview: React.FC<PreviewProps> = ({
           )}
           {isSectionSelectionMode && (
             <span className="text-[9px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full font-bold uppercase tracking-widest animate-pulse">
-              Select a Section
+              Select Section
             </span>
           )}
         </div>
@@ -359,14 +409,64 @@ export const Preview: React.FC<PreviewProps> = ({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="w-full h-full"
+              className={`w-full h-full flex justify-center items-center transition-all duration-300 relative ${
+                deviceViewport === 'desktop' ? '' : isDark ? 'bg-black/60 p-4' : 'bg-slate-200/80 p-4'
+              }`}
             >
+              {isLoading && (
+                <div className="absolute inset-0 z-30 bg-black/75 backdrop-blur-md flex flex-col items-center justify-center p-6 text-white">
+                  <div className="w-full max-w-md bg-[#141414] border border-white/10 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
+                    <div className="absolute -top-12 -right-12 w-32 h-32 bg-orange-primary/20 blur-[50px] rounded-full" />
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="w-8 h-8 rounded-full bg-orange-primary/20 border border-orange-primary/40 flex items-center justify-center shrink-0">
+                        <Loader2 size={16} className="animate-spin text-orange-primary" />
+                      </div>
+                      <div>
+                        <h4 className="font-display font-bold text-sm tracking-tight text-white">Réflexion & Action en direct</h4>
+                        <p className="text-[11px] text-white/50">Cook IA construit votre application...</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3 mb-6">
+                      <div className="p-3 rounded-xl border bg-white/5 border-white/10 text-xs flex items-center justify-between">
+                        <span className="font-mono text-orange-primary uppercase text-[10px] tracking-wider">{currentAgentStage || 'Architect'}</span>
+                        <span className="text-white/70">{loadingStatus || 'Building website...'}</span>
+                      </div>
+                    </div>
+
+                    {actions && actions.length > 0 && (
+                      <div className="space-y-1.5 max-h-48 overflow-y-auto scrollbar-hide">
+                        {actions.map((act, idx) => (
+                          <div key={idx} className="flex items-center justify-between text-xs py-1.5 px-3 rounded-lg bg-white/5 font-mono text-white/60">
+                            <span className="truncate">{act.content}</span>
+                            <span>{act.status === 'completed' ? '✓' : '...'}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {generatedCode ? (
-                <iframe 
-                  ref={iframeRef}
-                  title="Preview"
-                  className="w-full h-full border-none"
-                />
+                <div className={`transition-all duration-300 relative flex flex-col ${
+                  deviceViewport === 'desktop'
+                    ? 'w-full h-full'
+                    : deviceViewport === 'tablet'
+                      ? 'w-[768px] max-w-full h-full rounded-2xl border-4 border-slate-800 shadow-2xl overflow-hidden bg-white'
+                      : 'w-[375px] max-w-full h-full rounded-2xl border-4 border-slate-800 shadow-2xl overflow-hidden bg-white'
+                }`}>
+                  {deviceViewport !== 'desktop' && (
+                    <div className="w-full bg-slate-900 text-white h-5 shrink-0 flex items-center justify-center px-4 relative z-10">
+                      <div className="w-12 h-2.5 bg-black rounded-full" />
+                    </div>
+                  )}
+                  <iframe 
+                    ref={iframeRef}
+                    title="Preview"
+                    className="w-full h-full flex-1 border-none bg-white"
+                  />
+                </div>
               ) : (
                 <div className={`w-full h-full flex flex-col items-center justify-center ${isDark ? 'bg-[#0A0A0A]' : 'bg-slate-50'} relative overflow-hidden`}>
                   <motion.div

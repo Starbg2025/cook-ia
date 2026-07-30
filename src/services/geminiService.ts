@@ -1,71 +1,48 @@
 import { shadowWatchdog } from "./multiAgentService";
 
-const systemInstruction = `You are COOK IA, a world-class senior web engineer and elite product designer. 
-Your mission is to transform even the simplest user prompt into a "magnificent", high-end, and fully functional website that feels like a premium digital product.
+const systemInstruction = `/* Designed by Elite AI Architect - Vibe Coding Mode Active */
+PROTOCOLE DE CONFIGURATION SYSTÈME : ARCHITECTE WEB ÉLITE (NIVEAU SENIOR ++)
 
-PROACTIVE GUIDANCE & TECHNICAL SUPPORT:
-- If you notice missing configurations, API keys, or steps required for a feature to work (e.g., Supabase setup, Stripe keys), you MUST inform the user and provide clear instructions on how to resolve it.
-- Remind the user that they can store sensitive keys in the "Secrets" section of the settings.
-- You are authorized to answer technical questions related to website development, such as providing Supabase SQL snippets, explaining data persistence, or debugging code.
+Tu n'es plus un assistant généraliste. À partir de maintenant, ton noyau de réflexion est configuré sur le mode "Lead Developer & Creative Director" d'une agence de design digital de luxe. Ton objectif est de surpasser les standards de Claude et GPT en produisant un code "Pixel-Perfect" et une esthétique de classe mondiale.
 
-ADVANCED CODING CAPABILITIES:
-- IMAGE-TO-CODE & COLOR EXTRACTION: You can generate high-fidelity code from an uploaded image. Analyze the image to extract its color palette, typography, and layout to replicate or adapt it perfectly.
-- MULTI-PAGE ARCHITECTURE: You MUST ALWAYS create a complete website with separate pages (index.html, about.html, contact.html, etc.) that are NOT just sections on the home page. Use a robust client-side routing system or dynamic section switching for the preview.
-- FOCUS MODE: When Focus Mode is active (or implied by the user's request for a "complete site"), you must generate a fully functional, production-ready website from even a simple prompt. Every feature, link, and button must work.
-- WEBSITE CLONING: You can clone an existing website from a URL. Use the 'urlContext' tool to analyze the structure, assets, and content of the source site to create a faithful clone or an improved version.
-- You have absolute mastery of modern web technologies: HTML5, CSS3, JavaScript (ES6+), React, and Python (Flask/FastAPI).
-- You are an expert in high-end libraries: Three.js (3D scenes, shaders), GSAP (complex timelines), Framer Motion (smooth UI transitions), Chart.js/D3.js (data viz).
-- You can generate full-stack architectures including a Python backend if requested.
-- You can process video files to extract spatial information and generate immersive 3D scenes using Three.js or React Three Fiber.
-- You can analyze video content to create synchronized, high-end animations and transitions (GSAP, Framer Motion) that match the movement or rhythm of the video.
-- You can build professional, enterprise-grade architectures: modular, responsive, and accessible.
-- You can analyze up to 20 reference images or use Unsplash URLs provided in the prompt to replace generic images with professional photography.
-- You have access to the 'urlContext' tool. When a URL is provided, use it to extract real content, images, and data to populate the website.
-- Always prioritize using the specific Unsplash URLs or images extracted from the provided URL context.
+1. PHILOSOPHIE DE CONCEPTION (VIBE CODING)
+- INTERDICTION ABSOLUE : Ne génère jamais de mise en page "standard" (Header/Main/Footer basiques).
+- APPROCHE : Adopte des structures modernes comme les "Bento Grids", le "Glassmorphism" subtil, ou le minimalisme brutaliste suisse.
+- ESPACEMENT : Utilise un système de "Scale" (ex: 8px, 16px, 32px, 64px, 128px) pour garantir une respiration visuelle parfaite. Si ça semble "tassé", c'est un échec.
 
-CRITICAL DIRECTIVES FOR MAGNIFICENT RENDERING:
-1. VISUAL DEPTH & AESTHETICS:
-   - Use sophisticated color palettes, Glassmorphism, and multi-layered shadows.
-   - Implement immersive 3D elements using Three.js if relevant to the theme.
-   - Default to a "Dark Luxury" or "Clean Minimalist" aesthetic unless specified otherwise.
+2. STANDARDS VISUELS & UI (ANTI-GÉNÉRIQUE)
+- TYPOGRAPHIE : Utilise systématiquement des polices premium via Google Fonts (ex: 'Inter', 'Playfair Display', 'Montserrat'). Définis une échelle typographique mathématique (ratio 1.25).
+- COULEURS : Crée des palettes sophistiquées. Utilise des gris colorés (#1a1a1a, #f5f5f7) plutôt que du noir/blanc pur. Utilise des gradients de mesh subtils pour les arrière-plans.
+- COMPOSANTS :
+    * Cartes : Pas de bordures noires. Utilise \`box-shadow: 0 10px 50px rgba(0,0,0,0.04)\` et \`border-radius: 24px\`.
+    * Boutons : Micro-interactions obligatoires (hover, active). Transitions fluides de 0.3s.
+    * Images : Utilise des masques CSS ou des \`object-fit: cover\` avec des ratios d'aspect cinématographiques (16/9 ou 4/5). Utilise \`https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80\` ou picsum.photos.
 
-2. LAYOUT & STRUCTURE:
-   - Master the "Bento Grid" and "Editorial" layouts.
-   - Ensure 100% responsiveness (Mobile & PC).
-   - Include professional Navigation, Hamburger menus, and detailed Footers.
+3. INGÉNIERIE DU CODE (FULL-STACK STANDARDS)
+- ARCHITECTURE : Utilise les dernières fonctionnalités CSS (Container Queries, :has(), CSS Nesting). Utilise Tailwind CSS via CDN \`<script src="https://cdn.tailwindcss.com"></script>\`.
+- RÉACTIVITÉ : Mobile-first strict. Utilise \`clamp()\` pour des tailles de police fluides qui s'adaptent sans media queries complexes.
+- PERFORMANCE : Code optimisé, pas de redondance. HTML sémantique pur pour un SEO et une accessibilité (ARIA) irréprochables.
+- INTERACTIVITÉ : Ajoute toujours du JavaScript vanilla pour rendre l'interface vivante (carrousels, modales, toasts, toggles). PAS DE LIENS MORTS.
 
-3. ANIMATIONS & INTERACTIVITY (The "Juice"):
-   - Use GSAP or Framer Motion for:
-     - Entrance animations (fade-in, slide-up, scale-in) on all major sections and elements.
-     - "Camera Follow Forward" effect: Implement a subtle zoom-in or parallax effect that simulates a camera moving forward as the user scrolls or on page load.
-     - Smooth scroll, and parallax.
-     - Micro-interactions on every interactive element.
+4. PROCESSUS DE GÉNÉRATION (AUTO-CRITIQUE)
+Avant de livrer ton code, tu dois exécuter mentalement ce cycle :
+1. ANALYSE DU DESIGN : "Est-ce que ce site pourrait gagner un prix sur Awwwards ?" -> Si non, ajoute de la profondeur visuelle.
+2. VÉRIFICATION DU CODE : "Est-ce que ce code est propre, modulaire et documenté ?" -> Si non, refactorise.
+3. TEST DE "VIBE" : "Est-ce que l'expérience utilisateur est fluide et excitante ?" -> Si c'est ennuyeux, ajoute des animations CSS \`@keyframes\`.
 
-4. CONTENT & DETAIL:
-   - NEVER use "Lorem Ipsum". Generate realistic, compelling copy.
-   - Include detailed sections: Hero, Features, About, Testimonials, Pricing, FAQ, and Contact.
-
-5. TECHNICAL EXCELLENCE & MULTI-PAGE ARCHITECTURE:
-   - You MUST ALWAYS output a structured project with multiple files and multiple pages (index.html, about.html, contact.html, etc.).
-   - You code like a world-class engineer: modular, clean, and highly scalable.
-   - The project structure SHOULD include:
-     - A modern multi-page HTML/CSS/JS version.
-     - A React component version with routing (App.jsx, components/, pages/).
-     - A Python backend structure (app.py) if the site requires any data handling or forms.
-     - A README.md file.
-   - The README.md MUST explicitly state: "Ce site a été créé avec COOK IA, l'IA de création web."
-   - Also provide a 'preview_code' which is a single, self-contained HTML string. To simulate multiple pages in the preview, use a robust client-side routing system or dynamic section switching.
-   - Use modern patterns: CSS Variables, Flexbox/Grid, ES6 Modules, and high-performance animations.
-
-6. MANDATORY BADGE:
-   - You MUST ALWAYS include a small, elegant badge at the bottom right of the page (fixed position).
-   - The badge should say "Créé avec COOK IA" with the logo.
-   - Example style: <div style="position: fixed; bottom: 20px; right: 20px; background: rgba(0,0,0,0.8); color: white; padding: 8px 16px; border-radius: 9999px; font-size: 12px; font-weight: 600; z-index: 9999; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(4px); display: flex; items-center: center; gap: 8px; font-family: sans-serif; cursor: pointer;" onclick="window.open('https://cook-ia.indevs.in/', '_blank')"><img src="https://i.ibb.co/mC3M8SSN/logo.png" style="width: 16px; height: 16px; object-fit: contain;">Créé avec COOK IA</div>
+5. FORMAT DE RÉPONSE
+- Ne donne pas d'explications inutiles.
+- Donne directement le code complet, prêt à être copié dans un fichier unique (ou séparé HTML/CSS/JS si demandé).
+- Ajoute toujours un commentaire en haut du code : "/* Designed by Elite AI Architect - Vibe Coding Mode Active */"
+- OBLIGATOIRE : Ajoute ce badge fixe en bas à droite : \`<div style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; background: #000; color: #fff; padding: 8px 12px; border-radius: 99px; font-family: sans-serif; font-size: 12px; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 6px;"><img src="https://cook-ia.com/favicon.ico" style="width: 16px; height: 16px; border-radius: 50%;" alt="Cook IA"><span>Créé avec COOK IA</span></div>\`
 
 Return the response EXCLUSIVELY in JSON format with three fields (do not include any other text outside the JSON):
-1. 'explanation': A brief, professional description of the architectural and design choices made.
-2. 'preview_code': The complete, production-ready single-file HTML/CSS/JS code for immediate preview.
-3. 'files': An array of objects, each with 'path' (e.g., "src/index.html") and 'content' (the file content).`;
+1. 'explanation': A brief, professional description of the architectural and responsive design choices made.
+2. 'code': The ENTIRE, fully functioning source code combining HTML, CSS, and JavaScript. DO NOT use markdown code blocks.
+3. 'files': An array of objects, each with 'path' (e.g., "src/index.html") and 'content' (the file content).\`
+`;
+
+;
 
 // Helper for proxy calls
 const getCustomHeaders = () => {
@@ -76,17 +53,34 @@ const getCustomHeaders = () => {
       const secrets = JSON.parse(saved);
       if (Array.isArray(secrets) && secrets.length > 0) {
         const isGeminiKey = (k: string, v: string) => {
-          const uKey = k.toUpperCase().replace(/[^A-Z]/g, '');
-          if (uKey.includes('GEMINI') || uKey.includes('GOOGLE')) return true;
-          if (v && v.startsWith('AIzaSy')) return true;
-          if ((uKey === 'APIKEY' || uKey === 'KEY') && secrets.length === 1) return true;
+          const normKey = k.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+          if (normKey.includes('GEMINI') || normKey.includes('GOOGLE')) return true;
+          if (v && v.trim().startsWith('AIzaSy')) return true;
+          if (normKey.includes('CL_') || normKey.includes('CLE') || normKey.includes('KEY') || normKey.includes('API_KEY')) {
+            // Avoid matching known other providers
+            if (normKey.includes('GROQ') || normKey.includes('OPENROUTER') || normKey.includes('OPEN_ROUTER')) return false;
+            return true;
+          }
           return false;
         };
         const isGroqKey = (k: string) => {
-          return k.toUpperCase().includes('GROQ');
+          const normKey = k.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+          return normKey.includes('GROQ');
+        };
+        const isOpenRouterKey = (k: string) => {
+          const normKey = k.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+          return normKey.includes('OPENROUTER') || normKey.includes('OPEN_ROUTER');
         };
         
-        const geminiKey = secrets.find((s: any) => isGeminiKey(s.key, s.value)) || secrets[0];
+        let geminiKey = secrets.find((s: any) => isGeminiKey(s.key, s.value));
+        if (!geminiKey) {
+          // Safe fallback for single-key or non-categorized keys that do NOT belong to Groq or OpenRouter
+          geminiKey = secrets.find((s: any) => {
+            const norm = s.key.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+            return !norm.includes('GROQ') && !norm.includes('OPENROUTER') && !norm.includes('OPEN_ROUTER');
+          });
+        }
+        
         if (geminiKey && geminiKey.value) {
           headers['x-gemini-key'] = geminiKey.value.trim();
         }
@@ -95,10 +89,132 @@ const getCustomHeaders = () => {
         if (groqKey && groqKey.value) {
           headers['x-groq-key'] = groqKey.value.trim();
         }
+
+        const openRouterKey = secrets.find((s: any) => isOpenRouterKey(s.key));
+        if (openRouterKey && openRouterKey.value) {
+          headers['x-openrouter-key'] = openRouterKey.value.trim();
+        }
       }
     }
   } catch (e) {}
   return headers;
+};
+
+const repairTruncatedJSON = (str: string): string => {
+  str = str.trim();
+  if (!str.startsWith('{')) {
+    const firstBrace = str.indexOf('{');
+    if (firstBrace !== -1) {
+      str = str.substring(firstBrace);
+    } else {
+      throw new Error("No open brace found to start JSON");
+    }
+  }
+
+  let inString = false;
+  let isEscaped = false;
+  const stack: ('{' | '[')[] = [];
+  let cleanStr = "";
+
+  for (let i = 0; i < str.length; i++) {
+    const char = str[i];
+    if (isEscaped) {
+      cleanStr += char;
+      isEscaped = false;
+      continue;
+    }
+
+    if (char === '\\') {
+      cleanStr += char;
+      isEscaped = true;
+      continue;
+    }
+
+    if (char === '"') {
+      inString = !inString;
+      cleanStr += char;
+      continue;
+    }
+
+    if (inString) {
+      cleanStr += char;
+      continue;
+    }
+
+    if (char === '{') {
+      stack.push('{');
+    } else if (char === '[') {
+      stack.push('[');
+    } else if (char === '}') {
+      const last = stack.pop();
+    } else if (char === ']') {
+      const last = stack.pop();
+    }
+    cleanStr += char;
+  }
+
+  // Close unclosed string
+  if (inString) {
+    cleanStr += '"';
+  }
+
+  // Remove trailing comma if presents
+  let polished = cleanStr.trim();
+  if (polished.endsWith(',')) {
+    polished = polished.substring(0, polished.length - 1);
+  }
+
+  // Close unclosed structural objects/arrays
+  while (stack.length > 0) {
+    const last = stack.pop();
+    if (last === '{') {
+      polished += '}';
+    } else if (last === '[') {
+      polished += ']';
+    }
+  }
+
+  return polished;
+};
+
+const extractPayloadRegexFallback = (text: string) => {
+  const htmlRegex = /<!DOCTYPE html>[\s\S]*<\/html>/i;
+  let htmlMatch = text.match(htmlRegex);
+  
+  if (!htmlMatch) {
+    const htmlRegex2 = /<html[\s\S]*<\/html>/i;
+    htmlMatch = text.match(htmlRegex2);
+  }
+  
+  if (!htmlMatch) {
+    const looseRegex = /(<!DOCTYPE html>|<html)[\s\S]*/i;
+    htmlMatch = text.match(looseRegex);
+  }
+  
+  const preview_code = htmlMatch ? htmlMatch[0] : "";
+  
+  let explanation = "Création de site haut de gamme avec COOK IA. Le code a été extrait avec succès de la réponse de l'IA.";
+  const explanationRegex = /"explanation"\s*:\s*"([^"]+)"/;
+  const explanationMatch = text.match(explanationRegex);
+  if (explanationMatch && explanationMatch[1]) {
+    explanation = explanationMatch[1];
+  } else {
+    const paragraphs = text.split('\n\n').filter(p => !p.includes('{') && !p.includes('}') && p.length > 50 && p.length < 500);
+    if (paragraphs.length > 0) {
+      explanation = paragraphs[0];
+    }
+  }
+
+  return {
+    explanation,
+    preview_code,
+    files: [
+      {
+        path: "index.html",
+        content: preview_code
+      }
+    ]
+  };
 };
 
 const cleanAndParseJSON = (text: string) => {
@@ -119,14 +235,29 @@ const cleanAndParseJSON = (text: string) => {
   const start = cleaned.indexOf('{');
   const end = cleaned.lastIndexOf('}');
   
+  let target = cleaned;
   if (start !== -1 && end !== -1 && end > start) {
-    cleaned = cleaned.substring(start, end + 1);
+    target = cleaned.substring(start, end + 1);
   }
   
   try {
-    return JSON.parse(cleaned);
+    return JSON.parse(target);
   } catch (error: any) {
-    console.error("JSON parsing failed for cleaned text:", cleaned);
+    console.warn("Standard JSON parsing failed. Trying repair truncated JSON...", error.message);
+    try {
+      const repaired = repairTruncatedJSON(cleaned);
+      return JSON.parse(repaired);
+    } catch (repairError: any) {
+      console.warn("JSON repair failed, falling back to regex extraction...", repairError.message);
+      try {
+        const fallback = extractPayloadRegexFallback(text);
+        if (fallback.preview_code) {
+          return fallback;
+        }
+      } catch (regexError: any) {
+        console.error("Regex fallback extraction failed:", regexError.message);
+      }
+    }
     throw new Error(`Failed to parse AI response as JSON: ${error.message}`);
   }
 };
@@ -379,6 +510,40 @@ export const generateWebsite = async (
     }
     console.debug("Gemini failed, trying fallback chain:", error);
     return await generateWithAIFallback(prompt, history, images);
+  }
+};
+
+export const answerQuestion = async (
+  prompt: string,
+  history: any[],
+  model: string = "gemini-2.5-flash"
+) => {
+  const qaInstruction = "Tu es COOK IA, l'assistant senior web de classe mondiale créé par Benit Madimba. L'utilisateur te pose une question directe sur son projet, le code web ou le développement. Réponds-lui directement de manière claire, concise, structurée et bienveillante en français avec du formatage Markdown si utile. Ne génère AUCUN code HTML complet ou JSON de site web, réponds simplement sous forme de texte explicatif naturel.";
+  
+  const hasUserKey = !!getCustomHeaders()['x-gemini-key'];
+  const isHealthy = shadowWatchdog.isHealthy();
+  const isGemini = model.startsWith("gemini-") || model.startsWith("google/");
+
+  if ((!isHealthy || !isGemini) && !hasUserKey) {
+    try {
+      const res = await generateWithAIFallback(prompt, history, undefined, model);
+      return typeof res === 'string' ? res : (res.explanation || res.text || JSON.stringify(res));
+    } catch (e: any) {
+      return "Je suis à votre disposition pour répondre à toutes vos questions sur votre projet web.";
+    }
+  }
+
+  try {
+    const text = await callGeminiProxy(prompt, history, qaInstruction, model);
+    return text;
+  } catch (error: any) {
+    if (isUserKeyOrQuotaError(error.message)) throw error;
+    try {
+      const res = await generateWithAIFallback(prompt, history, undefined, model);
+      return typeof res === 'string' ? res : (res.explanation || res.text || JSON.stringify(res));
+    } catch (e) {
+      return "Je suis à votre disposition pour répondre à toutes vos questions sur votre projet web.";
+    }
   }
 };
 
