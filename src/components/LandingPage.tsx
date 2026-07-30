@@ -455,7 +455,7 @@ export default function DevPortfolio() {
             {lang === 'fr' ? "Concept" : "Concept"}
           </button>
           <button onClick={() => scrollToSection('agents')} className="text-xs font-bold uppercase tracking-widest text-white/50 hover:text-orange-primary transition-colors">
-            {lang === 'fr' ? "Équipe d'Agents" : "Agent Suite"}
+            {lang === 'fr' ? "Réflexion des IA" : "AI Thought Process"}
           </button>
           <button onClick={() => scrollToSection('tech')} className="text-xs font-bold uppercase tracking-widest text-white/50 hover:text-orange-primary transition-colors">
             {lang === 'fr' ? "Tech" : "Tech Stack"}

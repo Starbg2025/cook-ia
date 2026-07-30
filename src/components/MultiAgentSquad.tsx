@@ -109,14 +109,14 @@ export const MultiAgentSquad: React.FC<MultiAgentSquadProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <h3 className={`font-display font-black text-base md:text-lg tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                GÉNÉRATION MULTI-AGENTS IA
+                RÉFLEXION & CONCEPTION MULTI-AGENTS IA
               </h3>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-orange-primary/20 border border-orange-primary/30 text-orange-primary">
                 SÉQUENTIEL
               </span>
             </div>
             <p className={`text-xs ${isDark ? 'text-white/60' : 'text-slate-500'}`}>
-              Chaque agent intervient tour à tour pour sa tâche dédiée.
+              Réflexion autonome et modélisation pas-à-pas de votre projet.
             </p>
           </div>
         </div>
@@ -128,14 +128,14 @@ export const MultiAgentSquad: React.FC<MultiAgentSquadProps> = ({
           }`}
         >
           {showFullGrid ? <Eye size={14} /> : <Grid size={14} />}
-          <span>{showFullGrid ? 'Mode Focus (Un par un)' : 'Voir toute l\'équipe'}</span>
+          <span>{showFullGrid ? 'Mode Focus (Un par un)' : 'Voir la réflexion globale'}</span>
         </button>
       </div>
 
       {/* Pipeline Progress Stepper Bar */}
       <div className="mb-6">
         <div className="flex items-center justify-between text-xs font-bold mb-2">
-          <span className={isDark ? 'text-white/70' : 'text-slate-600'}>Progression de l'équipe</span>
+          <span className={isDark ? 'text-white/70' : 'text-slate-600'}>Progression de la Réflexion IA</span>
           <span className="text-orange-primary font-mono">
             {currentStage === 'complete' ? '100% (Terminé)' : `${Math.min(100, Math.max(10, ((activeIndex + 1) / MULTI_AGENT_PIPELINE.length) * 100))}%`}
           </span>

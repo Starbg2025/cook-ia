@@ -4,7 +4,7 @@ export const translations = {
   fr: {
     // Landing navigation
     concept: "Concept",
-    agents: "Équipe d'Agents",
+    agents: "Réflexion des IA",
     tech: "Infrastructures",
     guarantees: "Garanties",
     launchConsole: "Lancer la Console",

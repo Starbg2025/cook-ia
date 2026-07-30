@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Zap, RotateCcw, ExternalLink, Pencil, FileCode, Folder, Download, ChevronRight, ChevronDown, MousePointer2, FileSearch, History, X, Sparkles } from 'lucide-react';
+import { Zap, RotateCcw, ExternalLink, Pencil, FileCode, Folder, Download, ChevronRight, ChevronDown, MousePointer2, FileSearch, History, X, Sparkles, Smartphone, Tablet, Monitor } from 'lucide-react';
 import { ViewMode, ProjectFile, StyleConfig, SectionEditState } from '../types';
 import { ForgeStudio } from './ForgeStudio';
 
@@ -46,6 +46,7 @@ export const Preview: React.FC<PreviewProps> = ({
   const [selectedFilePath, setSelectedFilePath] = React.useState<string | null>(null);
   const [showActionHistory, setShowActionHistory] = React.useState(false);
   const [showForgeStudio, setShowForgeStudio] = React.useState(false);
+  const [deviceViewport, setDeviceViewport] = React.useState<'desktop' | 'tablet' | 'mobile'>('desktop');
 
   React.useEffect(() => {
     if (files.length > 0 && !selectedFilePath) {
@@ -260,8 +261,49 @@ export const Preview: React.FC<PreviewProps> = ({
           <div className="w-3 h-3 rounded-full bg-[#28C840] shadow-inner" />
         </div>
         
-        <div className={`flex-1 max-w-2xl ${isDark ? 'bg-[#0A0A0A] border-white/5' : 'bg-white border-slate-200'} px-4 py-1.5 rounded-xl border flex items-center justify-center gap-2 mx-4`}>
-          <span className={`text-[11px] font-mono ${isDark ? 'text-white/20' : 'text-slate-400'} select-none`}>localhost:3000/preview</span>
+        <div className={`flex-1 max-w-2xl ${isDark ? 'bg-[#0A0A0A] border-white/5' : 'bg-white border-slate-200'} px-4 py-1.5 rounded-xl border flex items-center justify-between gap-2 mx-4`}>
+          <span className={`text-[11px] font-mono ${isDark ? 'text-white/20' : 'text-slate-400'} select-none hidden sm:inline`}>localhost:3000/preview</span>
+          
+          {/* Responsive Device Viewport Switcher */}
+          <div className={`flex items-center gap-1 p-0.5 rounded-lg border ${isDark ? 'bg-[#141414] border-white/10' : 'bg-slate-100 border-slate-200'}`}>
+            <button
+              onClick={() => setDeviceViewport('desktop')}
+              className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold uppercase transition-all ${
+                deviceViewport === 'desktop'
+                  ? 'bg-orange-primary text-white shadow-sm'
+                  : isDark ? 'text-white/40 hover:text-white' : 'text-slate-500 hover:text-slate-900'
+              }`}
+              title="Aperçu PC / Bureau"
+            >
+              <Monitor size={13} />
+              <span className="hidden md:inline">PC</span>
+            </button>
+            <button
+              onClick={() => setDeviceViewport('tablet')}
+              className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold uppercase transition-all ${
+                deviceViewport === 'tablet'
+                  ? 'bg-orange-primary text-white shadow-sm'
+                  : isDark ? 'text-white/40 hover:text-white' : 'text-slate-500 hover:text-slate-900'
+              }`}
+              title="Aperçu Tablette (768px)"
+            >
+              <Tablet size={13} />
+              <span className="hidden md:inline">Tablette</span>
+            </button>
+            <button
+              onClick={() => setDeviceViewport('mobile')}
+              className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold uppercase transition-all ${
+                deviceViewport === 'mobile'
+                  ? 'bg-orange-primary text-white shadow-sm'
+                  : isDark ? 'text-white/40 hover:text-white' : 'text-slate-500 hover:text-slate-900'
+              }`}
+              title="Aperçu Mobile (375px)"
+            >
+              <Smartphone size={13} />
+              <span className="hidden md:inline">Mobile</span>
+            </button>
+          </div>
+
           {isVisualEditing && (
             <span className="text-[9px] bg-orange-primary/20 text-orange-primary px-2 py-0.5 rounded-full font-bold uppercase tracking-widest animate-pulse">
               Visual Edit Mode
@@ -269,7 +311,7 @@ export const Preview: React.FC<PreviewProps> = ({
           )}
           {isSectionSelectionMode && (
             <span className="text-[9px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full font-bold uppercase tracking-widest animate-pulse">
-              Select a Section
+              Select Section
             </span>
           )}
         </div>
@@ -359,14 +401,29 @@ export const Preview: React.FC<PreviewProps> = ({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="w-full h-full"
+              className={`w-full h-full flex justify-center items-center transition-all duration-300 ${
+                deviceViewport === 'desktop' ? '' : isDark ? 'bg-black/60 p-4' : 'bg-slate-200/80 p-4'
+              }`}
             >
               {generatedCode ? (
-                <iframe 
-                  ref={iframeRef}
-                  title="Preview"
-                  className="w-full h-full border-none"
-                />
+                <div className={`transition-all duration-300 relative flex flex-col ${
+                  deviceViewport === 'desktop'
+                    ? 'w-full h-full'
+                    : deviceViewport === 'tablet'
+                      ? 'w-[768px] max-w-full h-full rounded-2xl border-4 border-slate-800 shadow-2xl overflow-hidden bg-white'
+                      : 'w-[375px] max-w-full h-full rounded-2xl border-4 border-slate-800 shadow-2xl overflow-hidden bg-white'
+                }`}>
+                  {deviceViewport !== 'desktop' && (
+                    <div className="w-full bg-slate-900 text-white h-5 shrink-0 flex items-center justify-center px-4 relative z-10">
+                      <div className="w-12 h-2.5 bg-black rounded-full" />
+                    </div>
+                  )}
+                  <iframe 
+                    ref={iframeRef}
+                    title="Preview"
+                    className="w-full h-full flex-1 border-none bg-white"
+                  />
+                </div>
               ) : (
                 <div className={`w-full h-full flex flex-col items-center justify-center ${isDark ? 'bg-[#0A0A0A]' : 'bg-slate-50'} relative overflow-hidden`}>
                   <motion.div

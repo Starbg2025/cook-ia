@@ -1768,32 +1768,6 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
         </main>
       </div>
 
-      {/* Real-time Collaboration Cursors */}
-      {Object.entries(collaborators).map(([id, data]) => (
-        <motion.div
-          key={id}
-          style={{
-            position: 'fixed',
-            left: data.x,
-            top: data.y,
-            pointerEvents: 'none',
-            zIndex: 9999,
-          }}
-          initial={{ opacity: 0, scale: 0 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ type: 'spring', damping: 15, stiffness: 300 }}
-        >
-          <MousePointer2 
-            size={24} 
-            className="fill-orange-primary text-orange-primary drop-shadow-lg"
-            style={{ transform: 'rotate(-90deg)' }}
-          />
-          <div className="ml-4 mt-2 px-2 py-1 bg-orange-primary text-white text-[10px] font-black uppercase tracking-widest rounded-lg shadow-xl whitespace-nowrap">
-            {data.name}
-          </div>
-        </motion.div>
-      ))}
-
       <AnimatePresence>
         {isStyleEditorOpen && (
           <StyleEditor 

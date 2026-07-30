@@ -285,7 +285,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const tabs = isProjectSettings ? [
     { id: 'publish', label: 'Share', icon: Share2 },
-    { id: 'collaboration', label: 'Collaboration', icon: Users },
     { id: 'versions', label: 'Versions', icon: History },
     { id: 'secrets', label: 'Secrets', icon: Key },
     { id: 'integrations', label: 'Integrations', icon: Layers },
