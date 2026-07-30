@@ -155,12 +155,12 @@ const callGeminiProxy = async (prompt: string, history: any[], systemInstruction
     body: JSON.stringify({ prompt, history, systemInstruction, model, images, responseMimeType })
   });
 
-  const result = await response.json();
-
-  if (!response.ok || result.is_proxy_error) {
-    throw new Error(`[Gemini Proxy] API Error: ${result.error || response.statusText}`);
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(err.error || "Failed to call Gemini proxy");
   }
 
+  const result = await response.json();
   return result.text;
 };
 
@@ -255,7 +255,7 @@ INSTRUCTIONS:
     const text = await callGeminiProxy(targetPrompt, [], "You are a world-class full-stack developer.", undefined, undefined, "application/json");
     return cleanAndParseJSON(text);
   } catch (error: any) {
-    if (hasUserKey && isUserKeyOrQuotaError(error.message)) {
+    if (isUserKeyOrQuotaError(error.message)) {
       throw error;
     }
     if (!hasUserKey) {
@@ -325,7 +325,7 @@ Return the result in JSON format with two fields:
     const text = await callGeminiProxy(userPrompt, history, systemInstruction, model, undefined, "application/json");
     return cleanAndParseJSON(text);
   } catch (error: any) {
-    if (hasUserKey && isUserKeyOrQuotaError(error.message)) {
+    if (isUserKeyOrQuotaError(error.message)) {
       throw error;
     }
     if (!hasUserKey) {
@@ -366,12 +366,12 @@ export const generateWebsite = async (
           context: "Website Generation"
         }
       })
-    }).catch(err => console.log("[Watchdog] Failed to log session:", err));
+    }).catch(err => console.error("[Watchdog] Failed to log session:", err));
 
     const text = await callGeminiProxy(prompt, history, systemInstruction, model, images, "application/json");
     return { ...cleanAndParseJSON(text), _provider: 'gemini' };
   } catch (error: any) {
-    if (hasUserKey && isUserKeyOrQuotaError(error.message)) {
+    if (isUserKeyOrQuotaError(error.message)) {
       throw error;
     }
     if (!hasUserKey) {

@@ -31,7 +31,6 @@ import {
   ThumbsUp,
   Award
 } from 'lucide-react';
-import { supabase } from '../services/supabaseService';
 
 interface LandingPageProps {
   onEnter: (prompt?: string) => void;
@@ -49,52 +48,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter }) => {
   // Dynamic state for landing page input
   const [customPrompt, setCustomPrompt] = useState('');
   const [activeDepth, setActiveDepth] = useState('0m');
-
-  // Real-time metrics
-  const [sitesCount, setSitesCount] = useState<number>(14230);
-  const [activeUsersCount, setActiveUsersCount] = useState<number>(4);
-  const [latence, setLatence] = useState<number>(35);
-
-  useEffect(() => {
-    // 1. Fetch live count of published sites
-    const fetchSitesCount = async () => {
-      try {
-        const { count, error } = await supabase
-          .from('published_sites')
-          .select('slug', { count: 'exact', head: true });
-        
-        if (!error && count !== null) {
-          setSitesCount(14230 + count);
-        }
-      } catch (err) {
-        console.error("Error fetching live sites count:", err);
-      }
-    };
-    fetchSitesCount();
-
-    // 2. Real-time Postgres changes listener to automatically push count updates live!
-    const channel = supabase
-      .channel('public_published_sites')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'published_sites' }, () => {
-        setSitesCount(prev => prev + 1);
-      })
-      .subscribe();
-
-    // 3. Simulated latency and expert connected variation
-    const interval = setInterval(() => {
-      setLatence(Math.floor(25 + Math.random() * 18));
-      setActiveUsersCount(prev => {
-        const delta = Math.random() > 0.5 ? 1 : -1;
-        const next = prev + delta;
-        return next < 3 ? 3 : next > 9 ? 8 : next;
-      });
-    }, 5000);
-
-    return () => {
-      supabase.removeChannel(channel);
-      clearInterval(interval);
-    };
-  }, []);
 
   // Sticky depth navigation handler
   const scrollToSection = (id: string) => {
@@ -533,7 +486,7 @@ export default function DevPortfolio() {
               <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest font-bold">Agents de Synapse</span>
               <div className="flex items-center gap-2 mt-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-orange-primary animate-pulse shadow-[0_0_8px_#ff6b00]" />
-                <span className="text-[11px] font-black font-mono text-white">{activeUsersCount} EXPERTS CONNECTÉS</span>
+                <span className="text-[11px] font-black font-mono text-white">4 EXPERTS CONNECTÉS</span>
               </div>
             </div>
 
@@ -541,7 +494,7 @@ export default function DevPortfolio() {
               <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest font-bold">Latence Active</span>
               <div className="flex items-center gap-2 mt-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-cyan-bio animate-pulse shadow-[0_0_8px_#00f5d4]" />
-                <span className="text-[11px] font-black font-mono text-white">{latence}ms (Latence Cache)</span>
+                <span className="text-[11px] font-black font-mono text-white">35ms (Latence Cache)</span>
               </div>
             </div>
           </div>
@@ -999,7 +952,7 @@ export default function DevPortfolio() {
         
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
           {[
-            { metric: `${sitesCount.toLocaleString()}`, title: "PROJETS FORGÉS", desc: "Du site SaaS aux vitrines élégantes." },
+            { metric: "14,230+", title: "PROJETS FORGÉS", desc: "Du site SaaS aux vitrines élégantes." },
             { metric: "12.4s", title: "M-TIME GÉNÉRATION", desc: "Compilation multi-agent quasi-instantanée." },
             { metric: "100%", title: "PERSISTANCE SÉCURISÉE", desc: "Clés API privées stockées localement de bout en bout." },
             { metric: "99.9%", title: "TAUX DISPONIBILITÉ", desc: "Infrastructures Cloud optimisées en permanence." }

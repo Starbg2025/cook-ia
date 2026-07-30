@@ -360,7 +360,7 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
       // Add other agents as needed...
       res.status(400).json({ error: "Unknown agent type" });
     } catch (error: any) {
-      console.log(`[Agent Proxy] Error for ${agentType}:`, error.message);
+      console.error(`[Agent Proxy] Error for ${agentType}:`, error.message);
       res.status(500).json({ error: error.message });
     }
   });
@@ -418,7 +418,7 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
       const data: any = await response.json();
       return res.json({ text: data.choices[0].message.content });
     } catch (err: any) {
-      console.log("[Groq API Proxy] Exception:", err.message);
+      console.error("[Groq API Proxy] Exception:", err.message);
       return res.status(500).json({ error: `Exception Groq Proxy: ${err.message}` });
     }
   });
@@ -437,7 +437,7 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
     console.log(`[Gemini Proxy] Key present: ${!!apiKey}, Model: ${requestedModel}, MimeType: ${responseMimeType}`);
 
     if (!apiKey) {
-      return res.status(200).json({ error: "Gemini API key missing on server", is_proxy_error: true });
+      return res.status(500).json({ error: "Gemini API key missing on server" });
     }
 
     try {
@@ -494,11 +494,11 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
       res.json({ text: response.text });
     } catch (error: any) {
-       
+      console.error("[Gemini Proxy] Error:", error.message);
       if (error.message.includes("API key not valid") || error.message.includes("API_KEY_INVALID")) {
-        res.status(200).json({ error: "Clé API Gemini invalide ou non configurée sur le serveur (ex. Netlify).", is_proxy_error: true });
+        res.status(400).json({ error: "Clé API Gemini invalide ou non configurée sur le serveur (ex. Netlify)." });
       } else {
-        res.status(200).json({ error: error.message, is_proxy_error: true });
+        res.status(500).json({ error: error.message });
       }
     }
   });
@@ -805,7 +805,7 @@ Return the response EXCLUSIVELY in JSON format with three fields (do not include
           const jsonStr = jsonMatch ? jsonMatch[0] : content;
           return { ...JSON.parse(jsonStr), _provider: providerName.toLowerCase() };
         } catch (e) {
-          console.log(`[Fallback] ${providerName} returned invalid JSON:`, content.substring(0, 500));
+          console.error(`[Fallback] ${providerName} returned invalid JSON:`, content.substring(0, 500));
           throw new Error(`${providerName} returned invalid JSON format.`);
         }
       }
@@ -843,7 +843,7 @@ Return the response EXCLUSIVELY in JSON format with three fields (do not include
       }
 
       // 3. Last Resort: Emergency JSON Recovery
-       
+      console.error("[Fallback] All AI providers failed. Sending emergency recovery payload.");
       return res.json({
         explanation: "Mode Secours Extrême activé. Les serveurs de calcul sont temporairement surchargés. Voici une structure de base en attendant.",
         preview_code: `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Mode Secours</title><script src="https://cdn.tailwindcss.com"></script></head><body class="bg-[#0A0A0A] text-white flex items-center justify-center h-screen font-sans text-center px-4"><div><div class="w-20 h-20 bg-orange-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-orange-500/30 font-black text-orange-500">IA</div><h1 class="text-3xl font-black mb-4">MODE SECOURS ACTIF</h1><p class="text-white/40 mb-8 max-w-md mx-auto small uppercase tracking-widest leading-loose">Les modèles d'IA principaux (Gemini, Groq, OpenRouter) ne répondent plus. Votre demande est en file d'attente.</p><button onclick="window.location.reload()" class="bg-white text-black px-8 py-3 rounded-full font-bold uppercase tracking-widest text-[11px] hover:bg-orange-500 hover:text-white transition-all shadow-2xl">Réessayer la connexion</button></div></body></html>`,
@@ -851,7 +851,7 @@ Return the response EXCLUSIVELY in JSON format with three fields (do not include
         _provider: 'emergency-watchdog'
       });
     } catch (error: any) {
-       
+      console.error("[Fallback] Final failure:", error.stack || error.message);
       return res.status(500).json({ error: error.message || "Unknown fallback error" });
     }
   });

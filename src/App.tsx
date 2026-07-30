@@ -905,6 +905,7 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
         }]);
         return;
       }
+      console.error("Error generating website:", error);
       addAction('thought', "Erreur critique détectée. Tentative de diagnostic...");
       
       let errorMessage = `Désolé, une erreur est survenue lors de la génération. (Erreur: ${error.message})`;
@@ -1207,15 +1208,15 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
             title="Published Site"
             className="w-full h-full border-none"
           />
-          <a 
-            href="https://cook-ia.indevs.in/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="fixed bottom-6 right-6 bg-black/80 backdrop-blur-md border border-white/10 text-white px-4 py-2 rounded-full text-xs font-bold hover:bg-black hover:scale-105 active:scale-95 transition-all z-50 shadow-2xl flex items-center gap-2"
+          <button 
+            onClick={() => {
+              window.location.href = "https://cook-ia.indevs.in";
+            }}
+            className="fixed bottom-6 right-6 bg-black/80 backdrop-blur-md border border-white/10 text-white px-4 py-2 rounded-full text-xs font-bold hover:bg-black transition-all z-50 shadow-2xl flex items-center gap-2"
           >
             <img src={LOGO_URL} alt="Logo" className="w-4 h-4 object-contain" />
             Créé avec COOK IA
-          </a>
+          </button>
           <CookieBanner />
         </div>
       );
