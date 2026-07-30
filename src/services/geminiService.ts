@@ -498,6 +498,40 @@ export const generateWebsite = async (
   }
 };
 
+export const answerQuestion = async (
+  prompt: string,
+  history: any[],
+  model: string = "gemini-2.5-flash"
+) => {
+  const qaInstruction = "Tu es COOK IA, l'assistant senior web de classe mondiale créé par Benit Madimba. L'utilisateur te pose une question directe sur son projet, le code web ou le développement. Réponds-lui directement de manière claire, concise, structurée et bienveillante en français avec du formatage Markdown si utile. Ne génère AUCUN code HTML complet ou JSON de site web, réponds simplement sous forme de texte explicatif naturel.";
+  
+  const hasUserKey = !!getCustomHeaders()['x-gemini-key'];
+  const isHealthy = shadowWatchdog.isHealthy();
+  const isGemini = model.startsWith("gemini-") || model.startsWith("google/");
+
+  if ((!isHealthy || !isGemini) && !hasUserKey) {
+    try {
+      const res = await generateWithAIFallback(prompt, history, undefined, model);
+      return typeof res === 'string' ? res : (res.explanation || res.text || JSON.stringify(res));
+    } catch (e: any) {
+      return "Je suis à votre disposition pour répondre à toutes vos questions sur votre projet web.";
+    }
+  }
+
+  try {
+    const text = await callGeminiProxy(prompt, history, qaInstruction, model);
+    return text;
+  } catch (error: any) {
+    if (isUserKeyOrQuotaError(error.message)) throw error;
+    try {
+      const res = await generateWithAIFallback(prompt, history, undefined, model);
+      return typeof res === 'string' ? res : (res.explanation || res.text || JSON.stringify(res));
+    } catch (e) {
+      return "Je suis à votre disposition pour répondre à toutes vos questions sur votre projet web.";
+    }
+  }
+};
+
 export const generateTitle = async (prompt: string) => {
   try {
     const text = await callGeminiProxy(

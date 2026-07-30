@@ -93,7 +93,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onConnectGithub,
   isRealtimeEnabled = true,
   onToggleRealtime,
-  selectedModel = 'gemini-3.5-flash',
+  selectedModel = 'gemini-2.5-flash',
   onSelectModel,
   lang = 'fr'
 }) => {

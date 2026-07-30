@@ -1000,8 +1000,13 @@ export default function DevPortfolio() {
               transition={{ delay: i * 0.1, duration: 0.6 }}
               className={`flex items-start gap-6 p-8 rounded-2xl border ${agent.color} transition-all duration-300 shadow-xl shadow-black/10`}
             >
-              <div className="w-16 h-16 shrink-0 rounded-xl bg-white/5 flex items-center justify-center text-white border border-white/5 relative group-hover:scale-105 transition-transform">
-                {agent.icon}
+              <div className="w-16 h-16 shrink-0 rounded-xl bg-gradient-to-br from-slate-800 to-black p-0.5 border-2 border-white/20 shadow-md">
+                <div className="w-full h-full rounded-[10px] bg-slate-950 flex flex-col items-center justify-center p-1 text-white relative overflow-hidden group">
+                  <div className="absolute inset-0 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:8px_8px] opacity-10" />
+                  <div className="p-1.5 rounded-lg bg-white/10 backdrop-blur-md text-white border border-white/20 group-hover:scale-110 transition-transform origin-center scale-75">
+                    {agent.icon}
+                  </div>
+                </div>
               </div>
               <div>
                 <h4 className="font-display text-xl mb-2 text-white font-black tracking-wider uppercase">{agent.name}</h4>

@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { CheckCircle2, Loader2, Sparkles, AlertCircle, ShieldCheck, Cpu, ChevronRight, Eye, Grid } from 'lucide-react';
+import { CheckCircle2, Loader2, Sparkles, AlertCircle, ShieldCheck, Cpu, ChevronRight, Eye, Grid, Compass, Palette, Code2, FlaskConical, Award, Terminal } from 'lucide-react';
 
 export interface AgentInfo {
   id: string;
   name: string;
   role: string;
   specialty: string;
-  avatar: string;
+  icon: React.ReactNode;
   color: string;
   badge: string;
   description: string;
@@ -20,7 +20,7 @@ export const MULTI_AGENT_PIPELINE: AgentInfo[] = [
     name: 'Prompt Architecte',
     role: 'Structure & Blueprint',
     specialty: 'Prompts, sitemap & cahier des charges',
-    avatar: '/agents/architect.jpg',
+    icon: <Compass className="w-8 h-8 text-amber-400" />,
     color: 'from-amber-500 to-yellow-400',
     badge: '📐 Étape 1 : Prompt Architecte',
     description: 'Analyse votre idée, prépare le prompt optimisé et dessine le blueprint des sections du site.',
@@ -31,7 +31,7 @@ export const MULTI_AGENT_PIPELINE: AgentInfo[] = [
     name: 'Styliste UI/UX',
     role: 'Design & Harmonisation',
     specialty: 'Palette de couleurs, typographies & effets',
-    avatar: '/agents/designer.jpg',
+    icon: <Palette className="w-8 h-8 text-pink-400" />,
     color: 'from-pink-500 to-rose-400',
     badge: '🎨 Étape 2 : Design UI/UX',
     description: 'Harmonise la palette visuelle, le contraste des textes et l’ergonomie globale.',
@@ -42,7 +42,7 @@ export const MULTI_AGENT_PIPELINE: AgentInfo[] = [
     name: 'Développeur IA',
     role: 'Code Source Full-Stack',
     specialty: 'HTML5, Tailwind CSS, JS & Composants',
-    avatar: '/agents/developer.jpg',
+    icon: <Code2 className="w-8 h-8 text-orange-primary" />,
     color: 'from-orange-500 to-amber-500',
     badge: '⚡ Étape 3 : Développeur IA',
     description: 'Écrit le code source complet, responsive, structuré et animé pour le site web.',
@@ -53,7 +53,7 @@ export const MULTI_AGENT_PIPELINE: AgentInfo[] = [
     name: 'Testeur QA & Audit',
     role: 'Vérification des Boutons',
     specialty: 'Boutons interactifs, liens & formulaires',
-    avatar: '/agents/tester.jpg',
+    icon: <FlaskConical className="w-8 h-8 text-sky-400" />,
     color: 'from-sky-500 to-blue-600',
     badge: '🧪 Étape 4 : Testeur QA',
     description: 'Inspecte chaque bouton et formulaire pour s’assurer qu’aucun bouton n’est mort ou inutile.',
@@ -64,7 +64,7 @@ export const MULTI_AGENT_PIPELINE: AgentInfo[] = [
     name: 'Inspecteur Résultats',
     role: 'Validation Final & Rendu',
     specialty: 'Réactivité mobile & certification de qualité',
-    avatar: '/agents/inspector.jpg',
+    icon: <Award className="w-8 h-8 text-purple-400" />,
     color: 'from-purple-500 to-indigo-600',
     badge: '🏆 Étape 5 : Inspecteur Résultats',
     description: 'Vérifie le rendu final sur tous les écrans et appose la certification de qualité.',
@@ -183,16 +183,18 @@ export const MultiAgentSquad: React.FC<MultiAgentSquadProps> = ({
             }`}
           >
             <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
-              {/* Framed Agent Avatar ("Cadre bien") */}
+              {/* Framed Agent Logo Emblem ("Cadre Logo IA") */}
               <div className="relative group shrink-0">
-                <div className={`w-28 h-28 md:w-32 md:h-32 rounded-2xl overflow-hidden border-4 shadow-2xl transition-all duration-300 ${
-                  isGenerating ? 'border-orange-primary scale-105 shadow-[0_0_25px_rgba(255,107,0,0.4)]' : 'border-emerald-500/60'
+                <div className={`w-28 h-28 md:w-32 md:h-32 rounded-2xl bg-gradient-to-br ${activeAgent.color} p-0.5 shadow-2xl transition-all duration-300 ${
+                  isGenerating ? 'scale-105 shadow-[0_0_30px_rgba(255,107,0,0.4)] ring-2 ring-orange-primary' : ''
                 }`}>
-                  <img
-                    src={activeAgent.avatar}
-                    alt={activeAgent.name}
-                    className="w-full h-full object-cover object-center transform group-hover:scale-110 transition-transform duration-500"
-                  />
+                  <div className="w-full h-full rounded-[14px] bg-slate-950 flex flex-col items-center justify-center gap-1.5 p-2 text-white relative overflow-hidden group">
+                    <div className="absolute inset-0 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:12px_12px] opacity-10" />
+                    <div className="p-3 rounded-xl bg-white/10 backdrop-blur-md text-white border border-white/20 group-hover:scale-110 transition-transform">
+                      {activeAgent.icon}
+                    </div>
+                    <span className="text-[10px] font-extrabold font-mono tracking-widest text-white/80 uppercase">LOGO IA</span>
+                  </div>
                 </div>
                 {isGenerating && (
                   <div className="absolute -bottom-2 -right-2 bg-orange-primary text-white p-1.5 rounded-full shadow-lg animate-bounce">
@@ -225,22 +227,90 @@ export const MultiAgentSquad: React.FC<MultiAgentSquadProps> = ({
                   {activeAgent.description}
                 </p>
 
-                {/* Live Action Banner */}
-                <div className={`p-3 rounded-xl border flex items-center gap-3 text-xs font-medium ${
-                  isGenerating 
-                    ? 'bg-orange-primary/10 border-orange-primary/30 text-orange-primary' 
-                    : (isDark ? 'bg-emerald-950/30 border-emerald-500/30 text-emerald-300' : 'bg-emerald-50 border-emerald-200 text-emerald-800')
-                }`}>
-                  {isGenerating ? (
-                    <Loader2 size={16} className="animate-spin shrink-0 text-orange-primary" />
-                  ) : (
-                    <CheckCircle2 size={16} className="shrink-0 text-emerald-500" />
+                {/* Live Action Banner & Stream Details */}
+                <div className="space-y-2">
+                  <div className={`p-3 rounded-xl border flex items-center gap-3 text-xs font-medium ${
+                    isGenerating 
+                      ? 'bg-orange-primary/10 border-orange-primary/30 text-orange-primary' 
+                      : (isDark ? 'bg-emerald-950/30 border-emerald-500/30 text-emerald-300' : 'bg-emerald-50 border-emerald-200 text-emerald-800')
+                  }`}>
+                    {isGenerating ? (
+                      <Loader2 size={16} className="animate-spin shrink-0 text-orange-primary" />
+                    ) : (
+                      <CheckCircle2 size={16} className="shrink-0 text-emerald-500" />
+                    )}
+                    <span>
+                      {isGenerating 
+                        ? activeAgent.actionMessage 
+                        : `Mission de l'agent ${activeAgent.name} complétée avec succès !`}
+                    </span>
+                  </div>
+
+                  {/* Real-time Connection & Code Reflection Stream State */}
+                  {isGenerating && (
+                    <div className={`p-3 rounded-xl border ${isDark ? 'bg-black/80 border-orange-primary/40 text-white' : 'bg-slate-900 text-white border-slate-700'} space-y-2 text-xs font-mono shadow-xl`}>
+                      <div className="flex items-center justify-between border-b border-white/10 pb-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                          <span className="font-bold text-emerald-400 text-[11px]">RÉSEAU IA CONNECTÉ (WebSocket Sync)</span>
+                        </div>
+                        <span className="text-[10px] text-orange-primary font-semibold animate-pulse flex items-center gap-1">
+                          ⚡ Modification du code en direct
+                        </span>
+                      </div>
+
+                      <div className="text-[11px] text-slate-300 space-y-1">
+                        <p className="font-semibold text-amber-400 flex items-center justify-between">
+                          <span>🔨 Fonctions & Éléments créés en temps réel :</span>
+                          <span className="text-[9px] text-slate-400 font-normal">[{activeAgent.name}]</span>
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[10px] text-slate-200 pl-2">
+                          {currentStage === 'architect' && (
+                            <>
+                              <span className="flex items-center gap-1.5"><span className="text-orange-primary">›</span> JS parsePromptIntent()</span>
+                              <span className="flex items-center gap-1.5"><span className="text-orange-primary">›</span> Layout buildSitemapSchema()</span>
+                              <span className="flex items-center gap-1.5"><span className="text-orange-primary">›</span> Config setupTailwindConfig()</span>
+                              <span className="flex items-center gap-1.5"><span className="text-orange-primary">›</span> CSS createCSSVariables()</span>
+                            </>
+                          )}
+                          {currentStage === 'designer' && (
+                            <>
+                              <span className="flex items-center gap-1.5"><span className="text-orange-primary">›</span> Theme applyColorPalette()</span>
+                              <span className="flex items-center gap-1.5"><span className="text-orange-primary">›</span> UI configureTypography()</span>
+                              <span className="flex items-center gap-1.5"><span className="text-orange-primary">›</span> Style addGlassmorphism()</span>
+                              <span className="flex items-center gap-1.5"><span className="text-orange-primary">›</span> JS setupThemeModeToggle()</span>
+                            </>
+                          )}
+                          {currentStage === 'developer' && (
+                            <>
+                              <span className="flex items-center gap-1.5"><span className="text-orange-primary">›</span> Navigation Header & Drawer</span>
+                              <span className="flex items-center gap-1.5"><span className="text-orange-primary">›</span> JS handleMobileDrawer()</span>
+                              <span className="flex items-center gap-1.5"><span className="text-orange-primary">›</span> Section Hero & Bouton CTA</span>
+                              <span className="flex items-center gap-1.5"><span className="text-orange-primary">›</span> Modal Contact & handleFormSubmit()</span>
+                              <span className="flex items-center gap-1.5"><span className="text-orange-primary">›</span> Smooth Scroll & Effets Hover</span>
+                              <span className="flex items-center gap-1.5"><span className="text-orange-primary">›</span> Toast Notification System</span>
+                            </>
+                          )}
+                          {currentStage === 'tester' && (
+                            <>
+                              <span className="flex items-center gap-1.5"><span className="text-emerald-400">✓</span> JS auditAndFixButtons()</span>
+                              <span className="flex items-center gap-1.5"><span className="text-emerald-400">✓</span> Event verifyClickHandlers()</span>
+                              <span className="flex items-center gap-1.5"><span className="text-emerald-400">✓</span> Form testFormValidation()</span>
+                              <span className="flex items-center gap-1.5"><span className="text-emerald-400">✓</span> UI checkMobileInteractions()</span>
+                            </>
+                          )}
+                          {(currentStage === 'inspector' || currentStage === 'complete') && (
+                            <>
+                              <span className="flex items-center gap-1.5"><span className="text-purple-400">🏆</span> Check checkViewportBreakpoints()</span>
+                              <span className="flex items-center gap-1.5"><span className="text-purple-400">🏆</span> Audit validateWCAGAccessibility()</span>
+                              <span className="flex items-center gap-1.5"><span className="text-purple-400">🏆</span> System issueQualityCertificate()</span>
+                              <span className="flex items-center gap-1.5"><span className="text-purple-400">🏆</span> Bundle optimizeCSSBundle()</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   )}
-                  <span>
-                    {isGenerating 
-                      ? activeAgent.actionMessage 
-                      : `Mission de l'agent ${activeAgent.name} complétée avec succès !`}
-                  </span>
                 </div>
               </div>
             </div>
@@ -264,8 +334,13 @@ export const MultiAgentSquad: React.FC<MultiAgentSquadProps> = ({
                     : (isDark ? 'bg-white/[0.02] border-white/5 opacity-60' : 'bg-slate-50 border-slate-100 opacity-70')
                 }`}
               >
-                <div className="w-16 h-16 rounded-xl overflow-hidden border-2 border-white/20 mx-auto mb-2 shadow-md">
-                  <img src={agent.avatar} alt={agent.name} className="w-full h-full object-cover" />
+                <div className={`w-16 h-16 rounded-xl bg-gradient-to-br ${agent.color} p-0.5 border-2 border-white/20 mx-auto mb-2 shadow-md`}>
+                  <div className="w-full h-full rounded-[10px] bg-slate-950 flex flex-col items-center justify-center p-1 text-white relative overflow-hidden">
+                    <div className="absolute inset-0 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:8px_8px] opacity-10" />
+                    <div className="p-1.5 rounded-lg bg-white/10 backdrop-blur-md text-white border border-white/20 scale-75 origin-center">
+                      {agent.icon}
+                    </div>
+                  </div>
                 </div>
                 <div className="text-center">
                   <span className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-bold text-white bg-gradient-to-r ${agent.color} mb-1`}>

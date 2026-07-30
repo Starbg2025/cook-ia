@@ -154,7 +154,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
           body: JSON.stringify({
             prompt: `Suggère une courte complétion en français (entre 2 et 5 mots) pour continuer ou terminer naturellement la phrase de l'utilisateur. L'utilisateur écrit : "${prompt}". Ne renvoie QUE la partie complétée (la suite de la phrase), pas toute la saisie, ni de remarques ou de guillemets. Garde cela simple et en minuscules. Ex: si l'utilisateur saisit "comment faire ", renvoie "une tarte aux pommes".`,
             systemInstruction: "Tu es un assistant d'autocomplétion en ligne ultra-rapide. Renvoie uniquement la suite directe de la phrase en français, sans fioritures ni guillemets.",
-            model: "gemini-3.5-flash"
+            model: "gemini-2.5-flash"
           })
         });
 

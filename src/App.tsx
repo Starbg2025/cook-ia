@@ -48,7 +48,8 @@ import {
   Ban
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { generateWebsite, generateTitle, updateSection, convertToReact, improveText } from './services/geminiService';
+import { generateWebsite, generateTitle, updateSection, convertToReact, improveText, answerQuestion } from './services/geminiService';
+import { isInformationalQuestion } from './utils/intentDetection';
 import { analystReview, criticReview, plannerAgent, testerAgent, shadowWatchdog, auditAndFixButtons } from './services/multiAgentService';
 import { Message, ViewMode, Conversation, StyleConfig, SectionEditState, ActionHistory } from './types';
 import { ChatInterface } from './components/ChatInterface';
@@ -178,10 +179,10 @@ export default function App() {
   const [selectedModel, setSelectedModel] = useState<string>(() => {
     try {
       const saved = localStorage.getItem('selectedModel');
-      return saved || 'gemini-3.5-flash';
+      return saved || 'gemini-2.5-flash';
     } catch (e) {
       console.warn("Storage access denied:", e);
-      return 'gemini-3.5-flash';
+      return 'gemini-2.5-flash';
     }
   });
   const [isRealtimeEnabled, setIsRealtimeEnabled] = useState(() => {
@@ -920,6 +921,30 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
       const urls = currentImages.filter(img => !img.startsWith('data:'));
       if (urls.length > 0) {
         enrichedUserMessage += "\n\nReference Images (URLs):\n" + urls.join('\n');
+      }
+
+      // CHECK IF USER IS ASKING A QUESTION (WITHOUT REQUESTING WEBSITE CREATION OR MODIFICATION)
+      if (isInformationalQuestion(userMessage, !!generatedCode)) {
+        setCurrentAgentStage('architect');
+        setLoadingStatus(lang === 'fr' ? "💬 [Assistant COOK IA] Traitement de votre question..." : "💬 [COOK IA Assistant] Processing question...");
+        const aQa = addAction('thought', lang === 'fr' 
+          ? "💬 [Assistant IA] Réponse directe à votre question sans modification du site web..." 
+          : "💬 [AI Assistant] Answering question directly without modifying website...");
+
+        const textResponse = await answerQuestion(enrichedUserMessage, history.slice(0, -1), selectedModel);
+        completeAction(aQa);
+
+        const updatedMessages: Message[] = [...newMessages, { 
+          role: 'model', 
+          content: textResponse,
+          code: generatedCode, // PRESERVE EXISTING GENERATED CODE UNTOUCHED
+          actionHistory: currentActions
+        }];
+        setMessages(updatedMessages);
+        await saveConversation(updatedMessages);
+        setIsLoading(false);
+        setCurrentAgentStage('complete');
+        return;
       }
 
       // STAGE 1: PROMPT ARCHITECT

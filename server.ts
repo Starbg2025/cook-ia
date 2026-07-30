@@ -209,53 +209,54 @@ async function runMultiProviderCycle(params: {
     }
 
     // Provider 3: OpenRouter Free Models
-    const openRouterHeader: any = {
-      "Content-Type": "application/json",
-      "HTTP-Referer": "https://cook-ia.indevs.in",
-      "X-Title": "COOK IA"
-    };
     if (openRouterApiKey) {
-      openRouterHeader["Authorization"] = `Bearer ${openRouterApiKey}`;
-    }
-
-    console.log(`[Cycle ${cycle}] Step 3: Trying OpenRouter Free models...`);
-    const openRouterModels = [
-      "google/gemini-2.5-flash:free",
-      "meta-llama/llama-3.3-70b-instruct:free",
-      "google/gemini-2.0-flash-exp:free",
-      "deepseek/deepseek-r1:free",
-      "qwen/qwen-2.5-coder-32b-instruct:free"
-    ];
-    for (const m of openRouterModels) {
-      try {
-        console.log(`[OpenRouter Free] Testing model: ${m}`);
-        const bodyPayload: any = {
-          model: m,
-          messages: formattedOpenAIMessages,
-          temperature: 0.7,
-          max_tokens: 4096
-        };
-        if (isJsonMode) {
-          bodyPayload.response_format = { type: "json_object" };
-        }
-        const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-          method: "POST",
-          headers: openRouterHeader,
-          body: JSON.stringify(bodyPayload)
-        });
-        if (res.ok) {
-          const data: any = await res.json();
-          const text = data.choices[0]?.message?.content;
-          if (text) {
-            console.log(`[OpenRouter Free] Succeeded with model: ${m} in cycle ${cycle}`);
-            return { text, provider: `openrouter (${m})` };
+      console.log(`[Cycle ${cycle}] Step 3: Trying OpenRouter Free models...`);
+      const openRouterHeader: any = {
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://cook-ia.indevs.in",
+        "X-Title": "COOK IA",
+        "Authorization": `Bearer ${openRouterApiKey}`
+      };
+      const openRouterModels = [
+        "google/gemini-2.5-flash:free",
+        "meta-llama/llama-3.3-70b-instruct:free",
+        "google/gemini-2.0-flash-exp:free",
+        "deepseek/deepseek-r1:free",
+        "qwen/qwen-2.5-coder-32b-instruct:free"
+      ];
+      for (const m of openRouterModels) {
+        try {
+          console.log(`[OpenRouter Free] Testing model: ${m}`);
+          const bodyPayload: any = {
+            model: m,
+            messages: formattedOpenAIMessages,
+            temperature: 0.7,
+            max_tokens: 4096
+          };
+          if (isJsonMode) {
+            bodyPayload.response_format = { type: "json_object" };
           }
-        } else {
-          console.warn(`[OpenRouter Free] HTTP error on model ${m}:`, res.status, await res.text());
+          const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+            method: "POST",
+            headers: openRouterHeader,
+            body: JSON.stringify(bodyPayload)
+          });
+          if (res.ok) {
+            const data: any = await res.json();
+            const text = data.choices[0]?.message?.content;
+            if (text) {
+              console.log(`[OpenRouter Free] Succeeded with model: ${m} in cycle ${cycle}`);
+              return { text, provider: `openrouter (${m})` };
+            }
+          } else {
+            console.warn(`[OpenRouter Free] HTTP error on model ${m}:`, res.status, await res.text());
+          }
+        } catch (err: any) {
+          console.warn(`[OpenRouter Free] Model ${m} failed:`, err.message || err);
         }
-      } catch (err: any) {
-        console.warn(`[OpenRouter Free] Model ${m} failed:`, err.message || err);
       }
+    } else {
+      console.log(`[Cycle ${cycle}] Step 3: OpenRouter API key missing, moving to Nvidia...`);
     }
 
     // Provider 4: Nvidia NIM Models
