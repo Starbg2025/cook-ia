@@ -8,9 +8,9 @@ import { GoogleGenAI } from "@google/genai";
 dotenv.config();
 
 // High-reliability Gemini helper with model fallback cascade for 503 and high demand errors
-async function generateGeminiContentWithFallback(ai: any, contents: any, config: any, baseModel: string = "gemini-3.5-flash") {
+async function generateGeminiContentWithFallback(ai: any, contents: any, config: any, baseModel: string = "gemini-2.5-flash") {
   const modelList = [baseModel];
-  const backups = ["gemini-3.5-flash", "gemini-2.5-flash", "gemini-3.1-pro-preview", "gemini-3.1-flash-lite"];
+  const backups = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.5-pro"];
   
   for (const b of backups) {
     if (!modelList.includes(b)) {
@@ -18,7 +18,6 @@ async function generateGeminiContentWithFallback(ai: any, contents: any, config:
     }
   }
 
-  let response = null;
   let lastErr = null;
   
   for (const m of modelList) {
@@ -42,6 +41,296 @@ async function generateGeminiContentWithFallback(ai: any, contents: any, config:
   }
   
   throw lastErr || new Error("All Gemini models in fallback chain failed.");
+}
+
+// Multi-Provider Fallback Cascade Engine (Gemini Free -> Groq Free -> OpenRouter Free -> Nvidia Free -> Cycle)
+async function runMultiProviderCycle(params: {
+  prompt: string;
+  history?: any[];
+  images?: any[];
+  systemInstruction?: string;
+  geminiKey?: string;
+  groqKey?: string;
+  openRouterKey?: string;
+  nvidiaKey?: string;
+  baseModel?: string;
+  isJsonMode?: boolean;
+}): Promise<{ text: string; provider: string }> {
+  const {
+    prompt,
+    history = [],
+    images = [],
+    systemInstruction,
+    isJsonMode = false
+  } = params;
+
+  const geminiApiKey = (params.geminiKey || process.env.GEMINI_API_KEY || "").trim();
+  const groqApiKey = (params.groqKey || process.env.GROQ_API_KEY || "").trim();
+  const openRouterApiKey = (params.openRouterKey || process.env.OPENROUTER_API_KEY || "").trim();
+  const nvidiaApiKey = (params.nvidiaKey || process.env.NVIDIA_API_KEY || "").trim();
+
+  // Prepare standard OpenAI-compatible messages for Groq, OpenRouter, Nvidia
+  const formattedOpenAIMessages: any[] = [];
+  if (systemInstruction) {
+    formattedOpenAIMessages.push({ role: "system", content: systemInstruction });
+  }
+
+  (history || []).forEach((h: any) => {
+    let textParts = "";
+    if (Array.isArray(h.parts)) {
+      textParts = h.parts.map((p: any) => p.text || "").join("\n");
+    } else if (typeof h.parts === 'string') {
+      textParts = h.parts;
+    } else if (h.content) {
+      textParts = typeof h.content === 'string' ? h.content : JSON.stringify(h.content);
+    }
+    const role = h.role === 'model' || h.role === 'assistant' ? 'assistant' : 'user';
+    if (textParts) {
+      formattedOpenAIMessages.push({ role, content: textParts });
+    }
+  });
+
+  const userContentObj: any[] = [{ type: "text", text: prompt || "" }];
+  if (images && images.length > 0) {
+    images.forEach((img: any) => {
+      if (img && img.mimeType && img.data) {
+        userContentObj.push({
+          type: "image_url",
+          image_url: { url: `data:${img.mimeType};base64,${img.data}` }
+        });
+      }
+    });
+  }
+  formattedOpenAIMessages.push({ role: "user", content: images.length > 0 ? userContentObj : prompt });
+
+  const maxCycles = 2;
+
+  for (let cycle = 1; cycle <= maxCycles; cycle++) {
+    console.log(`[Multi-Provider Engine] Starting Cycle ${cycle}/${maxCycles}...`);
+
+    // Provider 1: Gemini Free Models
+    if (geminiApiKey) {
+      console.log(`[Cycle ${cycle}] Step 1: Trying Gemini Free models...`);
+      const geminiModels = Array.from(new Set([params.baseModel || "gemini-2.5-flash", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.5-pro"]));
+      const ai = new GoogleGenAI({ apiKey: geminiApiKey });
+
+      const geminiContents = [
+        ...(history || []).map((h: any) => {
+          let parsedParts: any[] = [];
+          if (Array.isArray(h.parts)) {
+            parsedParts = h.parts.map((p: any) => p.text ? { text: p.text } : p);
+          } else if (typeof h.parts === 'string') {
+            parsedParts = [{ text: h.parts }];
+          } else if (h.content) {
+            parsedParts = [{ text: String(h.content) }];
+          } else {
+            parsedParts = [{ text: "" }];
+          }
+          return {
+            role: h.role === "model" || h.role === "assistant" ? "model" : "user",
+            parts: parsedParts
+          };
+        }),
+        {
+          role: "user",
+          parts: [
+            { text: prompt },
+            ...(images || []).map((img: any) => ({
+              inlineData: { mimeType: img.mimeType, data: img.data }
+            }))
+          ]
+        }
+      ];
+
+      for (const m of geminiModels) {
+        try {
+          console.log(`[Gemini Free] Testing model: ${m}`);
+          const res = await ai.models.generateContent({
+            model: m,
+            contents: geminiContents,
+            config: {
+              systemInstruction: systemInstruction || undefined,
+              temperature: 0.7,
+              responseMimeType: isJsonMode ? "application/json" : undefined
+            }
+          });
+          if (res && res.text) {
+            console.log(`[Gemini Free] Succeeded with model: ${m} in cycle ${cycle}`);
+            return { text: res.text, provider: `gemini (${m})` };
+          }
+        } catch (err: any) {
+          console.warn(`[Gemini Free] Model ${m} failed:`, err.message || err);
+        }
+      }
+    } else {
+      console.log(`[Cycle ${cycle}] Step 1: Gemini API key missing, moving to Groq...`);
+    }
+
+    // Provider 2: Groq Free Models
+    if (groqApiKey) {
+      console.log(`[Cycle ${cycle}] Step 2: Trying Groq Free models...`);
+      const groqModels = ["llama-3.3-70b-versatile", "mixtral-8x7b-32768", "gemma2-9b-it", "llama-3.1-8b-instant"];
+      for (const m of groqModels) {
+        try {
+          console.log(`[Groq Free] Testing model: ${m}`);
+          const bodyPayload: any = {
+            model: m,
+            messages: formattedOpenAIMessages,
+            temperature: 0.7,
+            max_tokens: 4096
+          };
+          if (isJsonMode) {
+            bodyPayload.response_format = { type: "json_object" };
+          }
+          const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${groqApiKey}`,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify(bodyPayload)
+          });
+          if (res.ok) {
+            const data: any = await res.json();
+            const text = data.choices[0]?.message?.content;
+            if (text) {
+              console.log(`[Groq Free] Succeeded with model: ${m} in cycle ${cycle}`);
+              return { text, provider: `groq (${m})` };
+            }
+          } else {
+            console.warn(`[Groq Free] HTTP error on model ${m}:`, res.status, await res.text());
+          }
+        } catch (err: any) {
+          console.warn(`[Groq Free] Model ${m} failed:`, err.message || err);
+        }
+      }
+    } else {
+      console.log(`[Cycle ${cycle}] Step 2: Groq API key missing, moving to OpenRouter...`);
+    }
+
+    // Provider 3: OpenRouter Free Models
+    const openRouterHeader: any = {
+      "Content-Type": "application/json",
+      "HTTP-Referer": "https://cook-ia.indevs.in",
+      "X-Title": "COOK IA"
+    };
+    if (openRouterApiKey) {
+      openRouterHeader["Authorization"] = `Bearer ${openRouterApiKey}`;
+    }
+
+    console.log(`[Cycle ${cycle}] Step 3: Trying OpenRouter Free models...`);
+    const openRouterModels = [
+      "google/gemini-2.5-flash:free",
+      "meta-llama/llama-3.3-70b-instruct:free",
+      "google/gemini-2.0-flash-exp:free",
+      "deepseek/deepseek-r1:free",
+      "qwen/qwen-2.5-coder-32b-instruct:free"
+    ];
+    for (const m of openRouterModels) {
+      try {
+        console.log(`[OpenRouter Free] Testing model: ${m}`);
+        const bodyPayload: any = {
+          model: m,
+          messages: formattedOpenAIMessages,
+          temperature: 0.7,
+          max_tokens: 4096
+        };
+        if (isJsonMode) {
+          bodyPayload.response_format = { type: "json_object" };
+        }
+        const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: openRouterHeader,
+          body: JSON.stringify(bodyPayload)
+        });
+        if (res.ok) {
+          const data: any = await res.json();
+          const text = data.choices[0]?.message?.content;
+          if (text) {
+            console.log(`[OpenRouter Free] Succeeded with model: ${m} in cycle ${cycle}`);
+            return { text, provider: `openrouter (${m})` };
+          }
+        } else {
+          console.warn(`[OpenRouter Free] HTTP error on model ${m}:`, res.status, await res.text());
+        }
+      } catch (err: any) {
+        console.warn(`[OpenRouter Free] Model ${m} failed:`, err.message || err);
+      }
+    }
+
+    // Provider 4: Nvidia NIM Models
+    if (nvidiaApiKey) {
+      console.log(`[Cycle ${cycle}] Step 4: Trying Nvidia NIM models...`);
+      const nvidiaModels = [
+        "meta/llama-3.3-70b-instruct",
+        "deepseek-ai/deepseek-r1",
+        "mistralai/mistral-large-2-instruct",
+        "nvidia/llama-3.1-nemotron-70b-instruct"
+      ];
+      for (const m of nvidiaModels) {
+        try {
+          console.log(`[Nvidia NIM] Testing model: ${m}`);
+          const bodyPayload: any = {
+            model: m,
+            messages: formattedOpenAIMessages,
+            temperature: 0.7,
+            max_tokens: 4096
+          };
+          const res = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${nvidiaApiKey}`,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify(bodyPayload)
+          });
+          if (res.ok) {
+            const data: any = await res.json();
+            const text = data.choices[0]?.message?.content;
+            if (text) {
+              console.log(`[Nvidia NIM] Succeeded with model: ${m} in cycle ${cycle}`);
+              return { text, provider: `nvidia (${m})` };
+            }
+          } else {
+            console.warn(`[Nvidia NIM] HTTP error on model ${m}:`, res.status, await res.text());
+          }
+        } catch (err: any) {
+          console.warn(`[Nvidia NIM] Model ${m} failed:`, err.message || err);
+        }
+      }
+    } else {
+      console.log(`[Cycle ${cycle}] Step 4: Nvidia API key missing, trying Pollinations AI Free...`);
+    }
+
+    // Provider 5: Pollinations AI Free Endpoint (No API Key Required)
+    console.log(`[Cycle ${cycle}] Step 5: Trying Pollinations AI Free endpoint...`);
+    try {
+      const pollMessages = formattedOpenAIMessages.map(m => ({
+        role: m.role,
+        content: typeof m.content === 'string' ? m.content : (Array.isArray(m.content) ? m.content.map((c: any) => c.text || '').join('\n') : String(m.content))
+      }));
+      const pollRes = await fetch("https://text.pollinations.ai/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: pollMessages,
+          model: "openai",
+          jsonMode: isJsonMode
+        })
+      });
+      if (pollRes.ok) {
+        const text = await pollRes.text();
+        if (text && text.trim().length > 0) {
+          console.log(`[Pollinations Free] Succeeded in cycle ${cycle}`);
+          return { text: text.trim(), provider: "pollinations (free)" };
+        }
+      }
+    } catch (err: any) {
+      console.warn(`[Pollinations Free] Failed:`, err.message || err);
+    }
+  }
+
+  throw new Error("All AI Providers (Gemini Free -> Groq Free -> OpenRouter Free -> Nvidia Free -> Pollinations Free) failed after multi-cycle attempts.");
 }
 
 const supabaseUrl = "https://bxsilckpxcpsgojrakfs.supabase.co";
@@ -276,7 +565,7 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
                 ai,
                 `You are the 'Analyst' for COOK IA. Ask 1-2 questions to refine the project. Return JSON: { "needsClarification": boolean, "questions": string[], "isTechnicalQuestion": boolean, "answer": string }\n\nHISTORY:\n${formatHistory(safeHistory.slice(-5))}\n\nCURRENT PROMPT: ${prompt}`,
                 { responseMimeType: "application/json" },
-                "gemini-3.5-flash"
+                "gemini-2.5-flash"
               );
               if (response.text) {
                 return res.json(JSON.parse(response.text));
@@ -351,7 +640,7 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
             ai,
             `You are the 'Planner' for COOK IA. Break down the user's request into a detailed technical plan. Return JSON: { "plan": "string", "isComplex": boolean, "subAgents": string[] }\n\nUSER REQUEST: ${prompt}\n\nHISTORY:\n${formatHistory(safeHistory.slice(-3))}`,
             { responseMimeType: "application/json" },
-            "gemini-3.5-flash"
+            "gemini-2.5-flash"
           );
           return res.json(JSON.parse(response.text));
         } catch (error: any) {
@@ -465,87 +754,43 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
     }
   });
 
-  // Standard Gemini Proxy
+  // Standard Gemini Proxy with Multi-Provider Cycle (Gemini Free -> Groq Free -> OpenRouter Free -> Nvidia Free -> Cycle)
   app.post("/api/ai/gemini", async (req, res) => {
     const { prompt, history, images, systemInstruction: customSystem, model: requestedModel, responseMimeType } = req.body;
-    let apiKey = req.headers['x-gemini-key'] as string;
-    if (apiKey) {
-      apiKey = apiKey.trim();
-      if ((apiKey.startsWith('"') && apiKey.endsWith('"')) || (apiKey.startsWith("'") && apiKey.endsWith("'"))) {
-        apiKey = apiKey.slice(1, -1).trim();
+    let geminiKey = req.headers['x-gemini-key'] as string || process.env.GEMINI_API_KEY || "";
+    if (geminiKey) {
+      geminiKey = geminiKey.trim();
+      if ((geminiKey.startsWith('"') && geminiKey.endsWith('"')) || (geminiKey.startsWith("'") && geminiKey.endsWith("'"))) {
+        geminiKey = geminiKey.slice(1, -1).trim();
       }
-      const upperKey = apiKey.toUpperCase();
+      const upperKey = geminiKey.toUpperCase();
       if (upperKey.startsWith("FREE") || upperKey.includes("GRATUITE") || upperKey.includes("INCLUSE") || upperKey === "GEMINI_API_KEY") {
-        apiKey = process.env.GEMINI_API_KEY || "";
+        geminiKey = process.env.GEMINI_API_KEY || "";
       }
-    } else {
-      apiKey = process.env.GEMINI_API_KEY || "";
     }
 
-    console.log(`[Gemini Proxy] Key present: ${!!apiKey}, Model: ${requestedModel}, MimeType: ${responseMimeType}`);
-
-    if (!apiKey) {
-      return res.status(500).json({ error: "Gemini API key missing on server" });
-    }
+    let groqKey = req.headers['x-groq-key'] as string || process.env.GROQ_API_KEY || "";
+    let openRouterKey = req.headers['x-openrouter-key'] as string || process.env.OPENROUTER_API_KEY || "";
+    let nvidiaKey = req.headers['x-nvidia-key'] as string || process.env.NVIDIA_API_KEY || "";
 
     try {
-      const ai = new GoogleGenAI({ apiKey });
-      let modelName = requestedModel || "gemini-3.5-flash";
-      
-      const contents = [
-        ...(history || []).map((h: any) => {
-          return {
-            role: h.role, // role must be 'user' or 'model'
-            parts: (h.parts || []).map((p: any) => {
-              if (p.text) return { text: p.text };
-              if (p.inlineData) return {
-                inlineData: {
-                  mimeType: p.inlineData.mimeType,
-                  data: p.inlineData.data
-                }
-              };
-              return p;
-            })
-          };
-        }),
-        { role: "user", parts: [{ text: prompt }] }
-      ];
+      const result = await runMultiProviderCycle({
+        prompt,
+        history,
+        images,
+        systemInstruction: customSystem,
+        geminiKey,
+        groqKey,
+        openRouterKey,
+        nvidiaKey,
+        baseModel: requestedModel || "gemini-2.5-flash",
+        isJsonMode: responseMimeType === "application/json"
+      });
 
-      // Handle images for the current prompt
-      if (images && images.length > 0) {
-        images.forEach((img: any) => {
-          contents[contents.length - 1].parts.push({
-            inlineData: {
-              mimeType: img.mimeType,
-              data: img.data
-            }
-          });
-        });
-      }
-
-      const response = await generateGeminiContentWithFallback(
-        ai,
-        contents,
-        {
-          systemInstruction: customSystem || undefined,
-          temperature: 0.7,
-          responseMimeType: responseMimeType || undefined,
-        },
-        modelName
-      );
-
-      if (!response.text) {
-        throw new Error("Empty response from Gemini");
-      }
-
-      res.json({ text: response.text });
+      res.json({ text: result.text, provider: result.provider });
     } catch (error: any) {
-      console.error("[Gemini Proxy] Error:", error.message);
-      if (error.message.includes("API key not valid") || error.message.includes("API_KEY_INVALID")) {
-        res.status(400).json({ error: "Clé API Gemini invalide ou non configurée sur le serveur (ex. Netlify)." });
-      } else {
-        res.status(500).json({ error: error.message || "Invalid response from Gemini" });
-      }
+      console.error("[Gemini Proxy] Multi-provider cycle exhausted:", error.message);
+      res.status(500).json({ error: error.message || "Failed across all AI providers" });
     }
   });
 
@@ -579,6 +824,73 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
       console.error(`[Supabase DB Proxy] Error on ${table}/${action}:`, err.message);
       res.status(500).json({ error: err.message });
     }
+  });
+
+let systemAnnouncement = {
+  message: "La majorité des bugs sont corrigés par l'équipe !",
+  active: true,
+  updatedAt: new Date().toISOString(),
+  updatedBy: "Admin"
+};
+
+let bannedUsersMap: Record<string, { userId: string; username?: string; reason?: string; bannedAt: string }> = {};
+
+  // Get active system announcement
+  app.get("/api/announcement", (req, res) => {
+    res.json(systemAnnouncement);
+  });
+
+  // Admin update system announcement
+  app.post("/api/admin/announcement", (req, res) => {
+    const { adminEmail, message, active } = req.body;
+    if (!adminEmail || (adminEmail !== 'benit800@gmail.com' && !adminEmail.includes('benit800'))) {
+      return res.status(403).json({ error: "Accès refusé : Seul l'administrateur peut modifier l'annonce." });
+    }
+    systemAnnouncement = {
+      message: message || "La majorité des bugs sont corrigés par l'équipe !",
+      active: active !== undefined ? active : true,
+      updatedAt: new Date().toISOString(),
+      updatedBy: adminEmail
+    };
+    console.log("[Admin Announcement Updated]", systemAnnouncement);
+    res.json({ success: true, announcement: systemAnnouncement });
+  });
+
+  // Admin ban/unban user endpoint
+  app.post("/api/admin/ban-user", (req, res) => {
+    const { adminEmail, userId, username, reason, ban } = req.body;
+    if (!adminEmail || (adminEmail !== 'benit800@gmail.com' && !adminEmail.includes('benit800'))) {
+      return res.status(403).json({ error: "Accès refusé : Seul l'administrateur peut bannir des utilisateurs." });
+    }
+
+    if (!userId) {
+      return res.status(400).json({ error: "userId requis" });
+    }
+
+    if (ban) {
+      bannedUsersMap[userId] = {
+        userId,
+        username: username || 'Inconnu',
+        reason: reason || "Non-respect des règles de la plateforme.",
+        bannedAt: new Date().toISOString()
+      };
+      console.log(`[Admin User Banned] User ID: ${userId}, Reason: ${reason}`);
+    } else {
+      delete bannedUsersMap[userId];
+      console.log(`[Admin User Unbanned] User ID: ${userId}`);
+    }
+
+    res.json({ success: true, isBanned: !!bannedUsersMap[userId], bannedUsers: Object.values(bannedUsersMap) });
+  });
+
+  // Check if a user is banned
+  app.post("/api/check-user-ban", (req, res) => {
+    const { userId, username } = req.body;
+    const banInfo = (userId && bannedUsersMap[userId]) || (username && bannedUsersMap[username]);
+    if (banInfo) {
+      return res.json({ banned: true, reason: banInfo.reason, bannedAt: banInfo.bannedAt });
+    }
+    res.json({ banned: false });
   });
 
   // Admin users-activity dashboard endpoint
@@ -616,6 +928,8 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
             id: p.id,
             username: p.username || 'Utilisateur Anonyme',
             updatedAt: p.updated_at || null,
+            isBanned: !!bannedUsersMap[p.id],
+            banReason: bannedUsersMap[p.id]?.reason || null,
             conversations: []
           };
         });
@@ -631,6 +945,8 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
                 id: userId,
                 username: `Utilisateur #${userId.substring(0, 5)}`,
                 updatedAt: c.created_at || null,
+                isBanned: !!bannedUsersMap[userId],
+                banReason: bannedUsersMap[userId]?.reason || null,
                 conversations: []
               };
             }
@@ -648,7 +964,7 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
       }
 
       const usersList = Object.values(usersMap);
-      res.json({ success: true, users: usersList });
+      res.json({ success: true, users: usersList, announcement: systemAnnouncement });
     } catch (err: any) {
       console.error("[Admin Users Activity] Error:", err.message);
       res.status(500).json({ error: err.message });
@@ -775,25 +1091,14 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
     }
   });
 
-  // AI Fallback Proxy (Groq -> OpenRouter Free)
+  // AI Fallback Proxy (Gemini Free -> Groq Free -> OpenRouter Free -> Nvidia Free -> Cycle)
   app.post("/api/ai/fallback", async (req, res) => {
     try {
       const { prompt, history, images, targetModel } = req.body;
-      let groqKey = req.headers['x-groq-key'] as string || process.env.GROQ_API_KEY;
-      if (groqKey) {
-        groqKey = groqKey.trim();
-        if ((groqKey.startsWith('"') && groqKey.endsWith('"')) || (groqKey.startsWith("'") && groqKey.endsWith("'"))) {
-          groqKey = groqKey.slice(1, -1).trim();
-        }
-      }
-      let openRouterKey = req.headers['x-openrouter-key'] as string || process.env.OPENROUTER_API_KEY;
-      if (openRouterKey) {
-        openRouterKey = openRouterKey.trim();
-        if ((openRouterKey.startsWith('"') && openRouterKey.endsWith('"')) || (openRouterKey.startsWith("'") && openRouterKey.endsWith("'"))) {
-          openRouterKey = openRouterKey.slice(1, -1).trim();
-        }
-      }
-      const modalKey = process.env.MODAL_API_KEY;
+      const geminiKey = (req.headers['x-gemini-key'] as string || process.env.GEMINI_API_KEY || "").trim();
+      const groqKey = (req.headers['x-groq-key'] as string || process.env.GROQ_API_KEY || "").trim();
+      const openRouterKey = (req.headers['x-openrouter-key'] as string || process.env.OPENROUTER_API_KEY || "").trim();
+      const nvidiaKey = (req.headers['x-nvidia-key'] as string || process.env.NVIDIA_API_KEY || "").trim();
 
       const systemInstruction = `You are COOK IA, a world-class senior web engineer and elite product designer. 
 Your mission is to transform even the simplest user prompt into a "magnificent", high-end, and fully functional website that feels like a premium digital product.
@@ -856,166 +1161,33 @@ Return the response EXCLUSIVELY in JSON format with three fields (do not include
 2. 'preview_code': The complete, production-ready single-file HTML/CSS/JS code for immediate preview.
 3. 'files': An array of objects, each with 'path' (e.g., "src/index.html") and 'content' (the file content).`;
 
-      const messages = [
-        { role: "system", content: systemInstruction },
-        ...(history || []).map((h: any) => {
-          if (!h) return { role: "user", content: "" };
-          // Concatenate all text parts for each message
-          const textContent = (h.parts || [])
-            .filter((p: any) => p && p.text)
-            .map((p: any) => p.text)
-            .join("\n");
-          
-          return {
-            role: h.role === "model" ? "assistant" : "user",
-            content: textContent || (h.role === "user" ? "[Image/Media content]" : "Processing...")
-          };
-        })
-      ];
-
-      const userContent: any[] = [{ type: "text", text: prompt || "" }];
-      if (images && images.length > 0) {
-        images.forEach((img: any) => {
-          if (img && img.mimeType && img.data) {
-            userContent.push({
-              type: "image_url",
-              image_url: {
-                url: `data:${img.mimeType};base64,${img.data}`
-              }
-            });
-          }
-        });
-      }
-      messages.push({ role: "user", content: userContent as any });
-
-      async function tryRequest(url: string, key: string, model: string, providerName: string, isJson: boolean = true) {
-        console.log(`[Fallback] Attempting ${providerName} (${model})...`);
-        const headers: any = {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${key}`
-        };
-        
-        if (providerName === "OpenRouter") {
-          headers["HTTP-Referer"] = "https://cook-ia.indevs.in";
-          headers["X-Title"] = "COOK IA";
-        }
-
-        const body: any = {
-          model,
-          messages,
-          temperature: 0.7,
-          max_tokens: 8192
-        };
-
-        if (isJson) {
-          body.response_format = { type: "json_object" };
-        }
-
-        const response = await fetch(url, {
-          method: "POST",
-          headers,
-          body: JSON.stringify(body)
+      try {
+        const result = await runMultiProviderCycle({
+          prompt,
+          history,
+          images,
+          systemInstruction,
+          geminiKey,
+          groqKey,
+          openRouterKey,
+          nvidiaKey,
+          baseModel: targetModel || "gemini-2.5-flash",
+          isJsonMode: true
         });
 
-        if (!response.ok) {
-          const error = await response.json().catch(() => ({ error: response.statusText }));
-          throw new Error(`${providerName} Error (${response.status}): ${JSON.stringify(error)}`);
-        }
-
-        const data: any = await response.json();
-        const content = data.choices[0].message.content;
-        console.log(`[Fallback] ${providerName} succeeded!`);
-        
-        // Robust JSON Parsing
-        try {
-          const jsonMatch = content.match(/\{[\s\S]*\}/);
-          const jsonStr = jsonMatch ? jsonMatch[0] : content;
-          return { ...JSON.parse(jsonStr), _provider: providerName.toLowerCase() };
-        } catch (e) {
-          console.error(`[Fallback] ${providerName} returned invalid JSON:`, content.substring(0, 500));
-          throw new Error(`${providerName} returned invalid JSON format.`);
-        }
+        const jsonMatch = result.text.match(/\{[\s\S]*\}/);
+        const jsonStr = jsonMatch ? jsonMatch[0] : result.text;
+        const parsed = JSON.parse(jsonStr);
+        return res.json({ ...parsed, _provider: result.provider });
+      } catch (cycleErr: any) {
+        console.warn("[Fallback] Multi-provider cycle exhausted. Sending emergency recovery payload:", cycleErr.message);
+        return res.json({
+          explanation: "Mode Secours Extrême activé. Les serveurs de calcul sont temporairement surchargés.",
+          preview_code: `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Mode Secours</title><script src="https://cdn.tailwindcss.com"></script></head><body class="bg-[#0A0A0A] text-white flex items-center justify-center h-screen font-sans text-center px-4"><div><div class="w-20 h-20 bg-orange-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-orange-500/30 font-black text-orange-500">IA</div><h1 class="text-3xl font-black mb-4">MODE SECOURS ACTIF</h1><p class="text-white/40 mb-8 max-w-md mx-auto small uppercase tracking-widest leading-loose">Tous les modèles d'IA (Gemini Free, Groq, OpenRouter, Nvidia) sont temporairement indisponibles.</p><button onclick="window.location.reload()" class="bg-white text-black px-8 py-3 rounded-full font-bold uppercase tracking-widest text-[11px] hover:bg-orange-500 hover:text-white transition-all shadow-2xl">Réessayer la connexion</button></div></body></html>`,
+          files: [{ path: "index.html", content: "Mode secours actif." }],
+          _provider: 'emergency-watchdog'
+        });
       }
-
-      // Fallback Chain Execution
-      // 1. Try Groq (Priority 1)
-      if (groqKey) {
-        try {
-          const result = await tryRequest(
-            "https://api.groq.com/openai/v1/chat/completions",
-            groqKey,
-            "llama-3.3-70b-versatile",
-            "Groq"
-          );
-          return res.json(result);
-        } catch (err: any) {
-          console.warn(`[Fallback] Groq failed: ${err.message}`);
-        }
-      }
-      
-
-      // 2. Try OpenRouter (Priority 2)
-      if (openRouterKey) {
-        try {
-          const result = await tryRequest(
-            "https://openrouter.ai/api/v1/chat/completions",
-            openRouterKey,
-            "google/gemini-2.5-flash:free",
-            "OpenRouter"
-          );
-          return res.json(result);
-        } catch (err: any) {
-          console.warn(`[Fallback] OpenRouter with free model failed: ${err.message}`);
-          try {
-            // Fallback second attempt with standard flash
-            const result = await tryRequest(
-              "https://openrouter.ai/api/v1/chat/completions",
-              openRouterKey,
-              "google/gemini-2.5-flash",
-              "OpenRouter"
-            );
-            return res.json(result);
-          } catch (err2: any) {
-            console.warn(`[Fallback] OpenRouter secondary attempt failed: ${err2.message}`);
-          }
-        }
-      }
-
-      // 3. Try Gemini Free/Standard API fallback (Priority 3)
-      const geminiApiKey = process.env.GEMINI_API_KEY;
-      if (geminiApiKey) {
-        try {
-          console.log("[Fallback] Attempting Gemini fallback using standard Free client...");
-          const ai = new GoogleGenAI({ apiKey: geminiApiKey });
-          const response = await generateGeminiContentWithFallback(
-            ai,
-            prompt,
-            {
-              systemInstruction: systemInstruction,
-              responseMimeType: "application/json",
-              temperature: 0.7,
-            },
-            "gemini-3.5-flash"
-          );
-          if (response && response.text) {
-            const jsonMatch = response.text.match(/\{[\s\S]*\}/);
-            const jsonStr = jsonMatch ? jsonMatch[0] : response.text;
-            const parsed = JSON.parse(jsonStr);
-            return res.json({ ...parsed, _provider: 'gemini-fallback' });
-          }
-        } catch (err: any) {
-          console.warn(`[Fallback] Gemini fallback client failed: ${err.message}`);
-        }
-      }
-
-      // 4. Last Resort: Emergency JSON Recovery
-      console.error("[Fallback] All AI providers failed. Sending emergency recovery payload.");
-      return res.json({
-        explanation: "Mode Secours Extrême activé. Les serveurs de calcul sont temporairement surchargés. Voici une structure de base en attendant.",
-        preview_code: `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Mode Secours</title><script src="https://cdn.tailwindcss.com"></script></head><body class="bg-[#0A0A0A] text-white flex items-center justify-center h-screen font-sans text-center px-4"><div><div class="w-20 h-20 bg-orange-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-orange-500/30 font-black text-orange-500">IA</div><h1 class="text-3xl font-black mb-4">MODE SECOURS ACTIF</h1><p class="text-white/40 mb-8 max-w-md mx-auto small uppercase tracking-widest leading-loose">Les modèles d'IA principaux (Gemini, Groq, OpenRouter) ne répondent plus. Votre demande est en file d'attente.</p><button onclick="window.location.reload()" class="bg-white text-black px-8 py-3 rounded-full font-bold uppercase tracking-widest text-[11px] hover:bg-orange-500 hover:text-white transition-all shadow-2xl">Réessayer la connexion</button></div></body></html>`,
-        files: [{ path: "index.html", content: "Mode secours actif." }],
-        _provider: 'emergency-watchdog'
-      });
     } catch (error: any) {
       console.error("[Fallback] Final failure:", error.stack || error.message);
       return res.status(500).json({ error: error.message || "Unknown fallback error" });

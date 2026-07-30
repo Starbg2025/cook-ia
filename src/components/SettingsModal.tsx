@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   X, 
@@ -27,7 +27,11 @@ import {
   Sparkles,
   Activity,
   Search,
-  Eye
+  Eye,
+  Bell,
+  ShieldAlert,
+  AlertTriangle,
+  Ban
 } from 'lucide-react';
 import { supabase } from '../services/supabaseService';
 import { translations, Language } from '../translations';
@@ -112,6 +116,82 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [adminError, setAdminError] = useState<string | null>(null);
   const [adminSearchText, setAdminSearchText] = useState('');
   const [expandedUserIds, setExpandedUserIds] = useState<string[]>([]);
+
+  // Admin section announcement & moderation states
+  const [announcementMessage, setAnnouncementMessage] = useState("La majorité des bugs sont corrigés par notre équipe !");
+  const [isAnnouncementActive, setIsAnnouncementActive] = useState(true);
+  const [savingAnnouncement, setSavingAnnouncement] = useState(false);
+  const [announcementStatusMsg, setAnnouncementStatusMsg] = useState('');
+  const [customBanReasons, setCustomBanReasons] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (activeTab === 'admin' && user?.email === 'benit800@gmail.com') {
+      fetchAdminActivity();
+      fetch('/api/announcement')
+        .then(r => r.json())
+        .then(data => {
+          if (data && data.message) {
+            setAnnouncementMessage(data.message);
+            setIsAnnouncementActive(data.active !== false);
+          }
+        })
+        .catch(err => console.warn("Failed to load announcement:", err));
+    }
+  }, [activeTab]);
+
+  const handleSaveAnnouncement = async () => {
+    if (!user?.email) return;
+    setSavingAnnouncement(true);
+    setAnnouncementStatusMsg('');
+    try {
+      const response = await fetch('/api/admin/announcement', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          adminEmail: user.email,
+          message: announcementMessage,
+          active: isAnnouncementActive
+        })
+      });
+      if (response.ok) {
+        setAnnouncementStatusMsg("Bannière et message système mis à jour avec succès !");
+        setTimeout(() => setAnnouncementStatusMsg(''), 3500);
+      } else {
+        const data = await response.json();
+        setAnnouncementStatusMsg(`Erreur : ${data.error || 'Échec de mise à jour'}`);
+      }
+    } catch (err: any) {
+      setAnnouncementStatusMsg(`Erreur réseau : ${err.message}`);
+    } finally {
+      setSavingAnnouncement(false);
+    }
+  };
+
+  const handleToggleBanUser = async (targetUser: any) => {
+    if (!user?.email || !targetUser?.id) return;
+    const isCurrentlyBanned = !!targetUser.isBanned;
+    const banReason = customBanReasons[targetUser.id] || targetUser.banReason || "Non-respect des règles de la plateforme.";
+
+    try {
+      const response = await fetch('/api/admin/ban-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          adminEmail: user.email,
+          userId: targetUser.id,
+          username: targetUser.username,
+          reason: banReason,
+          ban: !isCurrentlyBanned
+        })
+      });
+
+      if (response.ok) {
+        setAdminUsers(prev => prev.map(u => u.id === targetUser.id ? { ...u, isBanned: !isCurrentlyBanned, banReason } : u));
+      }
+    } catch (err: any) {
+      console.error("Failed to toggle ban status:", err);
+    }
+  };
 
   const fetchAdminActivity = async () => {
     if (user?.email !== 'benit800@gmail.com') return;
@@ -581,55 +661,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </p>
                 </div>
 
-                {/* Cook IA Innovation Section */}
-                <div className={`mt-6 p-5 rounded-2xl border ${isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-slate-100/50 border-slate-200 text-slate-800'} space-y-4`}>
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="text-amber-500 shrink-0" size={18} />
-                    <h5 className="font-bold text-sm tracking-tight">
-                      {lang === 'fr' ? "Révolution de Conception : Cook IA Studio" : "Design Revolution: Cook IA Studio"}
-                    </h5>
-                  </div>
-                  
-                  <div className="space-y-3 text-xs leading-relaxed opacity-90">
-                    <div className="flex gap-2">
-                      <span className="text-amber-500">✦</span>
-                      <p>
-                        {lang === 'fr' 
-                          ? "Cook IA dessine comme sur un canvas interactif, mais c'est l'intelligence elle-même qui engendre et mature le design original de votre interface."
-                          : "Cook IA designs on an interactive canvas, but the core intelligence itself generates and matures the interface's original layout."
-                        }
-                      </p>
-                    </div>
-                    <div className="flex gap-2">
-                      <span className="text-blue-500">✦</span>
-                      <p>
-                        {lang === 'fr' 
-                          ? "Connectez ce design visuel à Cook IA Code, notre moteur d'écriture d'élite qui développe et code l'application complète directement à partir de l'esquisse."
-                          : "Connect this visual layout to Cook IA Code, our elite generation engine that compiles and codes the full application directly from the sketch."
-                        }
-                      </p>
-                    </div>
-                    <div className="flex gap-2">
-                      <span className="text-emerald-500">✦</span>
-                      <p>
-                        {lang === 'fr' 
-                          ? "Visualisez les points saillants et les étapes cinématiques pendant que l'IA code en temps réel, façonnant des sites que d'autres IA conventionnelles sont incapables de concevoir."
-                          : "Observe high-fidelity highlights and live cinematic steps as the AI codes in real-time, building websites that conventional AIs are simply unable to engineer."
-                        }
-                      </p>
-                    </div>
-                    <div className="flex gap-2">
-                      <span className="text-purple-500">✦</span>
-                      <p>
-                        {lang === 'fr' 
-                          ? "Cook IA intègre nativement les modèles 3D ultra-fluides de motionsites.ai pour animer et sublimer l'expérience utilisateur de vos applications."
-                          : "Cook IA natively integrates high-end 3D models from motionsites.ai to animate and enrich your user application experiences."
-                        }
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
                 <div className="mt-8 pt-8 border-t border-white/5 flex items-center justify-between">
                   <div className="flex flex-col">
                     <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Contact Direct</span>
@@ -913,9 +944,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <div>
                   <h3 className={`text-lg font-bold flex items-center gap-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>
                     <Activity size={18} className="text-yellow-500 animate-pulse" />
-                    Panneau d'Activité Admin - Benit Madimba
+                    Panneau de Contrôle Admin - Benit Madimba
                   </h3>
-                  <p className="text-xs text-slate-400">Suivez les utilisateurs enregistrés et observez ce qu'ils créent en temps réel.</p>
+                  <p className="text-xs text-slate-400">Gérez l'annonce système, modérez les règles et suivez l'activité en temps réel.</p>
                 </div>
                 <button 
                   onClick={fetchAdminActivity}
@@ -931,6 +962,83 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
             </div>
 
+            {/* Section 1: Message Système / Annonce Globale aux Utilisateurs */}
+            <div className={`p-5 rounded-2xl border ${isDark ? 'border-amber-500/30 bg-amber-500/5' : 'border-amber-200 bg-amber-50/60'}`}>
+              <div className="flex items-center gap-2 mb-2">
+                <Bell size={18} className="text-amber-500" />
+                <h4 className={`text-sm font-extrabold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                  Message d'Annonce Système (Bannière Globale)
+                </h4>
+              </div>
+              <p className="text-xs text-slate-400 mb-3">
+                Changez le message affiché en haut du site pour tous les utilisateurs (ex: annoncer des corrections de bugs, maintenances ou nouveautés).
+              </p>
+
+              {/* Presets */}
+              <div className="flex flex-wrap gap-2 mb-3">
+                <button
+                  type="button"
+                  onClick={() => setAnnouncementMessage("La majorité des bugs sont corrigés par notre équipe ! Bonne création.")}
+                  className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20 hover:bg-amber-500/20 transition-all"
+                >
+                  🛠️ Bugs corrigés
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAnnouncementMessage("Nouveau réseau de modèles IA 100% gratuits activé (Gemini, Groq, OpenRouter, Nvidia) !")}
+                  className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20 hover:bg-amber-500/20 transition-all"
+                >
+                  ⚡ Modèles IA Gratuits
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAnnouncementMessage("Serveurs optimisés & stables. Toutes les fonctionnalités sont opérationnelles.")}
+                  className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20 hover:bg-amber-500/20 transition-all"
+                >
+                  🚀 Serveurs stables
+                </button>
+              </div>
+
+              <textarea
+                value={announcementMessage}
+                onChange={(e) => setAnnouncementMessage(e.target.value)}
+                rows={2}
+                placeholder="Rédigez le message de bannière..."
+                className={`w-full p-3 rounded-xl border text-xs focus:outline-none focus:ring-1 ${
+                  isDark 
+                    ? 'border-white/10 bg-black/50 text-white focus:border-amber-500' 
+                    : 'border-slate-300 bg-white text-slate-900 focus:border-amber-500'
+                }`}
+              />
+
+              <div className="flex items-center justify-between mt-3">
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-400">
+                  <input
+                    type="checkbox"
+                    checked={isAnnouncementActive}
+                    onChange={(e) => setIsAnnouncementActive(e.target.checked)}
+                    className="w-4 h-4 rounded text-amber-500 accent-amber-500"
+                  />
+                  <span>Activer l'affichage de la bannière</span>
+                </label>
+
+                <button
+                  onClick={handleSaveAnnouncement}
+                  disabled={savingAnnouncement}
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-amber-500 text-black hover:bg-amber-400 transition-all flex items-center gap-1.5 shadow-lg shadow-amber-500/20 disabled:opacity-50"
+                >
+                  {savingAnnouncement ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                  Publier le message
+                </button>
+              </div>
+
+              {announcementStatusMsg && (
+                <div className="mt-2 text-xs font-bold text-emerald-400 text-right">
+                  {announcementStatusMsg}
+                </div>
+              )}
+            </div>
+
             {/* Stats Summary */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className={`p-4 rounded-2xl border ${isDark ? 'border-white/5 bg-white/5' : 'border-slate-100 bg-slate-50'}`}>
@@ -944,27 +1052,35 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </p>
               </div>
               <div className={`p-4 rounded-2xl border ${isDark ? 'border-white/5 bg-white/5' : 'border-slate-100 bg-slate-50'}`}>
-                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Statut Serveur</span>
-                <div>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-green-500/20 text-green-400 border border-green-500/30">Connecté</span>
-                </div>
+                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Utilisateurs Bannis</span>
+                <p className="text-xl font-extrabold text-red-500">
+                  {adminUsers.filter(u => u.isBanned).length}
+                </p>
               </div>
             </div>
 
-            {/* Search filter input */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-              <input
-                type="text"
-                value={adminSearchText}
-                onChange={(e) => setAdminSearchText(e.target.value)}
-                placeholder="Rechercher par nom d'utilisateur, ID, ou titre de conversation..."
-                className={`w-full pl-10 pr-4 py-2 text-sm rounded-xl border focus:outline-none focus:ring-1 ${
-                  isDark 
-                    ? 'border-white/10 bg-black/40 text-white focus:border-yellow-500 focus:ring-yellow-500' 
-                    : 'border-slate-200 bg-white text-slate-900 focus:border-amber-500 focus:ring-amber-500'
-                }`}
-              />
+            {/* Moderation Title & Search filter input */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <ShieldAlert size={18} className="text-red-500" />
+                <h4 className={`text-sm font-extrabold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                  Gestion des Règles & Bannissement des Utilisateurs
+                </h4>
+              </div>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                <input
+                  type="text"
+                  value={adminSearchText}
+                  onChange={(e) => setAdminSearchText(e.target.value)}
+                  placeholder="Rechercher par nom d'utilisateur, ID, ou titre..."
+                  className={`w-full pl-10 pr-4 py-2 text-sm rounded-xl border focus:outline-none focus:ring-1 ${
+                    isDark 
+                      ? 'border-white/10 bg-black/40 text-white focus:border-yellow-500 focus:ring-yellow-500' 
+                      : 'border-slate-200 bg-white text-slate-900 focus:border-amber-500 focus:ring-amber-500'
+                  }`}
+                />
+              </div>
             </div>
 
             {adminError && (
@@ -987,39 +1103,87 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 {filteredUsers.map((userObj) => {
                   const isExpanded = expandedUserIds.includes(userObj.id);
                   const totalConvs = userObj.conversations?.length || 0;
+                  const isBanned = !!userObj.isBanned;
+
                   return (
                     <div 
                       key={userObj.id} 
                       className={`rounded-2xl border transition-all ${
-                        isDark 
-                          ? 'border-white/5 bg-zinc-900/60 hover:bg-zinc-900' 
-                          : 'border-slate-100 bg-white shadow-sm hover:shadow-md'
+                        isBanned
+                          ? (isDark ? 'border-red-500/30 bg-red-950/20' : 'border-red-200 bg-red-50/50')
+                          : (isDark ? 'border-white/5 bg-zinc-900/60' : 'border-slate-100 bg-white shadow-sm')
                       }`}
                     >
                       {/* User Header Accordion Toggle */}
-                      <button 
-                        onClick={() => toggleUserExpanded(userObj.id)}
-                        className="w-full flex items-center justify-between p-4 text-left"
-                      >
+                      <div className="w-full flex items-center justify-between p-4 flex-wrap gap-3">
                         <div className="flex items-center gap-3">
-                          <div className={`w-9 h-9 rounded-full bg-slate-500/20 flex items-center justify-center font-bold text-sm ${isDark ? 'text-white' : 'text-slate-800'}`}>
+                          <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm ${
+                            isBanned ? 'bg-red-500/20 text-red-400' : 'bg-slate-500/20 text-slate-800'
+                          }`}>
                             {userObj.username?.[0]?.toUpperCase() || 'U'}
                           </div>
                           <div>
-                            <h4 className={`text-sm font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                              {userObj.username}
-                            </h4>
+                            <div className="flex items-center gap-2">
+                              <h4 className={`text-sm font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                                {userObj.username}
+                              </h4>
+                              {isBanned ? (
+                                <span className="px-2 py-0.5 rounded text-[10px] font-black bg-red-500/20 text-red-400 border border-red-500/30 flex items-center gap-1">
+                                  <Ban size={10} /> BANNI
+                                </span>
+                              ) : (
+                                <span className="px-2 py-0.5 rounded text-[10px] font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                                  🟢 Conforme
+                                </span>
+                              )}
+                            </div>
                             <p className="text-[10px] text-slate-400 font-mono">ID: {userObj.id}</p>
+                            {isBanned && userObj.banReason && (
+                              <p className="text-[10px] text-red-400 italic">Raison: {userObj.banReason}</p>
+                            )}
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-3">
-                          <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 text-[10px] font-bold">
-                            {totalConvs} {totalConvs > 1 ? 'projets' : 'projet'}
-                          </span>
-                          <span className={`text-xs transition-transform ${isExpanded ? 'rotate-180' : ''}`}>▼</span>
+                        {/* Ban / Unban Controls */}
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            placeholder="Raison du bannissement..."
+                            value={customBanReasons[userObj.id] || ''}
+                            onChange={(e) => setCustomBanReasons({ ...customBanReasons, [userObj.id]: e.target.value })}
+                            className={`px-2.5 py-1 text-xs rounded-lg border focus:outline-none ${
+                              isDark ? 'bg-black/40 border-white/10 text-white' : 'bg-slate-100 border-slate-200 text-slate-900'
+                            }`}
+                          />
+                          
+                          <button
+                            onClick={() => handleToggleBanUser(userObj)}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 shrink-0 ${
+                              isBanned
+                                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30'
+                                : 'bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30'
+                            }`}
+                          >
+                            {isBanned ? (
+                              <>
+                                <CheckCircle size={12} /> Débannir
+                              </>
+                            ) : (
+                              <>
+                                <Ban size={12} /> Bannir
+                              </>
+                            )}
+                          </button>
+
+                          <button 
+                            onClick={() => toggleUserExpanded(userObj.id)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-white transition-colors"
+                            title="Voir les activités"
+                          >
+                            <span className={`text-xs block transition-transform ${isExpanded ? 'rotate-180' : ''}`}>▼</span>
+                          </button>
                         </div>
-                      </button>
+                      </div>
 
                       {/* Conversations details drawer */}
                       {isExpanded && (
@@ -1249,39 +1413,56 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         return (
           <div className="space-y-6 p-2">
             <div className="flex flex-col gap-1">
-              <h3 className={`text-lg font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>Intelligence Artificielle</h3>
-              <p className="text-xs text-slate-400">Choisissez le moteur qui alimente vos créations.</p>
+              <div className="flex items-center gap-2">
+                <Sparkles size={18} className="text-amber-500" />
+                <h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>Modèles IA 100% Gratuits</h3>
+              </div>
+              <p className="text-xs text-slate-400">Choisissez le modèle IA gratuit de votre choix pour alimenter vos créations.</p>
             </div>
             
             <div className="space-y-3">
               {[
                 { 
                   id: 'gemini-2.5-flash',
-                  name: 'Gemini 2.5 Flash', 
+                  name: 'Gemini 2.5 Flash (Gratuit)', 
                   provider: 'Google', 
-                  desc: 'Modèle de production phare, rapide et intelligent. Idéal pour les clés API gratuites/standards.', 
-                  badge: 'Standard Free' 
+                  desc: 'Modèle rapide et intelligent. Inclus 100% gratuitement dans la plateforme.', 
+                  badge: '100% Gratuit' 
                 },
                 { 
                   id: 'gemini-2.0-flash',
-                  name: 'Gemini 2.0 Flash', 
+                  name: 'Gemini 2.0 Flash (Gratuit)', 
                   provider: 'Google', 
-                  desc: 'Modèle rapide avec d\'excellentes capacités de mise en page réactive et de design.', 
-                  badge: 'Rapide' 
+                  desc: 'Modèle haute vitesse optimisé pour le code et le design réactif.', 
+                  badge: '100% Gratuit' 
+                },
+                { 
+                  id: 'groq-llama-3.3-70b',
+                  name: 'Groq Llama 3.3 70B (Gratuit)', 
+                  provider: 'Groq Cloud', 
+                  desc: 'Inférence ultra-rapide propulsée par les puces LPU Groq.', 
+                  badge: '100% Gratuit' 
+                },
+                { 
+                  id: 'openrouter-free',
+                  name: 'OpenRouter DeepSeek R1 (Gratuit)', 
+                  provider: 'OpenRouter', 
+                  desc: 'Accès aux modèles gratuits de la communauté (DeepSeek R1, Llama 3.3).', 
+                  badge: '100% Gratuit' 
+                },
+                { 
+                  id: 'nvidia-llama-3.3-70b',
+                  name: 'Nvidia NIM Llama 3.3 70B (Gratuit)', 
+                  provider: 'Nvidia', 
+                  desc: 'Microservices Nvidia NIM haute performance gratuits.', 
+                  badge: '100% Gratuit' 
                 },
                 { 
                   id: 'gemini-1.5-flash',
-                  name: 'Gemini 1.5 Flash', 
+                  name: 'Gemini 1.5 Flash (Gratuit)', 
                   provider: 'Google', 
-                  desc: 'Modèle classique stable et ultra-robuste avec un grand contexte.', 
-                  badge: 'Stable' 
-                },
-                { 
-                  id: 'gemini-3.5-flash',
-                  name: 'Gemini 3.5 Flash', 
-                  provider: 'Google', 
-                  desc: 'Modèle expérimental de l\'infrastructure.', 
-                  badge: 'Expérimental' 
+                  desc: 'Modèle classique très stable avec un grand contexte.', 
+                  badge: '100% Gratuit' 
                 },
               ].map((m) => (
                 <button
@@ -1289,7 +1470,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   onClick={() => onSelectModel?.(m.id)}
                   className={`w-full text-left p-4 rounded-2xl border transition-all relative group ${
                     selectedModel === m.id 
-                      ? 'border-orange-primary bg-orange-primary/5 ring-1 ring-orange-primary'
+                      ? 'border-amber-500 bg-amber-500/10 ring-1 ring-amber-500'
                       : `border-white/5 bg-white/5 hover:border-white/10 hover:bg-white/10`
                   }`}
                 >
@@ -1299,7 +1480,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-white/10 text-white/40 uppercase font-black">{m.provider}</span>
                     </div>
                     {m.badge && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-orange-primary text-white font-bold uppercase tracking-wider">
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold uppercase tracking-wider">
                         {m.badge}
                       </span>
                     )}
@@ -1308,20 +1489,23 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   
                   {selectedModel === m.id && (
                     <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                      <CheckCircle size={20} className="text-orange-primary" />
+                      <CheckCircle size={20} className="text-amber-500" />
                     </div>
                   )}
                 </button>
               ))}
             </div>
 
-            <div className={`p-4 rounded-2xl border ${isDark ? 'bg-blue-500/5 border-blue-500/20' : 'bg-blue-50 border-blue-100'}`}>
+            <div className={`p-4 rounded-2xl border ${isDark ? 'bg-amber-500/10 border-amber-500/20' : 'bg-amber-50 border-amber-200'}`}>
               <div className="flex gap-3">
-                <Info size={16} className="text-blue-500 shrink-0 mt-0.5" />
-                <p className={`text-[11px] leading-relaxed ${isDark ? 'text-blue-400' : 'text-blue-700'}`}>
-                  Le modèle sélectionné sera utilisé pour toutes les nouvelles générations et mises à jour de sections. 
-                  Si un modèle est temporairement indisponible, le système basculera automatiquement sur Gemini.
-                </p>
+                <Info size={18} className="text-amber-500 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <h5 className={`text-xs font-bold ${isDark ? 'text-amber-400' : 'text-amber-900'}`}>Cycle de Secours Automatique (Failover Multi-Fournisseurs)</h5>
+                  <p className={`text-[11px] leading-relaxed ${isDark ? 'text-amber-300/80' : 'text-amber-800'}`}>
+                    Tous les modèles ci-dessus sont 100% gratuits. Si votre modèle principal rencontre un pic de trafic, le cycle passe automatiquement la main : 
+                    <b className="block mt-1">🔄 Gemini Free ➔ Groq Free ➔ OpenRouter Free ➔ Nvidia NIM Free</b>
+                  </p>
+                </div>
               </div>
             </div>
           </div>

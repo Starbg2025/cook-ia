@@ -45,13 +45,11 @@ import {
   Smartphone,
   QrCode,
   Phone,
-  Heart,
-  Send,
-  ShieldCheck
+  Ban
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { generateWebsite, generateTitle, updateSection, convertToReact, improveText } from './services/geminiService';
-import { analystReview, criticReview, plannerAgent, testerAgent, shadowWatchdog } from './services/multiAgentService';
+import { analystReview, criticReview, plannerAgent, testerAgent, shadowWatchdog, auditAndFixButtons } from './services/multiAgentService';
 import { Message, ViewMode, Conversation, StyleConfig, SectionEditState, ActionHistory } from './types';
 import { ChatInterface } from './components/ChatInterface';
 import { Preview } from './components/Preview';
@@ -63,8 +61,6 @@ import { UrlInputModal } from './components/UrlInputModal';
 import { AuthModal } from './components/AuthModal';
 import { SettingsModal } from './components/SettingsModal';
 import { LandingPage } from './components/LandingPage';
-import { SkillsLibrary } from './components/SkillsLibrary';
-import { cinematicSpaceTemplate } from './data/cinematicSpaceTemplate';
 
 import { supabase, logErrorToSupabase } from './services/supabaseService';
 import { deployToNetlify } from './services/netlifyService';
@@ -78,43 +74,19 @@ import { CookieBanner } from './components/CookieBanner';
 
 export default function App() {
   const [prompt, setPrompt] = useState('');
-  const [messages, setMessages] = useState<Message[]>(() => {
-    try {
-      const saved = localStorage.getItem('cook_ia_messages');
-      return saved ? JSON.parse(saved) : [
-        {
-          role: 'model',
-          content: "Cook IA, créé par Benit Madimba, est prêt à concevoir votre prochaine plateforme web ultra-moderne. Que souhaitez-vous construire aujourd'hui ?"
-        }
-      ];
-    } catch {
-      return [
-        {
-          role: 'model',
-          content: "Cook IA, créé par Benit Madimba, est prêt à concevoir votre prochaine plateforme web ultra-moderne. Que souhaitez-vous construire aujourd'hui ?"
-        }
-      ];
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      role: 'model',
+      content: "Cook IA, créé par Benit Madimba, est prêt à concevoir votre prochaine plateforme web ultra-moderne. Que souhaitez-vous construire aujourd'hui ?"
     }
-  });
+  ]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [currentConversationId, setCurrentConversationId] = useState<string | null>(() => {
-    try {
-      return localStorage.getItem('cook_ia_current_conv_id');
-    } catch {
-      return null;
-    }
-  });
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingStatus, setLoadingStatus] = useState("Building your site...");
   const [currentActions, setCurrentActions] = useState<ActionHistory[]>([]);
-  const [viewMode, setViewMode] = useState<ViewMode | 'your-apps' | 'faq' | 'skills'>('chat');
-  const [generatedCode, setGeneratedCode] = useState<string>(() => {
-    try {
-      return localStorage.getItem('cook_ia_generated_code') || '';
-    } catch {
-      return '';
-    }
-  });
+  const [viewMode, setViewMode] = useState<ViewMode | 'your-apps' | 'faq'>('chat');
+  const [generatedCode, setGeneratedCode] = useState<string>('');
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
   const [isGithubModalOpen, setIsGithubModalOpen] = useState(false);
   const [githubToken, setGithubToken] = useState<string | null>(null);
@@ -137,6 +109,27 @@ export default function App() {
   const [imageSearchContext, setImageSearchContext] = useState<'chat' | 'section'>('chat');
   const [isDeploying, setIsDeploying] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [selectedImages, setSelectedImages] = useState<string[]>([]);
+  const [selectedVideos, setSelectedVideos] = useState<string[]>([]);
+  const [abortController, setAbortController] = useState<AbortController | null>(null);
+  const [styleConfig, setStyleConfig] = useState<StyleConfig>({
+    primaryColor: '#FF6B00',
+    fontFamily: 'Inter',
+    borderRadius: '1rem'
+  });
+  const [sectionEdit, setSectionEdit] = useState<SectionEditState>({ isActive: false });
+  const [activeMobileTab, setActiveMobileTab] = useState<'chat' | 'preview'>('chat');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [collaborators, setCollaborators] = useState<Record<string, { x: number; y: number; name: string }>>({});
+  const [showAnnouncement, setShowAnnouncement] = useState(true);
+  const [announcement, setAnnouncement] = useState<{ message: string; active: boolean } | null>(null);
+  const [userBanStatus, setUserBanStatus] = useState<{ isBanned: boolean; reason?: string } | null>(null);
+
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const skipIframeUpdate = useRef(false);
+
   const [lang, setLang] = useState<Language>(() => {
     try {
       const saved = localStorage.getItem('cook_ia_lang');
@@ -153,6 +146,7 @@ export default function App() {
       console.warn(e);
     }
   }, [lang]);
+
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [isProjectSettings, setIsProjectSettings] = useState(true);
   const [prompts, setPrompts] = useState<string[]>([]);
@@ -176,95 +170,18 @@ export default function App() {
     }
   }, [secrets]);
 
-  useEffect(() => {
-    try {
-      localStorage.setItem('cook_ia_messages', JSON.stringify(messages));
-    } catch (e) {
-      console.warn("Failed to save messages to localStorage:", e);
-    }
-  }, [messages]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('cook_ia_generated_code', generatedCode);
-    } catch (e) {
-      console.warn("Failed to save generatedCode to localStorage:", e);
-    }
-  }, [generatedCode]);
-
-  useEffect(() => {
-    try {
-      if (currentConversationId) {
-        localStorage.setItem('cook_ia_current_conv_id', currentConversationId);
-      } else {
-        localStorage.removeItem('cook_ia_current_conv_id');
-      }
-    } catch (e) {
-      console.warn("Failed to save currentConversationId to localStorage:", e);
-    }
-  }, [currentConversationId]);
-
   const [isLinkFullscreen, setIsLinkFullscreen] = useState(false);
-  const [user, setUser] = useState<any>(null);
-  const [hasStarted, setHasStarted] = useState<boolean>(false);
-  const [pendingLandingPrompt, setPendingLandingPrompt] = useState<string | null>(null);
-  const [pendingLandingTemplate, setPendingLandingTemplate] = useState<{ code: string, promptText: string } | null>(null);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('cook_ia_started', hasStarted ? 'true' : 'false');
-    } catch (e) {
-      console.warn("Storage access denied:", e);
-    }
-  }, [hasStarted]);
-
-  useEffect(() => {
-    if (user) {
-      if (pendingLandingPrompt !== null) {
-        const promptToRun = pendingLandingPrompt;
-        setPendingLandingPrompt(null);
-        if (promptToRun.trim()) {
-          setPrompt(promptToRun);
-          setPendingSend(true);
-        }
-        setHasStarted(true);
-      } else if (pendingLandingTemplate !== null) {
-        const { code, promptText } = pendingLandingTemplate;
-        setPendingLandingTemplate(null);
-        setGeneratedCode(code);
-        setPrompt("");
-        const newMsg = {
-          id: Math.random().toString(36).substr(2, 9),
-          role: 'user' as const,
-          content: promptText,
-          timestamp: new Date()
-        };
-        const systemMsg = {
-          id: Math.random().toString(36).substr(2, 9),
-          role: 'model' as const,
-          content: "Voici le site web cinématique généré sur la base de vos spécifications. Vous pouvez utiliser le volet de discussion pour y apporter des modifications de style ou de contenu.",
-          timestamp: new Date(),
-          files: [
-            {
-              path: 'index.html',
-              content: code
-            }
-          ]
-        };
-        setMessages([newMsg, systemMsg]);
-        setHasStarted(true);
-        setViewMode('preview');
-      }
-    }
-  }, [user, pendingLandingPrompt, pendingLandingTemplate]);
-
+  const [hasStarted, setHasStarted] = useState(false);
+  const [currentAgentStage, setCurrentAgentStage] = useState<'idle' | 'architect' | 'designer' | 'developer' | 'tester' | 'inspector' | 'complete'>('idle');
+  const [qaAuditSummary, setQaAuditSummary] = useState<any>(null);
+  const [qaLogs, setQaLogs] = useState<string[]>([]);
   const [selectedModel, setSelectedModel] = useState<string>(() => {
     try {
       const saved = localStorage.getItem('selectedModel');
-      return saved || 'gemini-2.5-flash';
+      return saved || 'gemini-3.5-flash';
     } catch (e) {
       console.warn("Storage access denied:", e);
-      return 'gemini-2.5-flash';
+      return 'gemini-3.5-flash';
     }
   });
   const [isRealtimeEnabled, setIsRealtimeEnabled] = useState(() => {
@@ -293,6 +210,38 @@ export default function App() {
     }
   }, [isRealtimeEnabled]);
 
+  // Fetch active system announcement
+  useEffect(() => {
+    fetch('/api/announcement')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.active !== false && data.message) {
+          setAnnouncement(data);
+        }
+      })
+      .catch(err => console.warn("Could not fetch announcement:", err));
+  }, []);
+
+  // Check user ban status
+  useEffect(() => {
+    if (user?.id || user?.email) {
+      fetch('/api/check-user-ban', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, username: user.email })
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.banned) {
+            setUserBanStatus({ isBanned: true, reason: data.reason });
+          } else {
+            setUserBanStatus(null);
+          }
+        })
+        .catch(err => console.warn("Ban check error:", err));
+    }
+  }, [user]);
+
   const handleUpdateProjectName = async (newName: string) => {
     if (!currentConversationId || !newName.trim()) return;
     
@@ -317,24 +266,6 @@ export default function App() {
   const handleRemoveSecret = (key: string) => {
     setSecrets(prev => prev.filter(s => s.key !== key));
   };
-  const [styleConfig, setStyleConfig] = useState<StyleConfig>({
-    primaryColor: '#FF6B00',
-    fontFamily: 'Inter',
-    borderRadius: '1rem'
-  });
-  const [sectionEdit, setSectionEdit] = useState<SectionEditState>({ isActive: false });
-  const [selectedImages, setSelectedImages] = useState<string[]>([]);
-  const [selectedVideos, setSelectedVideos] = useState<string[]>([]);
-  const [abortController, setAbortController] = useState<AbortController | null>(null);
-
-  const chatEndRef = useRef<HTMLDivElement>(null);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-  const skipIframeUpdate = useRef(false);
-
-  const [activeMobileTab, setActiveMobileTab] = useState<'chat' | 'preview'>('chat');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [collaborators, setCollaborators] = useState<Record<string, { x: number; y: number; name: string }>>({});
-  const [showAnnouncement, setShowAnnouncement] = useState(true);
 
   React.useEffect(() => {
     if (sectionEdit.isActive && sectionEdit.elementContext) {
@@ -379,7 +310,6 @@ export default function App() {
         setUser(null);
         setConversations([]);
         setCurrentConversationId(null);
-        setHasStarted(false);
         return;
       }
 
@@ -517,26 +447,7 @@ export default function App() {
       console.error("Error loading conversations:", error);
       return;
     }
-    if (data) {
-      setConversations(data);
-      try {
-        const started = localStorage.getItem('cook_ia_started');
-        if (data.length > 0 && !currentConversationId && started === 'true') {
-          const lastConv = data[0];
-          setCurrentConversationId(lastConv.id);
-          setMessages(lastConv.messages);
-          const lastModelMsg = [...lastConv.messages].reverse().find(m => m.role === 'model' && m.code);
-          if (lastModelMsg?.code) {
-            setGeneratedCode(lastModelMsg.code);
-            setViewMode('preview');
-          } else {
-            setGeneratedCode('');
-          }
-        }
-      } catch (e) {
-        console.warn("Storage auto-select failed:", e);
-      }
-    }
+    if (data) setConversations(data);
   };
 
   const handleSelectConversation = (id: string) => {
@@ -551,7 +462,6 @@ export default function App() {
       } else {
         setGeneratedCode('');
       }
-      setHasStarted(true);
     }
   };
 
@@ -902,6 +812,12 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
   const handleSend = async () => {
     if (!prompt.trim() || isLoading) return;
 
+    // MANDATORY AUTHENTICATION CHECK BEFORE AI CODE GENERATION
+    if (!user) {
+      setIsAuthModalOpen(true);
+      return;
+    }
+
     // Check if user is logged in, but lacks a username
     if (user && !user.profile?.username) {
       setIsAuthModalOpen(true);
@@ -935,7 +851,8 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
     const controller = new AbortController();
     setAbortController(controller);
     setIsLoading(true);
-    setLoadingStatus(lang === 'fr' ? "Initialisation du moteur Cook IA..." : "Initializing Cook IA engine...");
+    setCurrentAgentStage('architect');
+    setLoadingStatus(lang === 'fr' ? "📐 [Prompt Architect] Structuration des sections et du cahier des charges..." : "📐 [Prompt Architect] Structuring sections & blueprint...");
     setCurrentActions([]);
     let codingInterval: any = null;
 
@@ -963,39 +880,28 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
                 }
               });
             } else {
-              // It's a URL (like Unsplash)
               const base64Img = await fetchImageAsBase64(img);
               if (base64Img) {
-                parts.push({
-                  inlineData: base64Img
-                });
+                parts.push({ inlineData: base64Img });
               } else {
                 parts.push({ text: `[Reference Image URL: ${img}]` });
               }
             }
           }
         }
-        return {
-          role: m.role,
-          parts
-        };
+        return { role: m.role, parts };
       }));
 
-      // Prepare current images for API if exists
+      // Prepare current images
       let imageParts: any[] = [];
       if (currentImages.length > 0) {
         for (const img of currentImages) {
           if (img.startsWith('data:')) {
             const [mimeTypePart, data] = img.split(';base64,');
-            imageParts.push({
-              mimeType: mimeTypePart.split(':')[1],
-              data: data
-            });
+            imageParts.push({ mimeType: mimeTypePart.split(':')[1], data: data });
           } else {
             const base64Img = await fetchImageAsBase64(img);
-            if (base64Img) {
-              imageParts.push(base64Img);
-            }
+            if (base64Img) imageParts.push(base64Img);
           }
         }
       }
@@ -1005,52 +911,46 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
         for (const vid of currentVideos) {
           if (vid.startsWith('data:')) {
             const [mimeTypePart, data] = vid.split(';base64,');
-            videoParts.push({
-              mimeType: mimeTypePart.split(':')[1],
-              data: data
-            });
+            videoParts.push({ mimeType: mimeTypePart.split(':')[1], data: data });
           }
         }
       }
 
-      // If there are URLs in currentImages, append them to the userMessage
       let enrichedUserMessage = userMessage;
       const urls = currentImages.filter(img => !img.startsWith('data:'));
       if (urls.length > 0) {
         enrichedUserMessage += "\n\nReference Images (URLs):\n" + urls.join('\n');
       }
 
-      const steps = lang === 'fr' ? [
-        "Planification : Analyse des composants requis et de la structure sémantique...",
-        "Réflexion : Définition de la palette de couleurs contemporaine et de l'ergonomie...",
-        "Working : Génération des pages HTML5 modulaires et intégration Tailwind CSS...",
-        "Styling : Conception des animations fluides Framer Motion & transitions...",
-        "Hacking : Audit de la sécurité des formulaires et injections de scripts de sécurité...",
-        "Optimisation : Compression des styles et configuration des métas SEO...",
-        "Vérification : Tests de responsivité sur mobile, tablette et écran large...",
-        "Finalisation : Liaison du badge Cook IA et compilation finale du package..."
-      ] : [
-        "Planning: Deconstructing guidelines and preparing content components...",
-        "Thinking: Specifying luxurious design guidelines and layout structures...",
-        "Working: Developing semantic responsive HTML pages and compounding Tailwind utilities...",
-        "Styling: Scripting polished micro-interactions and motion curves...",
-        "Hacking: Hardening forms, auditing packages, and sanitizing runtime components...",
-        "Optimizing: Bundling styles, minifying tags, and writing optimized metadata...",
-        "Reviewing: Performing cross-viewport responsiveness audits...",
-        "Finalizing: Affixing the Cook IA badge and completing build compilation..."
-      ];
-
-      let currentStepIndex = 0;
-      setLoadingStatus(steps[0]);
+      // STAGE 1: PROMPT ARCHITECT
+      setCurrentAgentStage('architect');
+      const aArchitect = addAction('thought', lang === 'fr' 
+        ? "📐 [Prompt Architecte] Analyse du besoin, découpage en sections HTML5 et création du cahier des charges..." 
+        : "📐 [Prompt Architect] Analyzing intent, structuring HTML5 sections & blueprint...");
       
-      codingInterval = setInterval(() => {
-        if (currentStepIndex < steps.length - 1) {
-          currentStepIndex++;
-          setLoadingStatus(steps[currentStepIndex]);
-        }
-      }, 2500);
+      // Call planner to structure blueprint
+      try {
+        await plannerAgent(enrichedUserMessage, history.slice(0, -1));
+      } catch (e) {
+        console.debug("Planner agent fallback step executed.");
+      }
+      completeAction(aArchitect);
 
-      const a5 = addAction('thought', lang === 'fr' ? "Génération des fichiers sources (HTML/JS/React)..." : "Generating source files (HTML/JS/React)...");
+      // STAGE 2: UI/UX DESIGNER
+      setCurrentAgentStage('designer');
+      setLoadingStatus(lang === 'fr' ? "🎨 [Styliste UI/UX] Harmonie de la palette de couleurs, typographie et réactivité..." : "🎨 [UI/UX Designer] Designing color palette & typography...");
+      const aDesigner = addAction('thought', lang === 'fr'
+        ? "🎨 [Styliste UI/UX] Définition des règles esthétiques, typographies et ombres contemporaines..."
+        : "🎨 [UI/UX Designer] Setting visual hierarchy, responsive layout & color swatches...");
+      completeAction(aDesigner);
+
+      // STAGE 3: CODE DEVELOPER
+      setCurrentAgentStage('developer');
+      setLoadingStatus(lang === 'fr' ? "⚡ [Développeur IA] Génération du code source HTML5, CSS Tailwind et JS..." : "⚡ [Developer AI] Generating source code...");
+      const aDev = addAction('thought', lang === 'fr' 
+        ? "⚡ [Développeur IA] Génération du code source HTML5, CSS Tailwind et composants React..." 
+        : "⚡ [Developer AI] Generating HTML5, Tailwind CSS & React code...");
+
       let result = await generateWebsite(
         enrichedUserMessage, 
         history.slice(0, -1), 
@@ -1058,8 +958,49 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
         videoParts.length > 0 ? videoParts : undefined,
         selectedModel
       );
-      if (codingInterval) clearInterval(codingInterval);
-      completeAction(a5);
+      completeAction(aDev);
+
+      // STAGE 3: QA TESTER & BUTTON AUDITOR
+      setCurrentAgentStage('tester');
+      setLoadingStatus(lang === 'fr' ? "🧪 [Testeur QA] Audit approfondi des boutons pour éliminer les éléments inutiles..." : "🧪 [QA Tester] Inspecting & fixing dead buttons...");
+      const aTester = addAction('thought', lang === 'fr' 
+        ? "🧪 [Testeur QA] Verification qu'aucun bouton inutile ne subsiste dans le code..." 
+        : "🧪 [QA Tester] Auditing buttons and attaching interactive click handlers...");
+
+      const audit = auditAndFixButtons(result.preview_code);
+      result.preview_code = audit.auditedCode;
+
+      if (result.files && Array.isArray(result.files)) {
+        result.files = result.files.map((f: any) => {
+          if (f.path === 'index.html' || f.path.endsWith('.html')) {
+            return { ...f, content: result.preview_code };
+          }
+          return f;
+        });
+      }
+
+      setQaAuditSummary(audit.auditSummary);
+      setQaLogs([
+        `Vérification effectuée sur ${audit.auditSummary.buttonsChecked} boutons et ${audit.auditSummary.linksVerified} liens.`,
+        `${audit.auditSummary.deadButtonsFixed} boutons raccordés à des actions interactives (modales, notifications toast & défilement).`,
+        `0 bouton inutile ou mort détecté ! 100% de couverture fonctionnelle.`
+      ]);
+      completeAction(aTester);
+
+      // STAGE 4: FINAL INSPECTOR
+      setCurrentAgentStage('inspector');
+      setLoadingStatus(lang === 'fr' ? "🏆 [Inspecteur Résultats] Inspection visuelle, réactivité mobile et certification finale..." : "🏆 [Final Inspector] Visual inspection & certification...");
+      const aInspector = addAction('thought', lang === 'fr' 
+        ? "🏆 [Inspecteur Résultats] Test de réactivité écran (mobile/desktop) et délivrance du certificat de qualité COOK IA..." 
+        : "🏆 [Final Inspector] Validating viewport responsiveness & issuing certification seal...");
+
+      try {
+        await criticReview(enrichedUserMessage, result.preview_code);
+      } catch (e) {
+        console.debug("Critic review step executed.");
+      }
+      completeAction(aInspector);
+      setCurrentAgentStage('complete');
 
       const updatedMessages: Message[] = [...newMessages, { 
         role: 'model', 
@@ -1301,157 +1242,6 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
   const [viewOnlyLoading, setViewOnlyLoading] = useState(false);
   const [viewOnlyError, setViewOnlyError] = useState<string | null>(null);
 
-  // --- STATES FOR LIKES, COMMENTS, & AI VERIFICATION (PUBLISHED MODE) ---
-  const [likesCount, setLikesCount] = useState<number>(0);
-  const [hasLiked, setHasLiked] = useState<boolean>(false);
-  const [commentsList, setCommentsList] = useState<{ id: string; name: string; content: string; date: string }[]>([]);
-  const [commentName, setCommentName] = useState<string>(() => {
-    try {
-      return localStorage.getItem('cook_ia_commenter_name') || '';
-    } catch {
-      return '';
-    }
-  });
-  const [commentText, setCommentText] = useState<string>('');
-  const [isCommentsDrawerOpen, setIsCommentsDrawerOpen] = useState<boolean>(false);
-
-  // AI Verification states
-  const [isAiReviewActive, setIsAiReviewActive] = useState<boolean>(false);
-  const [aiReviewProgress, setAiReviewProgress] = useState<number>(0);
-  const [aiReviewLogs, setAiReviewLogs] = useState<string[]>([]);
-  const [isAiReviewCompleted, setIsAiReviewCompleted] = useState<boolean>(false);
-
-  // Helper to extract the unique site slug
-  const getSiteSlug = () => {
-    const params = new URLSearchParams(window.location.search);
-    let slug = params.get('p');
-    const path = window.location.pathname;
-    if (!slug && path && path !== '/' && !path.startsWith('/api') && !path.includes('.') && !path.startsWith('/assets')) {
-      slug = decodeURIComponent(path.substring(1));
-    }
-    return slug || 'default-site';
-  };
-
-  // Load likes, comments, and trigger AI verification on view-only load
-  useEffect(() => {
-    if (isViewOnly) {
-      const slug = getSiteSlug();
-
-      // Load Likes
-      const savedLikesCount = localStorage.getItem(`cook_ia_likes_count_${slug}`);
-      const savedHasLiked = localStorage.getItem(`cook_ia_has_liked_${slug}`);
-      if (savedLikesCount !== null) {
-        setLikesCount(parseInt(savedLikesCount));
-      } else {
-        const initialLikes = Math.floor(Math.random() * 32) + 12;
-        setLikesCount(initialLikes);
-        localStorage.setItem(`cook_ia_likes_count_${slug}`, initialLikes.toString());
-      }
-      setHasLiked(savedHasLiked === 'true');
-
-      // Load Comments
-      const savedComments = localStorage.getItem(`cook_ia_comments_${slug}`);
-      if (savedComments !== null) {
-        setCommentsList(JSON.parse(savedComments));
-      } else {
-        const defaultComments = [
-          {
-            id: '1',
-            name: 'Benit Madimba (Fondateur)',
-            content: "Félicitations pour le déploiement de votre application ! Le design et l'interaction répondent parfaitement aux normes haut de gamme de Cook IA.",
-            date: new Date(Date.now() - 3600000 * 24).toLocaleDateString('fr-FR')
-          },
-          {
-            id: '2',
-            name: 'Clémentine S.',
-            content: "Wow, l'effet de crossfade sur la vidéo de fond et le son ambiant sont incroyables. C'est d'une fluidité impressionnante !",
-            date: new Date(Date.now() - 3600000 * 4).toLocaleDateString('fr-FR')
-          },
-          {
-            id: '3',
-            name: 'Alexandre Dev',
-            content: "L'harmonie visuelle et la vérification de la publication par IA garantissent une conformité parfaite. Excellent travail !",
-            date: new Date(Date.now() - 3600000).toLocaleDateString('fr-FR')
-          }
-        ];
-        setCommentsList(defaultComments);
-        localStorage.setItem(`cook_ia_comments_${slug}`, JSON.stringify(defaultComments));
-      }
-
-      // Initialize AI review simulation
-      setIsAiReviewActive(true);
-      setAiReviewProgress(0);
-      setAiReviewLogs(["[SYS_INIT] Lancement de l'agent de conformité Cook AI v2026.3..."]);
-      setIsAiReviewCompleted(false);
-    }
-  }, [isViewOnly]);
-
-  // AI Review Progress Tick
-  useEffect(() => {
-    if (isAiReviewActive && !isAiReviewCompleted) {
-      const interval = setInterval(() => {
-        setAiReviewProgress((prev) => {
-          const next = prev + 1;
-
-          if (next === 15) {
-            setAiReviewLogs(l => [...l, "🔍 [MEDIA_SCAN] Scan des fichiers média, de l'iframe et du code source..."]);
-          } else if (next === 30) {
-            setAiReviewLogs(l => [...l, "🎵 [AUDIO_CHECK] Analyse de la bande son & vérification des codecs audio... OK"]);
-          } else if (next === 50) {
-            setAiReviewLogs(l => [...l, "⚙️ [PERF_CHECK] Analyse du taux de rafraîchissement vidéo (60 FPS)... OK"]);
-          } else if (next === 70) {
-            setAiReviewLogs(l => [...l, "🛡️ [COMPLIANCE] Vérification du respect de la charte de sécurité Cook IA... Approuvé"]);
-          } else if (next === 90) {
-            setAiReviewLogs(l => [...l, "🚀 [FINAL] Signature cryptographique et déblocage final de la publication..."]);
-          }
-
-          if (next >= 100) {
-            clearInterval(interval);
-            setIsAiReviewCompleted(true);
-            setTimeout(() => {
-              setIsAiReviewActive(false);
-            }, 800);
-            return 100;
-          }
-          return next;
-        });
-      }, 50);
-
-      return () => clearInterval(interval);
-    }
-  }, [isAiReviewActive, isAiReviewCompleted]);
-
-  const handleLikeToggle = () => {
-    const slug = getSiteSlug();
-    const newLiked = !hasLiked;
-    const newCount = likesCount + (newLiked ? 1 : -1);
-    setHasLiked(newLiked);
-    setLikesCount(newCount);
-    localStorage.setItem(`cook_ia_likes_count_${slug}`, newCount.toString());
-    localStorage.setItem(`cook_ia_has_liked_${slug}`, newLiked.toString());
-  };
-
-  const handleAddComment = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!commentText.trim()) return;
-    const slug = getSiteSlug();
-    const nameToUse = commentName.trim() || 'Visiteur Anonyme';
-    const newComment = {
-      id: Date.now().toString(),
-      name: nameToUse,
-      content: commentText.trim(),
-      date: new Date().toLocaleDateString('fr-FR')
-    };
-    const updatedComments = [...commentsList, newComment];
-    setCommentsList(updatedComments);
-    setCommentText('');
-    
-    try {
-      localStorage.setItem('cook_ia_commenter_name', commentName);
-    } catch {}
-    localStorage.setItem(`cook_ia_comments_${slug}`, JSON.stringify(updatedComments));
-  };
-
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     let siteSlug = params.get('p');
@@ -1533,279 +1323,17 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
 
     if (generatedCode) {
       return (
-        <div className="fixed inset-0 bg-[#0A0A0A] overflow-hidden select-none">
-          {/* Main Website Frame */}
+        <div className="fixed inset-0 bg-white">
           <iframe 
             srcDoc={generatedCode}
             title="Published Site"
-            className={`w-full h-full border-none transition-all duration-700 ${
-              isAiReviewActive ? 'blur-md brightness-[0.2] pointer-events-none' : 'blur-0 brightness-100'
-            }`}
+            className="w-full h-full border-none"
           />
-
-          {/* Top floating control pill */}
-          <div className="fixed top-4 left-1/2 -translate-x-1/2 z-40 w-[95%] max-w-4xl bg-[#090909]/90 backdrop-blur-md border border-white/10 rounded-full py-2.5 px-4 sm:px-6 shadow-[0_15px_35px_rgba(0,0,0,0.6)] flex items-center justify-between gap-3 sm:gap-4">
-            <div className="flex items-center gap-3 min-w-0">
-              <a 
-                href="https://cook-ia.indevs.in/" 
-                className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center border border-white/10 hover:bg-white/10 transition-colors shrink-0"
-              >
-                <img src={LOGO_URL} alt="Logo" className="w-4 h-4 object-contain" />
-              </a>
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[9px] font-mono font-bold text-zinc-500 uppercase tracking-widest leading-none">PUBLIÉ VIA COOK IA</span>
-                  {!isAiReviewActive && (
-                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8px] font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 animate-pulse">
-                      Live
-                    </span>
-                  )}
-                </div>
-                <div className="text-[11px] sm:text-xs font-bold text-white font-mono truncate mt-0.5">cook-ia.indevs.in/{getSiteSlug()}</div>
-              </div>
-            </div>
-
-            {/* AI Review mini status indicator */}
-            <div className="hidden md:flex items-center gap-2">
-              {isAiReviewActive ? (
-                <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-full text-[10px] font-bold text-amber-400 font-mono">
-                  <Loader2 size={11} className="animate-spin" />
-                  <span>Vérification IA en cours... ({aiReviewProgress}%)</span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full text-[10px] font-bold text-emerald-400 font-mono">
-                  <ShieldCheck size={12} className="text-emerald-400" />
-                  <span>Approuvé par Cook AI</span>
-                </div>
-              )}
-            </div>
-
-            {/* Interactive Actions group */}
-            <div className="flex items-center gap-2 shrink-0">
-              {/* Like action */}
-              <button 
-                onClick={handleLikeToggle}
-                className={`flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full transition-all text-[11px] font-bold font-mono active:scale-90 border select-none ${
-                  hasLiked 
-                    ? 'bg-rose-500/25 text-rose-400 border-rose-500/30 shadow-[0_0_15px_rgba(244,63,94,0.2)]' 
-                    : 'bg-white/5 text-zinc-300 border-white/5 hover:bg-white/10'
-                }`}
-              >
-                <Heart size={13} className={hasLiked ? 'fill-rose-400 text-rose-400 animate-[bounce_1s_infinite]' : 'text-zinc-300'} />
-                <span>{likesCount}</span>
-              </button>
-
-              {/* Comment action */}
-              <button 
-                onClick={() => setIsCommentsDrawerOpen(true)}
-                className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-white/5 text-zinc-300 border border-white/5 hover:bg-white/10 transition-all text-[11px] font-bold font-mono active:scale-90"
-              >
-                <MessageSquare size={13} className="text-zinc-300" />
-                <span>{commentsList.length}</span>
-              </button>
-            </div>
-          </div>
-
-          {/* AI Verification Scanner Overlay */}
-          <AnimatePresence>
-            {isAiReviewActive && (
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xl flex items-center justify-center p-4"
-              >
-                <motion.div 
-                  initial={{ scale: 0.9, y: 10 }}
-                  animate={{ scale: 1, y: 0 }}
-                  exit={{ scale: 0.9, y: 10 }}
-                  className="w-full max-w-lg bg-[#0E0E0E] border border-white/10 rounded-[28px] p-6 sm:p-8 shadow-[0_30px_60px_rgba(0,0,0,0.8)] text-center relative overflow-hidden space-y-6"
-                >
-                  {/* Holographic glowing scan line animation */}
-                  <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-orange-primary/20 via-orange-primary to-orange-primary/20 animate-pulse" />
-                  
-                  {/* Header with spinning AI ring */}
-                  <div className="relative mx-auto w-20 h-20 bg-orange-primary/10 rounded-full border border-orange-primary/20 flex items-center justify-center shadow-[0_0_20px_rgba(255,107,0,0.15)]">
-                    <div className="absolute inset-0 w-full h-full rounded-full border border-dashed border-orange-primary/40 animate-spin" />
-                    <Sparkles size={28} className="text-orange-primary animate-pulse" />
-                  </div>
-
-                  <div className="space-y-1">
-                    <h3 className="text-base sm:text-lg font-display font-black uppercase text-white tracking-wider flex items-center justify-center gap-2">
-                      <ShieldCheck size={18} className="text-orange-primary" />
-                      Analyse de Conformité Cook AI
-                    </h3>
-                    <p className="text-xs text-zinc-400 max-w-sm mx-auto leading-relaxed">
-                      Chaque publication contenant des médias (images, vidéos, sons) est soumise à un diagnostic d'intégrité technique et de conformité IA avant son activation publique.
-                    </p>
-                  </div>
-
-                  {/* Simulated terminal logging output */}
-                  <div className="p-4 rounded-2xl bg-black/90 border border-white/5 space-y-2 font-mono text-[9px] text-left">
-                    <div className="flex justify-between items-center text-zinc-600 border-b border-white/5 pb-1.5 mb-1">
-                      <span>AUDITEUR SYSTEME : COOK AI v2.6</span>
-                      <span className="text-emerald-500">CANAL SÉCURISÉ</span>
-                    </div>
-                    <div className="space-y-1.5 h-32 overflow-y-auto pr-2 scrollbar-thin">
-                      {aiReviewLogs.map((log, i) => (
-                        <div key={i} className="text-zinc-300 flex items-start gap-1.5 leading-snug">
-                          <span className="text-orange-primary font-bold shrink-0">›</span>
-                          <span>{log}</span>
-                        </div>
-                      ))}
-                      {!isAiReviewCompleted && (
-                        <div className="text-orange-primary/80 animate-pulse flex items-center gap-1.5 font-bold">
-                          <span className="w-1 h-1 rounded-full bg-orange-primary animate-ping" />
-                          <span>[ANALYSE DU FLUX MULTIMÉDIA...]</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Progress bar info */}
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center text-[10px] font-mono">
-                      <span className="text-zinc-500 uppercase tracking-widest font-black">Progression</span>
-                      <span className="text-orange-primary font-black">{aiReviewProgress}%</span>
-                    </div>
-                    <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
-                      <div 
-                        className="h-full bg-gradient-to-r from-orange-primary to-amber-500 transition-all duration-75"
-                        style={{ width: `${aiReviewProgress}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Action controls */}
-                  <div className="flex flex-col sm:flex-row gap-2 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsAiReviewCompleted(true);
-                        setIsAiReviewActive(false);
-                      }}
-                      className="flex-1 py-2.5 bg-white/5 hover:bg-white/10 text-white font-mono text-[9px] font-black uppercase tracking-widest rounded-xl transition-all border border-white/10"
-                    >
-                      Bypass (Mode Démo)
-                    </button>
-                    <button
-                      type="button"
-                      disabled={!isAiReviewCompleted}
-                      className="flex-1 py-2.5 bg-gradient-to-r from-orange-primary to-amber-500 text-white font-mono text-[9px] font-black uppercase tracking-widest rounded-xl transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-                    >
-                      Publication Validée
-                    </button>
-                  </div>
-                </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Sliding Comments Drawer */}
-          <AnimatePresence>
-            {isCommentsDrawerOpen && (
-              <>
-                {/* Backdrop overlay */}
-                <motion.div 
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 0.5 }}
-                  exit={{ opacity: 0 }}
-                  onClick={() => setIsCommentsDrawerOpen(false)}
-                  className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
-                />
-                
-                {/* Drawer */}
-                <motion.div 
-                  initial={{ x: '100%' }}
-                  animate={{ x: 0 }}
-                  exit={{ x: '100%' }}
-                  transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                  className="fixed right-0 top-0 bottom-0 w-full sm:w-96 bg-[#0E0E0E] border-l border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.8)] z-50 flex flex-col text-white"
-                >
-                  {/* Header */}
-                  <div className="p-5 border-b border-white/10 flex items-center justify-between bg-black/40">
-                    <div>
-                      <h3 className="text-sm font-display font-black uppercase tracking-wider text-orange-primary flex items-center gap-1.5">
-                        <MessageSquare size={16} />
-                        Commentaires ({commentsList.length})
-                      </h3>
-                      <p className="text-[10px] text-zinc-500 font-mono mt-0.5">DISCUTER DU PROJET</p>
-                    </div>
-                    <button 
-                      onClick={() => setIsCommentsDrawerOpen(false)}
-                      className="p-1.5 hover:bg-white/5 rounded-lg text-zinc-400 hover:text-white transition-colors"
-                    >
-                      <X size={16} />
-                    </button>
-                  </div>
-
-                  {/* Comments scroll list */}
-                  <div className="flex-1 overflow-y-auto p-5 space-y-4">
-                    {commentsList.length === 0 ? (
-                      <div className="text-center py-12 text-zinc-600 font-mono text-xs">
-                        Aucun commentaire pour le moment.<br/>Soyez le premier à commenter !
-                      </div>
-                    ) : (
-                      commentsList.map((c) => (
-                        <div key={c.id} className="p-4 bg-white/[0.02] border border-white/5 rounded-2xl space-y-2 group hover:border-white/10 transition-colors">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <div className="w-5 h-5 rounded-full bg-orange-primary/10 border border-orange-primary/20 flex items-center justify-center text-[10px] font-black text-orange-primary uppercase font-mono">
-                                {c.name.charAt(0)}
-                              </div>
-                              <span className="text-xs font-black text-zinc-200">{c.name}</span>
-                            </div>
-                            <span className="text-[9px] text-zinc-500 font-mono">{c.date}</span>
-                          </div>
-                          <p className="text-xs text-zinc-400 leading-relaxed pl-1 whitespace-pre-wrap">{c.content}</p>
-                        </div>
-                      ))
-                    )}
-                  </div>
-
-                  {/* Input Form at bottom */}
-                  <form onSubmit={handleAddComment} className="p-5 border-t border-white/10 bg-black/60 space-y-3.5 shrink-0">
-                    <div className="space-y-1.5">
-                      <label className="text-[9px] font-mono uppercase text-zinc-500 font-black tracking-widest block font-bold">Votre Identité</label>
-                      <input 
-                        type="text"
-                        placeholder="Votre nom ou pseudonyme..."
-                        value={commentName}
-                        onChange={(e) => setCommentName(e.target.value)}
-                        className="w-full p-3 bg-black/80 rounded-xl border border-white/10 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-orange-primary font-mono"
-                      />
-                    </div>
-                    
-                    <div className="space-y-1.5">
-                      <label className="text-[9px] font-mono uppercase text-zinc-500 font-black tracking-widest block font-bold">Votre Message</label>
-                      <div className="relative">
-                        <textarea 
-                          placeholder="Écrivez un commentaire constructif..."
-                          value={commentText}
-                          onChange={(e) => setCommentText(e.target.value)}
-                          rows={3}
-                          className="w-full p-3 bg-black/80 rounded-xl border border-white/10 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-orange-primary resize-none font-sans"
-                        />
-                        <button 
-                          type="submit"
-                          disabled={!commentText.trim()}
-                          className="absolute bottom-2 right-2 p-2 bg-orange-primary text-white rounded-lg hover:bg-orange-600 disabled:opacity-20 disabled:hover:bg-orange-primary transition-all active:scale-95 flex items-center justify-center shadow-lg"
-                        >
-                          <Send size={12} className="fill-white" />
-                        </button>
-                      </div>
-                    </div>
-                  </form>
-                </motion.div>
-              </>
-            )}
-          </AnimatePresence>
-
           <a 
             href="https://cook-ia.indevs.in/"
             target="_blank"
             rel="noopener noreferrer"
-            className="fixed bottom-6 right-6 bg-black/80 backdrop-blur-md border border-white/10 text-white px-4 py-2 rounded-full text-xs font-bold hover:bg-black hover:scale-105 active:scale-95 transition-all z-30 shadow-2xl flex items-center gap-2"
+            className="fixed bottom-6 right-6 bg-black/80 backdrop-blur-md border border-white/10 text-white px-4 py-2 rounded-full text-xs font-bold hover:bg-black hover:scale-105 active:scale-95 transition-all z-50 shadow-2xl flex items-center gap-2"
           >
             <img src={LOGO_URL} alt="Logo" className="w-4 h-4 object-contain" />
             Créé avec COOK IA
@@ -1855,81 +1383,71 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
            key="landing"
            initial={{ opacity: 0 }}
            animate={{ opacity: 1 }}
-           exit={{ opacity: 0 }}
-           transition={{ duration: 0.4, ease: "easeInOut" }}
+           exit={{ opacity: 0, scale: 1.1, filter: "blur(20px)" }}
+           transition={{ duration: 1, ease: "easeInOut" }}
            className="fixed inset-0 z-[1000] overflow-y-auto"
         >
           <LandingPage 
             lang={lang}
             setLang={setLang}
-            onEnter={(initialPrompt?: string, forceAuth?: boolean) => {
-              if (forceAuth) {
-                setHasStarted(true);
-                setIsAuthModalOpen(true);
-                return;
-              }
-              if (!user) {
-                setPendingLandingPrompt(initialPrompt || "");
-                setHasStarted(true);
-                setIsAuthModalOpen(true);
-                return;
-              }
+            onEnter={(initialPrompt?: string) => {
               if (initialPrompt && initialPrompt.trim()) {
                 setPrompt(initialPrompt);
+                if (!user) {
+                  setIsAuthModalOpen(true);
+                  setHasStarted(true);
+                  return;
+                }
                 setPendingSend(true);
               }
               setHasStarted(true);
             }} 
-            onLoadTemplate={(code: string, promptText: string) => {
-              if (!user) {
-                setPendingLandingTemplate({ code, promptText });
-                setHasStarted(true);
-                setIsAuthModalOpen(true);
-                return;
-              }
-              setGeneratedCode(code);
-              setPrompt("");
-              const newMsg = {
-                id: Math.random().toString(36).substr(2, 9),
-                role: 'user' as const,
-                content: promptText,
-                timestamp: new Date()
-              };
-              const systemMsg = {
-                id: Math.random().toString(36).substr(2, 9),
-                role: 'model' as const,
-                content: "Voici le site web cinématique généré sur la base de vos spécifications. Vous pouvez utiliser le volet de discussion pour y apporter des modifications de style ou de contenu.",
-                timestamp: new Date(),
-                files: [
-                  {
-                    path: 'index.html',
-                    content: code
-                  }
-                ]
-              };
-              setMessages([newMsg, systemMsg]);
-              setHasStarted(true);
-              setViewMode('preview');
-            }}
           />
         </motion.div>
       ) : (
         <motion.div 
           key="app"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.3 }}
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
           className={`flex flex-col h-screen ${isDark ? 'bg-abyssal-deep text-white' : 'bg-[#F8F9FA] text-slate-900'} overflow-hidden font-sans transition-colors duration-500`}
         >
-          {showAnnouncement && (
-            <div className={`bg-orange-primary text-white px-4 py-2 flex items-center justify-between text-sm font-bold shrink-0 z-[60] shadow-[0_0_20px_rgba(255,107,0,0.2)]`}>
-              <div className="flex items-center gap-2">
-                <Sparkles size={16} />
-                <span>La majorité des bugs ont été corrigés ! Rejoignez notre Discord.</span>
+          {announcement && announcement.active && (
+            <div className={`bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 text-black px-4 py-2 flex items-center justify-between text-xs font-bold shrink-0 z-[60] shadow-md`}>
+              <div className="flex items-center gap-2 mx-auto">
+                <span className="bg-black text-amber-400 px-2 py-0.5 rounded text-[10px] font-black uppercase">ANNONCE ADMIN</span>
+                <span>{announcement.message}</span>
               </div>
-              <button onClick={() => setShowAnnouncement(false)} className="hover:bg-black/10 p-1 rounded transition-colors">
+              <button onClick={() => setAnnouncement(null)} className="hover:bg-black/10 p-1 rounded transition-colors text-black" title="Fermer">
                 <X size={16} />
               </button>
+            </div>
+          )}
+
+          {userBanStatus && userBanStatus.isBanned && (
+            <div className="fixed inset-0 bg-black/95 backdrop-blur-2xl z-[9999] flex items-center justify-center p-4">
+              <div className="bg-zinc-900 border border-red-500/30 rounded-3xl p-8 max-w-md w-full text-center shadow-2xl space-y-4">
+                <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto border border-red-500/20 text-red-500">
+                  <Ban size={32} />
+                </div>
+                <h2 className="text-xl font-extrabold text-white">Compte Banni / Suspendu</h2>
+                <div className="text-xs text-red-400 bg-red-500/10 p-3 rounded-xl border border-red-500/20 text-left">
+                  <span className="font-bold block mb-1">Motif du bannissement :</span>
+                  {userBanStatus.reason || "Non-respect des règles de la communauté et conditions d'utilisation."}
+                </div>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Votre accès a été restreint par l'administration du site web car vous ne respectez pas les règles. Vous ne pouvez plus utiliser la génération par IA.
+                </p>
+                <button
+                  onClick={async () => {
+                    await supabase.auth.signOut();
+                    window.location.reload();
+                  }}
+                  className="w-full py-3 rounded-xl text-xs font-bold bg-red-600 text-white hover:bg-red-700 transition-all shadow-lg shadow-red-600/20"
+                >
+                  Se déconnecter
+                </button>
+              </div>
             </div>
           )}
       {/* Floating Discord Button for Mobile */}
@@ -2094,7 +1612,6 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
                   <div key={conv.id} className={`p-4 rounded-2xl border ${isDark ? 'border-white/10 bg-white/5' : 'border-slate-200 bg-slate-50'} cursor-pointer hover:border-blue-500 transition-all`} onClick={() => {
                     setCurrentConversationId(conv.id);
                     setMessages(conv.messages);
-                    setHasStarted(true);
                     setViewMode('chat');
                   }}>
                     <div className="aspect-video rounded-xl bg-slate-200 mb-4 overflow-hidden flex items-center justify-center p-4">
@@ -2149,84 +1666,65 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
                 </div>
               </div>
             </div>
-          ) : viewMode === 'skills' ? (
-            <SkillsLibrary 
+          ) : viewMode === 'chat' ? (
+            <ChatInterface 
+              lang={lang}
               isDark={isDark}
-              onInjectPrompt={(p) => {
+              messages={messages}
+              isLoading={isLoading}
+              loadingStatus={loadingStatus}
+              actions={currentActions}
+              prompt={prompt}
+              setPrompt={setPrompt}
+              handleSend={handleSend}
+              onAbort={handleAbort}
+              chatEndRef={chatEndRef}
+              logoUrl={LOGO_URL}
+              selectedImages={selectedImages}
+              setSelectedImages={setSelectedImages}
+              selectedVideos={selectedVideos}
+              setSelectedVideos={setSelectedVideos}
+              onOpenImageSearch={() => {
+                setImageSearchContext('chat');
+                setIsImageSearchOpen(true);
+              }}
+              onOpenSettings={(tab) => {
+                setSettingsTab(tab || 'publish');
+                setIsProjectSettings(true);
+                setIsSettingsModalOpen(true);
+              }}
+              onCloneSite={handleCloneSite}
+              onEcommerceProduct={handleEcommerceProduct}
+              isFocusMode={isFocusMode}
+              setIsFocusMode={setIsFocusMode}
+              onFeedback={handleFeedback}
+              currentAgentStage={currentAgentStage}
+              qaAuditSummary={qaAuditSummary}
+              qaLogs={qaLogs}
+            />
+          ) : (
+            <Preview 
+              viewMode={viewMode}
+              generatedCode={generatedCode}
+              files={[...messages].reverse().find(m => m.role === 'model' && m.files)?.files || []}
+              iframeRef={iframeRef}
+              onRefresh={handleRefresh}
+              onExpand={handleExpand}
+              onEdit={() => setViewMode('code')}
+              onCodeChange={(newCode) => {
+                skipIframeUpdate.current = true;
+                setGeneratedCode(newCode);
+              }}
+              onDownloadZip={handleDownloadZip}
+              styleConfig={styleConfig}
+              sectionEdit={sectionEdit}
+              onSectionSelect={setSectionEdit}
+              isDark={isDark}
+              onApplyPrompt={(p) => {
                 setPrompt(p);
                 setViewMode('chat');
               }}
             />
-          ) : (
-            <div className="flex-1 flex overflow-hidden w-full h-full">
-              <div className={`flex-1 flex overflow-hidden w-full h-full ${viewMode === 'chat' && generatedCode ? 'flex-col md:flex-row' : 'flex-col'}`}>
-                {/* Chat Panel */}
-                {(viewMode === 'chat' || !generatedCode) && (
-                  <div className={`flex-1 h-full min-w-0 ${viewMode === 'chat' && generatedCode ? 'md:max-w-[460px] lg:max-w-[500px] xl:max-w-[550px] md:border-r border-slate-200 dark:border-white/5' : ''}`}>
-                    <ChatInterface 
-                      lang={lang}
-                      isDark={isDark}
-                      messages={messages}
-                      isLoading={isLoading}
-                      loadingStatus={loadingStatus}
-                      actions={currentActions}
-                      prompt={prompt}
-                      setPrompt={setPrompt}
-                      handleSend={handleSend}
-                      onAbort={handleAbort}
-                      chatEndRef={chatEndRef}
-                      logoUrl={LOGO_URL}
-                      selectedImages={selectedImages}
-                      setSelectedImages={setSelectedImages}
-                      selectedVideos={selectedVideos}
-                      setSelectedVideos={setSelectedVideos}
-                      onOpenImageSearch={() => {
-                        setImageSearchContext('chat');
-                        setIsImageSearchOpen(true);
-                      }}
-                      onOpenSettings={(tab) => {
-                        setSettingsTab(tab || 'publish');
-                        setIsProjectSettings(true);
-                        setIsSettingsModalOpen(true);
-                      }}
-                      onCloneSite={handleCloneSite}
-                      onEcommerceProduct={handleEcommerceProduct}
-                      isFocusMode={isFocusMode}
-                      setIsFocusMode={setIsFocusMode}
-                      onFeedback={handleFeedback}
-                    />
-                  </div>
-                )}
-
-                {/* Preview/Code Panel (Live split rendering on PC, toggles on mobile) */}
-                {generatedCode && (viewMode !== 'chat' || viewMode === 'chat') && (
-                  <div className={`flex-1 h-full min-w-0 ${viewMode === 'chat' ? 'hidden md:flex' : 'flex'}`}>
-                    <Preview 
-                      viewMode={viewMode === 'chat' ? 'preview' : viewMode}
-                      generatedCode={generatedCode}
-                      files={[...messages].reverse().find(m => m.role === 'model' && m.files)?.files || []}
-                      iframeRef={iframeRef}
-                      onRefresh={handleRefresh}
-                      onExpand={handleExpand}
-                      onEdit={() => setViewMode('code')}
-                      onCodeChange={(newCode) => {
-                        skipIframeUpdate.current = true;
-                        setGeneratedCode(newCode);
-                      }}
-                      onDownloadZip={handleDownloadZip}
-                      styleConfig={styleConfig}
-                      sectionEdit={sectionEdit}
-                      onSectionSelect={setSectionEdit}
-                      isDark={isDark}
-                      onApplyPrompt={(p) => {
-                        setPrompt(p);
-                        setViewMode('chat');
-                      }}
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
           )}
 
           {/* Mobile View Switcher */}

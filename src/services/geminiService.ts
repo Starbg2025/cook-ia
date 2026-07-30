@@ -15,25 +15,31 @@ ADVANCED CODING CAPABILITIES:
 - WEBSITE CLONING: You can clone an existing website from a URL. Use the 'urlContext' tool to analyze the structure, assets, and content of the source site to create a faithful clone or an improved version.
 - You have absolute mastery of modern web technologies: HTML5, CSS3, JavaScript (ES6+), React, and Python (Flask/FastAPI).
 - You are an expert in high-end libraries: Three.js (3D scenes, shaders), GSAP (complex timelines), Framer Motion (smooth UI transitions), Chart.js/D3.js (data viz).
+- You can generate full-stack architectures including a Python backend if requested.
+- You can process video files to extract spatial information and generate immersive 3D scenes using Three.js or React Three Fiber.
+- You can analyze video content to create synchronized, high-end animations and transitions (GSAP, Framer Motion) that match the movement or rhythm of the video.
 - You can build professional, enterprise-grade architectures: modular, responsive, and accessible.
+- You can analyze up to 20 reference images or use Unsplash URLs provided in the prompt to replace generic images with professional photography.
+- You have access to the 'urlContext' tool. When a URL is provided, use it to extract real content, images, and data to populate the website.
 - Always prioritize using the specific Unsplash URLs or images extracted from the provided URL context.
 
-CRITICAL DIRECTIVES FOR MAGNIFICENT RENDERING (ABSOLUTELY REQUIRED):
-1. VISUAL DEPTH & AESTHETICS (INCREDIBLE UI/UX):
-   - You MUST create websites that look INCREDIBLE and visually stunning. Do NOT use default, boring, or generic styles.
-   - Use sophisticated color palettes, premium gradients (Mesh Gradients, Glassmorphism, Aurora effects), and multi-layered soft shadows.
-   - Default to a "Premium Dark Cosmic" or "Ultra-Clean Apple-like" aesthetic unless specified otherwise.
-   - Every background, button, and card must have rich textures (subtle grain, noise overlays, blur effects).
+CRITICAL DIRECTIVES FOR MAGNIFICENT RENDERING:
+1. VISUAL DEPTH & AESTHETICS:
+   - Use sophisticated color palettes, Glassmorphism, and multi-layered shadows.
+   - Implement immersive 3D elements using Three.js if relevant to the theme.
+   - Default to a "Dark Luxury" or "Clean Minimalist" aesthetic unless specified otherwise.
 
-2. LAYOUT & TYPOGRAPHY:
+2. LAYOUT & STRUCTURE:
    - Master the "Bento Grid" and "Editorial" layouts.
-   - Use high-end typography: Pair elegant Serif fonts (e.g. Playfair Display) with clean Sans-serifs (e.g. Inter, Space Grotesk) for impact.
-   - Ensure 100% responsiveness (Mobile & PC). The site must look perfect on smartphones and desktop screens.
+   - Ensure 100% responsiveness (Mobile & PC).
+   - Include professional Navigation, Hamburger menus, and detailed Footers.
 
 3. ANIMATIONS & INTERACTIVITY (The "Juice"):
-   - Use Framer Motion or pure CSS for ultra-smooth entrance animations (fade-in, slide-up, scale-in) on ALL major sections and elements.
-   - Add hover effects on all interactive elements (buttons scaling, cards glowing or lifting, text gradients shifting).
-   - Implement smooth scroll and subtle parallax effects where appropriate.
+   - Use GSAP or Framer Motion for:
+     - Entrance animations (fade-in, slide-up, scale-in) on all major sections and elements.
+     - "Camera Follow Forward" effect: Implement a subtle zoom-in or parallax effect that simulates a camera moving forward as the user scrolls or on page load.
+     - Smooth scroll, and parallax.
+     - Micro-interactions on every interactive element.
 
 4. CONTENT & DETAIL:
    - NEVER use "Lorem Ipsum". Generate realistic, compelling copy.
@@ -45,9 +51,11 @@ CRITICAL DIRECTIVES FOR MAGNIFICENT RENDERING (ABSOLUTELY REQUIRED):
    - The project structure SHOULD include:
      - A modern multi-page HTML/CSS/JS version.
      - A React component version with routing (App.jsx, components/, pages/).
-     - A README.md file stating: "Ce site a été créé avec COOK IA, l'IA de création web."
-   - Provide a 'preview_code' which is a single, self-contained HTML string simulating multiple pages with a robust client-side routing system or dynamic section switching.
-   - Use modern patterns: CSS Variables, Flexbox/Grid, ES6 Modules.
+     - A Python backend structure (app.py) if the site requires any data handling or forms.
+     - A README.md file.
+   - The README.md MUST explicitly state: "Ce site a été créé avec COOK IA, l'IA de création web."
+   - Also provide a 'preview_code' which is a single, self-contained HTML string. To simulate multiple pages in the preview, use a robust client-side routing system or dynamic section switching.
+   - Use modern patterns: CSS Variables, Flexbox/Grid, ES6 Modules, and high-performance animations.
 
 6. MANDATORY BADGE:
    - You MUST ALWAYS include a small, elegant badge at the bottom right of the page (fixed position).
@@ -294,46 +302,20 @@ const isUserKeyOrQuotaError = (msg: string) => {
   );
 };
 
-const callGeminiProxy = async (prompt: string, history: any[], systemInstruction?: string, model?: string, images?: any[], responseMimeType?: string): Promise<string> => {
-  const currentModel = model || "gemini-3.5-flash";
-  try {
-    const response = await fetch("/api/ai/gemini", {
-      method: "POST",
-      headers: getCustomHeaders(),
-      body: JSON.stringify({ prompt, history, systemInstruction, model: currentModel, images, responseMimeType })
-    });
+const callGeminiProxy = async (prompt: string, history: any[], systemInstruction?: string, model?: string, images?: any[], responseMimeType?: string) => {
+  const response = await fetch("/api/ai/gemini", {
+    method: "POST",
+    headers: getCustomHeaders(),
+    body: JSON.stringify({ prompt, history, systemInstruction, model, images, responseMimeType })
+  });
 
-    if (!response.ok) {
-      const err = await response.json();
-      const errMsg = err.error || "Failed to call Gemini proxy";
-      
-      const isUnavailable = errMsg.toLowerCase().includes("demand") || 
-                            errMsg.toLowerCase().includes("unavailable") || 
-                            errMsg.toLowerCase().includes("503") ||
-                            response.status === 503;
-                            
-      if (isUnavailable && currentModel === "gemini-3.5-flash") {
-        console.warn("[Gemini Recovery] gemini-3.5-flash is experiencing high demand. Retrying with gemini-2.5-flash...");
-        return await callGeminiProxy(prompt, history, systemInstruction, "gemini-2.5-flash", images, responseMimeType);
-      }
-      
-      throw new Error(errMsg);
-    }
-
-    const result = await response.json();
-    return result.text;
-  } catch (error: any) {
-    const errMsg = error.message || "";
-    const isUnavailable = errMsg.toLowerCase().includes("demand") || 
-                          errMsg.toLowerCase().includes("unavailable") || 
-                          errMsg.toLowerCase().includes("503");
-                          
-    if (isUnavailable && currentModel === "gemini-3.5-flash") {
-      console.warn("[Gemini Recovery] gemini-3.5-flash is experiencing high demand/network error. Retrying with gemini-2.5-flash...");
-      return await callGeminiProxy(prompt, history, systemInstruction, "gemini-2.5-flash", images, responseMimeType);
-    }
-    throw error;
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(err.error || "Failed to call Gemini proxy");
   }
+
+  const result = await response.json();
+  return result.text;
 };
 
 const generateWithAIFallback = async (
@@ -463,7 +445,7 @@ export const updateSection = async (
   sectionHtml: string,
   fullCode: string,
   history: any[],
-  model: string = "gemini-3.5-flash"
+  model: string = "gemini-2.5-flash"
 ) => {
   const systemInstruction = "You are an expert web developer specializing in targeted component updates.";
   const userPrompt = `TARGET SECTION HTML:
@@ -513,7 +495,7 @@ export const generateWebsite = async (
   history: { role: "user" | "model", parts: { text?: string, inlineData?: { mimeType: string, data: string } }[] }[],
   images?: { mimeType: string, data: string }[],
   videos?: { mimeType: string, data: string }[],
-  model: string = "gemini-3.5-flash"
+  model: string = "gemini-2.5-flash"
 ) => {
   const hasUserKey = !!getCustomHeaders()['x-gemini-key'];
   const isHealthy = shadowWatchdog.isHealthy();

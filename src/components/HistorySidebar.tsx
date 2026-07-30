@@ -30,7 +30,7 @@ interface HistorySidebarProps {
   onNewChat: () => void;
   onDeleteConversation: (id: string) => void;
   onOpenSettings: (tab?: any) => void;
-  onSelectView: (view: 'your-apps' | 'faq' | 'skills') => void;
+  onSelectView: (view: 'your-apps' | 'faq') => void;
   onCloneSite: () => void;
   onEcommerceProduct: () => void;
   currentView: string;
@@ -57,7 +57,6 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = ({
   const buildItems = [
     { id: 'your-apps', label: 'Your apps', icon: Zap },
     { id: 'faq', label: 'FAQ', icon: HelpCircle },
-    { id: 'skills', label: 'Skills de l\'IA', icon: LayoutGrid },
     { id: 'clone', label: 'Clone site', icon: Copy, action: onCloneSite },
     { id: 'ecommerce', label: 'E-commerce', icon: ShoppingBag, action: onEcommerceProduct },
   ];
