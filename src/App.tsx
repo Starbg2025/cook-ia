@@ -44,13 +44,11 @@ import {
   ExternalLink,
   Smartphone,
   QrCode,
-  Phone,
-  Ban
+  Phone
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { generateWebsite, generateTitle, updateSection, convertToReact, improveText, answerQuestion } from './services/geminiService';
-import { isInformationalQuestion } from './utils/intentDetection';
-import { analystReview, criticReview, plannerAgent, testerAgent, shadowWatchdog, auditAndFixButtons } from './services/multiAgentService';
+import { generateWebsite, generateTitle, updateSection, convertToReact, improveText } from './services/geminiService';
+import { analystReview, criticReview, plannerAgent, testerAgent, shadowWatchdog } from './services/multiAgentService';
 import { Message, ViewMode, Conversation, StyleConfig, SectionEditState, ActionHistory } from './types';
 import { ChatInterface } from './components/ChatInterface';
 import { Preview } from './components/Preview';
@@ -67,7 +65,6 @@ import { supabase, logErrorToSupabase } from './services/supabaseService';
 import { deployToNetlify } from './services/netlifyService';
 import JSZip from 'jszip';
 import { Palette, Braces } from 'lucide-react';
-import { translations, Language } from './translations';
 
 const LOGO_URL = "https://i.ibb.co/mC3M8SSN/logo.png";
 
@@ -110,44 +107,6 @@ export default function App() {
   const [imageSearchContext, setImageSearchContext] = useState<'chat' | 'section'>('chat');
   const [isDeploying, setIsDeploying] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
-  const [user, setUser] = useState<any>(null);
-  const [selectedImages, setSelectedImages] = useState<string[]>([]);
-  const [selectedVideos, setSelectedVideos] = useState<string[]>([]);
-  const [abortController, setAbortController] = useState<AbortController | null>(null);
-  const [styleConfig, setStyleConfig] = useState<StyleConfig>({
-    primaryColor: '#FF6B00',
-    fontFamily: 'Inter',
-    borderRadius: '1rem'
-  });
-  const [sectionEdit, setSectionEdit] = useState<SectionEditState>({ isActive: false });
-  const [activeMobileTab, setActiveMobileTab] = useState<'chat' | 'preview'>('chat');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [collaborators, setCollaborators] = useState<Record<string, { x: number; y: number; name: string }>>({});
-  const [showAnnouncement, setShowAnnouncement] = useState(true);
-  const [announcement, setAnnouncement] = useState<{ message: string; active: boolean } | null>(null);
-  const [userBanStatus, setUserBanStatus] = useState<{ isBanned: boolean; reason?: string } | null>(null);
-
-  const chatEndRef = useRef<HTMLDivElement>(null);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-  const skipIframeUpdate = useRef(false);
-
-  const [lang, setLang] = useState<Language>(() => {
-    try {
-      const saved = localStorage.getItem('cook_ia_lang');
-      return (saved === 'fr' || saved === 'en') ? saved as Language : 'fr';
-    } catch {
-      return 'fr';
-    }
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('cook_ia_lang', lang);
-    } catch (e) {
-      console.warn(e);
-    }
-  }, [lang]);
-
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [isProjectSettings, setIsProjectSettings] = useState(true);
   const [prompts, setPrompts] = useState<string[]>([]);
@@ -173,12 +132,10 @@ export default function App() {
 
   const [isLinkFullscreen, setIsLinkFullscreen] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
-  const [currentAgentStage, setCurrentAgentStage] = useState<'idle' | 'architect' | 'designer' | 'developer' | 'tester' | 'inspector' | 'complete'>('idle');
-  const [qaAuditSummary, setQaAuditSummary] = useState<any>(null);
-  const [qaLogs, setQaLogs] = useState<string[]>([]);
   const [selectedModel, setSelectedModel] = useState<string>(() => {
     try {
       const saved = localStorage.getItem('selectedModel');
+      if (saved === 'gemini-3.5-flash') return 'gemini-2.5-flash';
       return saved || 'gemini-2.5-flash';
     } catch (e) {
       console.warn("Storage access denied:", e);
@@ -211,38 +168,6 @@ export default function App() {
     }
   }, [isRealtimeEnabled]);
 
-  // Fetch active system announcement
-  useEffect(() => {
-    fetch('/api/announcement')
-      .then(res => res.json())
-      .then(data => {
-        if (data && data.active !== false && data.message) {
-          setAnnouncement(data);
-        }
-      })
-      .catch(err => console.warn("Could not fetch announcement:", err));
-  }, []);
-
-  // Check user ban status
-  useEffect(() => {
-    if (user?.id || user?.email) {
-      fetch('/api/check-user-ban', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id, username: user.email })
-      })
-        .then(res => res.json())
-        .then(data => {
-          if (data && data.banned) {
-            setUserBanStatus({ isBanned: true, reason: data.reason });
-          } else {
-            setUserBanStatus(null);
-          }
-        })
-        .catch(err => console.warn("Ban check error:", err));
-    }
-  }, [user]);
-
   const handleUpdateProjectName = async (newName: string) => {
     if (!currentConversationId || !newName.trim()) return;
     
@@ -267,6 +192,25 @@ export default function App() {
   const handleRemoveSecret = (key: string) => {
     setSecrets(prev => prev.filter(s => s.key !== key));
   };
+  const [styleConfig, setStyleConfig] = useState<StyleConfig>({
+    primaryColor: '#FF6B00',
+    fontFamily: 'Inter',
+    borderRadius: '1rem'
+  });
+  const [sectionEdit, setSectionEdit] = useState<SectionEditState>({ isActive: false });
+  const [user, setUser] = useState<any>(null);
+  const [selectedImages, setSelectedImages] = useState<string[]>([]);
+  const [selectedVideos, setSelectedVideos] = useState<string[]>([]);
+  const [abortController, setAbortController] = useState<AbortController | null>(null);
+
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const skipIframeUpdate = useRef(false);
+
+  const [activeMobileTab, setActiveMobileTab] = useState<'chat' | 'preview'>('chat');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [collaborators, setCollaborators] = useState<Record<string, { x: number; y: number; name: string }>>({});
+  const [showAnnouncement, setShowAnnouncement] = useState(true);
 
   React.useEffect(() => {
     if (sectionEdit.isActive && sectionEdit.elementContext) {
@@ -402,9 +346,7 @@ export default function App() {
       .eq('id', authUser.id)
       .single();
     
-    const updatedUser = { ...authUser, profile };
-    setUser(updatedUser);
-    loadConversations();
+    setUser({ ...authUser, profile });
   };
 
   useEffect(() => {
@@ -813,12 +755,6 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
   const handleSend = async () => {
     if (!prompt.trim() || isLoading) return;
 
-    // MANDATORY AUTHENTICATION CHECK BEFORE AI CODE GENERATION
-    if (!user) {
-      setIsAuthModalOpen(true);
-      return;
-    }
-
     // Check if user is logged in, but lacks a username
     if (user && !user.profile?.username) {
       setIsAuthModalOpen(true);
@@ -852,10 +788,8 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
     const controller = new AbortController();
     setAbortController(controller);
     setIsLoading(true);
-    setCurrentAgentStage('architect');
-    setLoadingStatus(lang === 'fr' ? "📐 [Prompt Architect] Structuration des sections et du cahier des charges..." : "📐 [Prompt Architect] Structuring sections & blueprint...");
+    setLoadingStatus("Analyse de votre demande...");
     setCurrentActions([]);
-    let codingInterval: any = null;
 
     const addAction = (type: 'read' | 'thought' | 'shell', content: string) => {
       const id = Math.random().toString(36).substr(2, 9);
@@ -881,28 +815,39 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
                 }
               });
             } else {
+              // It's a URL (like Unsplash)
               const base64Img = await fetchImageAsBase64(img);
               if (base64Img) {
-                parts.push({ inlineData: base64Img });
+                parts.push({
+                  inlineData: base64Img
+                });
               } else {
                 parts.push({ text: `[Reference Image URL: ${img}]` });
               }
             }
           }
         }
-        return { role: m.role, parts };
+        return {
+          role: m.role,
+          parts
+        };
       }));
 
-      // Prepare current images
+      // Prepare current images for API if exists
       let imageParts: any[] = [];
       if (currentImages.length > 0) {
         for (const img of currentImages) {
           if (img.startsWith('data:')) {
             const [mimeTypePart, data] = img.split(';base64,');
-            imageParts.push({ mimeType: mimeTypePart.split(':')[1], data: data });
+            imageParts.push({
+              mimeType: mimeTypePart.split(':')[1],
+              data: data
+            });
           } else {
             const base64Img = await fetchImageAsBase64(img);
-            if (base64Img) imageParts.push(base64Img);
+            if (base64Img) {
+              imageParts.push(base64Img);
+            }
           }
         }
       }
@@ -912,70 +857,22 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
         for (const vid of currentVideos) {
           if (vid.startsWith('data:')) {
             const [mimeTypePart, data] = vid.split(';base64,');
-            videoParts.push({ mimeType: mimeTypePart.split(':')[1], data: data });
+            videoParts.push({
+              mimeType: mimeTypePart.split(':')[1],
+              data: data
+            });
           }
         }
       }
 
+      // If there are URLs in currentImages, append them to the userMessage
       let enrichedUserMessage = userMessage;
       const urls = currentImages.filter(img => !img.startsWith('data:'));
       if (urls.length > 0) {
         enrichedUserMessage += "\n\nReference Images (URLs):\n" + urls.join('\n');
       }
 
-      // CHECK IF USER IS ASKING A QUESTION (WITHOUT REQUESTING WEBSITE CREATION OR MODIFICATION)
-      if (isInformationalQuestion(userMessage, !!generatedCode)) {
-        setCurrentAgentStage('architect');
-        setLoadingStatus(lang === 'fr' ? "💬 [Assistant COOK IA] Traitement de votre question..." : "💬 [COOK IA Assistant] Processing question...");
-        const aQa = addAction('thought', lang === 'fr' 
-          ? "💬 [Assistant IA] Réponse directe à votre question sans modification du site web..." 
-          : "💬 [AI Assistant] Answering question directly without modifying website...");
-
-        const textResponse = await answerQuestion(enrichedUserMessage, history.slice(0, -1), selectedModel);
-        completeAction(aQa);
-
-        const updatedMessages: Message[] = [...newMessages, { 
-          role: 'model', 
-          content: textResponse,
-          code: generatedCode, // PRESERVE EXISTING GENERATED CODE UNTOUCHED
-          actionHistory: currentActions
-        }];
-        setMessages(updatedMessages);
-        await saveConversation(updatedMessages);
-        setIsLoading(false);
-        setCurrentAgentStage('complete');
-        return;
-      }
-
-      // STAGE 1: PROMPT ARCHITECT
-      setCurrentAgentStage('architect');
-      const aArchitect = addAction('thought', lang === 'fr' 
-        ? "📐 [Prompt Architecte] Analyse du besoin, découpage en sections HTML5 et création du cahier des charges..." 
-        : "📐 [Prompt Architect] Analyzing intent, structuring HTML5 sections & blueprint...");
-      
-      // Call planner to structure blueprint
-      try {
-        await plannerAgent(enrichedUserMessage, history.slice(0, -1));
-      } catch (e) {
-        console.debug("Planner agent fallback step executed.");
-      }
-      completeAction(aArchitect);
-
-      // STAGE 2: UI/UX DESIGNER
-      setCurrentAgentStage('designer');
-      setLoadingStatus(lang === 'fr' ? "🎨 [Styliste UI/UX] Harmonie de la palette de couleurs, typographie et réactivité..." : "🎨 [UI/UX Designer] Designing color palette & typography...");
-      const aDesigner = addAction('thought', lang === 'fr'
-        ? "🎨 [Styliste UI/UX] Définition des règles esthétiques, typographies et ombres contemporaines..."
-        : "🎨 [UI/UX Designer] Setting visual hierarchy, responsive layout & color swatches...");
-      completeAction(aDesigner);
-
-      // STAGE 3: CODE DEVELOPER
-      setCurrentAgentStage('developer');
-      setLoadingStatus(lang === 'fr' ? "⚡ [Développeur IA] Génération du code source HTML5, CSS Tailwind et JS..." : "⚡ [Developer AI] Generating source code...");
-      const aDev = addAction('thought', lang === 'fr' 
-        ? "⚡ [Développeur IA] Génération du code source HTML5, CSS Tailwind et composants React..." 
-        : "⚡ [Developer AI] Generating HTML5, Tailwind CSS & React code...");
-
+      const a5 = addAction('thought', "Génération des fichiers sources (HTML/JS/React)...");
       let result = await generateWebsite(
         enrichedUserMessage, 
         history.slice(0, -1), 
@@ -983,49 +880,7 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
         videoParts.length > 0 ? videoParts : undefined,
         selectedModel
       );
-      completeAction(aDev);
-
-      // STAGE 3: QA TESTER & BUTTON AUDITOR
-      setCurrentAgentStage('tester');
-      setLoadingStatus(lang === 'fr' ? "🧪 [Testeur QA] Audit approfondi des boutons pour éliminer les éléments inutiles..." : "🧪 [QA Tester] Inspecting & fixing dead buttons...");
-      const aTester = addAction('thought', lang === 'fr' 
-        ? "🧪 [Testeur QA] Verification qu'aucun bouton inutile ne subsiste dans le code..." 
-        : "🧪 [QA Tester] Auditing buttons and attaching interactive click handlers...");
-
-      const audit = auditAndFixButtons(result.preview_code);
-      result.preview_code = audit.auditedCode;
-
-      if (result.files && Array.isArray(result.files)) {
-        result.files = result.files.map((f: any) => {
-          if (f.path === 'index.html' || f.path.endsWith('.html')) {
-            return { ...f, content: result.preview_code };
-          }
-          return f;
-        });
-      }
-
-      setQaAuditSummary(audit.auditSummary);
-      setQaLogs([
-        `Vérification effectuée sur ${audit.auditSummary.buttonsChecked} boutons et ${audit.auditSummary.linksVerified} liens.`,
-        `${audit.auditSummary.deadButtonsFixed} boutons raccordés à des actions interactives (modales, notifications toast & défilement).`,
-        `0 bouton inutile ou mort détecté ! 100% de couverture fonctionnelle.`
-      ]);
-      completeAction(aTester);
-
-      // STAGE 4: FINAL INSPECTOR
-      setCurrentAgentStage('inspector');
-      setLoadingStatus(lang === 'fr' ? "🏆 [Inspecteur Résultats] Inspection visuelle, réactivité mobile et certification finale..." : "🏆 [Final Inspector] Visual inspection & certification...");
-      const aInspector = addAction('thought', lang === 'fr' 
-        ? "🏆 [Inspecteur Résultats] Test de réactivité écran (mobile/desktop) et délivrance du certificat de qualité COOK IA..." 
-        : "🏆 [Final Inspector] Validating viewport responsiveness & issuing certification seal...");
-
-      try {
-        await criticReview(enrichedUserMessage, result.preview_code);
-      } catch (e) {
-        console.debug("Critic review step executed.");
-      }
-      completeAction(aInspector);
-      setCurrentAgentStage('complete');
+      completeAction(a5);
 
       const updatedMessages: Message[] = [...newMessages, { 
         role: 'model', 
@@ -1050,7 +905,6 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
         }]);
         return;
       }
-      console.error("Error generating website:", error);
       addAction('thought', "Erreur critique détectée. Tentative de diagnostic...");
       
       let errorMessage = `Désolé, une erreur est survenue lors de la génération. (Erreur: ${error.message})`;
@@ -1091,7 +945,6 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
         content: errorMessage
       }]);
     } finally {
-      if (codingInterval) clearInterval(codingInterval);
       setIsLoading(false);
       setAbortController(null);
     }
@@ -1412,22 +1265,13 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
            transition={{ duration: 1, ease: "easeInOut" }}
            className="fixed inset-0 z-[1000] overflow-y-auto"
         >
-          <LandingPage 
-            lang={lang}
-            setLang={setLang}
-            onEnter={(initialPrompt?: string) => {
-              if (initialPrompt && initialPrompt.trim()) {
-                setPrompt(initialPrompt);
-                if (!user) {
-                  setIsAuthModalOpen(true);
-                  setHasStarted(true);
-                  return;
-                }
-                setPendingSend(true);
-              }
-              setHasStarted(true);
-            }} 
-          />
+          <LandingPage onEnter={(initialPrompt?: string) => {
+            if (initialPrompt && initialPrompt.trim()) {
+              setPrompt(initialPrompt);
+              setPendingSend(true);
+            }
+            setHasStarted(true);
+          }} />
         </motion.div>
       ) : (
         <motion.div 
@@ -1437,42 +1281,15 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
           transition={{ duration: 0.8, ease: "easeOut" }}
           className={`flex flex-col h-screen ${isDark ? 'bg-abyssal-deep text-white' : 'bg-[#F8F9FA] text-slate-900'} overflow-hidden font-sans transition-colors duration-500`}
         >
-          {announcement && announcement.active && (
-            <div className={`bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 text-black px-4 py-2 flex items-center justify-between text-xs font-bold shrink-0 z-[60] shadow-md`}>
-              <div className="flex items-center gap-2 mx-auto">
-                <span className="bg-black text-amber-400 px-2 py-0.5 rounded text-[10px] font-black uppercase">ANNONCE ADMIN</span>
-                <span>{announcement.message}</span>
+          {showAnnouncement && (
+            <div className={`bg-orange-primary text-white px-4 py-2 flex items-center justify-between text-sm font-bold shrink-0 z-[60] shadow-[0_0_20px_rgba(255,107,0,0.2)]`}>
+              <div className="flex items-center gap-2">
+                <Sparkles size={16} />
+                <span>La majorité des bugs ont été corrigés ! Rejoignez notre Discord.</span>
               </div>
-              <button onClick={() => setAnnouncement(null)} className="hover:bg-black/10 p-1 rounded transition-colors text-black" title="Fermer">
+              <button onClick={() => setShowAnnouncement(false)} className="hover:bg-black/10 p-1 rounded transition-colors">
                 <X size={16} />
               </button>
-            </div>
-          )}
-
-          {userBanStatus && userBanStatus.isBanned && (
-            <div className="fixed inset-0 bg-black/95 backdrop-blur-2xl z-[9999] flex items-center justify-center p-4">
-              <div className="bg-zinc-900 border border-red-500/30 rounded-3xl p-8 max-w-md w-full text-center shadow-2xl space-y-4">
-                <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto border border-red-500/20 text-red-500">
-                  <Ban size={32} />
-                </div>
-                <h2 className="text-xl font-extrabold text-white">Compte Banni / Suspendu</h2>
-                <div className="text-xs text-red-400 bg-red-500/10 p-3 rounded-xl border border-red-500/20 text-left">
-                  <span className="font-bold block mb-1">Motif du bannissement :</span>
-                  {userBanStatus.reason || "Non-respect des règles de la communauté et conditions d'utilisation."}
-                </div>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  Votre accès a été restreint par l'administration du site web car vous ne respectez pas les règles. Vous ne pouvez plus utiliser la génération par IA.
-                </p>
-                <button
-                  onClick={async () => {
-                    await supabase.auth.signOut();
-                    window.location.reload();
-                  }}
-                  className="w-full py-3 rounded-xl text-xs font-bold bg-red-600 text-white hover:bg-red-700 transition-all shadow-lg shadow-red-600/20"
-                >
-                  Se déconnecter
-                </button>
-              </div>
             </div>
           )}
       {/* Floating Discord Button for Mobile */}
@@ -1693,7 +1510,6 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
             </div>
           ) : viewMode === 'chat' ? (
             <ChatInterface 
-              lang={lang}
               isDark={isDark}
               messages={messages}
               isLoading={isLoading}
@@ -1723,9 +1539,6 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
               isFocusMode={isFocusMode}
               setIsFocusMode={setIsFocusMode}
               onFeedback={handleFeedback}
-              currentAgentStage={currentAgentStage}
-              qaAuditSummary={qaAuditSummary}
-              qaLogs={qaLogs}
             />
           ) : (
             <Preview 
@@ -1792,6 +1605,32 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
           )}
         </main>
       </div>
+
+      {/* Real-time Collaboration Cursors */}
+      {Object.entries(collaborators).map(([id, data]) => (
+        <motion.div
+          key={id}
+          style={{
+            position: 'fixed',
+            left: data.x,
+            top: data.y,
+            pointerEvents: 'none',
+            zIndex: 9999,
+          }}
+          initial={{ opacity: 0, scale: 0 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ type: 'spring', damping: 15, stiffness: 300 }}
+        >
+          <MousePointer2 
+            size={24} 
+            className="fill-orange-primary text-orange-primary drop-shadow-lg"
+            style={{ transform: 'rotate(-90deg)' }}
+          />
+          <div className="ml-4 mt-2 px-2 py-1 bg-orange-primary text-white text-[10px] font-black uppercase tracking-widest rounded-lg shadow-xl whitespace-nowrap">
+            {data.name}
+          </div>
+        </motion.div>
+      ))}
 
       <AnimatePresence>
         {isStyleEditorOpen && (
@@ -2251,7 +2090,6 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
         secrets={secrets}
         onAddSecret={handleAddSecret}
         onRemoveSecret={handleRemoveSecret}
-        lang={lang}
         isLinkFullscreen={isLinkFullscreen}
         onToggleLinkFullscreen={setIsLinkFullscreen}
         onConnectGithub={handleGithubClick}

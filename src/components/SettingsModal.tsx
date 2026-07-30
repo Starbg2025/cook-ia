@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   X, 
@@ -24,17 +24,9 @@ import {
   ShieldCheck,
   Users,
   CheckCircle,
-  Sparkles,
-  Activity,
-  Search,
-  Eye,
-  Bell,
-  ShieldAlert,
-  AlertTriangle,
-  Ban
+  Sparkles
 } from 'lucide-react';
 import { supabase } from '../services/supabaseService';
-import { translations, Language } from '../translations';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -63,10 +55,9 @@ interface SettingsModalProps {
   onToggleRealtime?: (val: boolean) => void;
   selectedModel?: string;
   onSelectModel?: (model: string) => void;
-  lang?: Language;
 }
 
-type TabType = 'publish' | 'versions' | 'secrets' | 'integrations' | 'github' | 'general' | 'account' | 'help' | 'founder' | 'collaboration' | 'models' | 'admin';
+type TabType = 'publish' | 'versions' | 'secrets' | 'integrations' | 'github' | 'general' | 'account' | 'help' | 'founder' | 'collaboration' | 'models';
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ 
   isOpen, 
@@ -94,8 +85,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   isRealtimeEnabled = true,
   onToggleRealtime,
   selectedModel = 'gemini-2.5-flash',
-  onSelectModel,
-  lang = 'fr'
+  onSelectModel
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>(initialTab);
   const [accessLevel, setAccessLevel] = useState('Restricted: Only people you specify can access');
@@ -109,123 +99,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [isSending, setIsSending] = useState(false);
   const [sendSuccess, setSendSuccess] = useState(false);
   const [localProjectName, setLocalProjectName] = useState(projectName);
-
-  // Admin section states
-  const [adminUsers, setAdminUsers] = useState<any[]>([]);
-  const [adminLoading, setAdminLoading] = useState(false);
-  const [adminError, setAdminError] = useState<string | null>(null);
-  const [adminSearchText, setAdminSearchText] = useState('');
-  const [expandedUserIds, setExpandedUserIds] = useState<string[]>([]);
-
-  // Admin section announcement & moderation states
-  const [announcementMessage, setAnnouncementMessage] = useState("La majorité des bugs sont corrigés par notre équipe !");
-  const [isAnnouncementActive, setIsAnnouncementActive] = useState(true);
-  const [savingAnnouncement, setSavingAnnouncement] = useState(false);
-  const [announcementStatusMsg, setAnnouncementStatusMsg] = useState('');
-  const [customBanReasons, setCustomBanReasons] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    if (activeTab === 'admin' && user?.email === 'benit800@gmail.com') {
-      fetchAdminActivity();
-      fetch('/api/announcement')
-        .then(r => r.json())
-        .then(data => {
-          if (data && data.message) {
-            setAnnouncementMessage(data.message);
-            setIsAnnouncementActive(data.active !== false);
-          }
-        })
-        .catch(err => console.warn("Failed to load announcement:", err));
-    }
-  }, [activeTab]);
-
-  const handleSaveAnnouncement = async () => {
-    if (!user?.email) return;
-    setSavingAnnouncement(true);
-    setAnnouncementStatusMsg('');
-    try {
-      const response = await fetch('/api/admin/announcement', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          adminEmail: user.email,
-          message: announcementMessage,
-          active: isAnnouncementActive
-        })
-      });
-      if (response.ok) {
-        setAnnouncementStatusMsg("Bannière et message système mis à jour avec succès !");
-        setTimeout(() => setAnnouncementStatusMsg(''), 3500);
-      } else {
-        const data = await response.json();
-        setAnnouncementStatusMsg(`Erreur : ${data.error || 'Échec de mise à jour'}`);
-      }
-    } catch (err: any) {
-      setAnnouncementStatusMsg(`Erreur réseau : ${err.message}`);
-    } finally {
-      setSavingAnnouncement(false);
-    }
-  };
-
-  const handleToggleBanUser = async (targetUser: any) => {
-    if (!user?.email || !targetUser?.id) return;
-    const isCurrentlyBanned = !!targetUser.isBanned;
-    const banReason = customBanReasons[targetUser.id] || targetUser.banReason || "Non-respect des règles de la plateforme.";
-
-    try {
-      const response = await fetch('/api/admin/ban-user', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          adminEmail: user.email,
-          userId: targetUser.id,
-          username: targetUser.username,
-          reason: banReason,
-          ban: !isCurrentlyBanned
-        })
-      });
-
-      if (response.ok) {
-        setAdminUsers(prev => prev.map(u => u.id === targetUser.id ? { ...u, isBanned: !isCurrentlyBanned, banReason } : u));
-      }
-    } catch (err: any) {
-      console.error("Failed to toggle ban status:", err);
-    }
-  };
-
-  const fetchAdminActivity = async () => {
-    if (user?.email !== 'benit800@gmail.com') return;
-    setAdminLoading(true);
-    setAdminError(null);
-    try {
-      const response = await fetch('/api/admin/users-activity', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ adminEmail: user.email })
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Erreur de communication');
-      }
-      const data = await response.json();
-      if (data.success) {
-        setAdminUsers(data.users || []);
-      } else {
-        throw new Error(data.error || "Impossible de récupérer les rapports.");
-      }
-    } catch (err: any) {
-      console.error(err);
-      setAdminError(err.message || "Erreur lors de la récupération.");
-    } finally {
-      setAdminLoading(false);
-    }
-  };
-
-  const toggleUserExpanded = (userId: string) => {
-    setExpandedUserIds(prev => 
-      prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]
-    );
-  };
 
   const currentUrl = typeof window !== 'undefined' ? window.location.href : 'https://cook-ia.indevs.in';
 
@@ -285,6 +158,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const tabs = isProjectSettings ? [
     { id: 'publish', label: 'Share', icon: Share2 },
+    { id: 'collaboration', label: 'Collaboration', icon: Users },
     { id: 'versions', label: 'Versions', icon: History },
     { id: 'secrets', label: 'Secrets', icon: Key },
     { id: 'integrations', label: 'Integrations', icon: Layers },
@@ -292,7 +166,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     { id: 'general', label: 'Settings', icon: Settings },
     { id: 'models', label: 'AI Models', icon: Sparkles },
     { id: 'account', label: 'Account', icon: User },
-    ...(user?.email === 'benit800@gmail.com' ? [{ id: 'admin', label: 'Super Admin', icon: Activity }] : []),
     { id: 'founder', label: 'Fondateur', icon: ShieldCheck },
     { id: 'help', label: 'Help', icon: HelpCircle },
   ];
@@ -303,12 +176,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setLocalProjectName(projectName);
     }
   }, [isOpen, initialTab, projectName]);
-
-  React.useEffect(() => {
-    if ((activeTab === 'admin' || activeTab === 'account') && user?.email === 'benit800@gmail.com') {
-      fetchAdminActivity();
-    }
-  }, [activeTab, user]);
 
   const renderContent = () => {
     switch (activeTab) {
@@ -482,67 +349,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         return (
           <div className="space-y-6 p-2">
             <div className="flex flex-col gap-1">
-              <h3 className={`text-lg font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>{lang === 'fr' ? "Secrets & Clés API" : "Secrets & API Keys"}</h3>
-              <p className="text-xs text-slate-400">{lang === 'fr' ? "Ces clés sont stockées en toute sécurité et ne seront jamais montrées en public." : "These keys are stored securely and will never be shown in public."}</p>
-            </div>
-            
-            {/* Clé API Gemini Gratuite Card */}
-            <div className={`p-4 rounded-xl border ${
-              isDark 
-                ? 'bg-orange-500/5 border-orange-500/20 text-white' 
-                : 'bg-orange-50 border-orange-200 text-slate-900'
-            }`}>
-              <div className="flex items-start gap-3">
-                <div className="p-2 bg-orange-primary rounded-lg text-white shrink-0">
-                  <Sparkles size={16} />
-                </div>
-                <div className="flex-1 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-bold uppercase tracking-wider text-orange-primary">
-                      {lang === 'fr' ? "Clé API Gemini Gratuite" : "Free Gemini API Key"}
-                    </h4>
-                    {secrets.some(s => s.key === 'GEMINI_API_KEY') ? (
-                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-emerald-500/20 text-emerald-500 border border-emerald-500/30">
-                        <CheckCircle size={10} />
-                        {lang === 'fr' ? "Active" : "Active"}
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-amber-500/20 text-amber-500 border border-amber-500/30">
-                        {lang === 'fr' ? "Non configurée" : "Not configured"}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-slate-400 leading-relaxed">
-                    {lang === 'fr' 
-                      ? "Vous pouvez activer instantanément notre clé API Gemini gratuite incluse pour forger vos projets. Aucune carte de crédit requise, prêt en un clic."
-                      : "You can instantly activate our included free Gemini API key to forge your projects. No credit card required, ready in one click."
-                    }
-                  </p>
-                  
-                  {!secrets.some(s => s.key === 'GEMINI_API_KEY') && (
-                    <button
-                      onClick={() => {
-                        onAddSecret?.('GEMINI_API_KEY', 'FREE_TRIAL_KEY');
-                      }}
-                      className="mt-1 px-4 py-2 bg-gradient-to-r from-orange-primary to-amber-500 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:shadow-lg transition-all"
-                    >
-                      {lang === 'fr' ? "Activer la Clé Gratuite" : "Activate Free Key"}
-                    </button>
-                  )}
-                  
-                  <div className="text-[10px] text-slate-500 flex items-center gap-1 pt-1">
-                    <span>{lang === 'fr' ? "Ou créez votre clé personnelle sur" : "Or get your own personal key on"}</span>
-                    <a 
-                      href="https://aistudio.google.com/" 
-                      target="_blank" 
-                      rel="noopener noreferrer" 
-                      className="text-orange-primary hover:underline font-bold"
-                    >
-                      Google AI Studio
-                    </a>
-                  </div>
-                </div>
-              </div>
+              <h3 className={`text-lg font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>Secrets & API Keys</h3>
+              <p className="text-xs text-slate-400">Ces clés sont stockées en toute sécurité et ne seront jamais montrées en public.</p>
             </div>
             
             <div className="space-y-4">
@@ -686,7 +494,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
             <div className={`p-6 rounded-3xl border ${isDark ? 'border-white/10 bg-white/5' : 'border-slate-100 bg-slate-50'}`}>
               <div className="flex items-center gap-6 mb-8">
-                <div className={`w-20 h-20 rounded-full ${user?.email === 'benit800@gmail.com' ? 'bg-gradient-to-r from-amber-400 to-yellow-600 text-black ring-4 ring-yellow-400 shadow-2xl' : 'bg-blue-600 text-white'} flex items-center justify-center font-bold text-2xl overflow-hidden shadow-2xl`}>
+                <div className="w-20 h-20 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-2xl overflow-hidden shadow-2xl">
                   {user?.user_metadata?.avatar_url ? (
                     <img src={user.user_metadata.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
                   ) : (
@@ -694,30 +502,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   )}
                 </div>
                 <div className="flex flex-col gap-1">
-                  <h4 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-slate-900'} flex items-center gap-2`}>
-                    {user?.email === 'benit800@gmail.com' ? 'Welcome Admin' : (user?.user_metadata?.username || user?.email?.split('@')[0])}
-                    {user?.email === 'benit800@gmail.com' && (
-                      <span className="w-2.5 h-2.5 rounded-full bg-yellow-400 animate-pulse shadow-[0_0_8px_#f59e0b]" />
-                    )}
+                  <h4 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                    {user?.user_metadata?.username || user?.email?.split('@')[0]}
                   </h4>
                   <p className="text-sm text-slate-400">{user?.email}</p>
                   <div className="flex items-center gap-2 mt-2">
-                    {user?.email === 'benit800@gmail.com' ? (
-                      <>
-                        <span className="px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-400/20 to-yellow-500/20 text-yellow-500 border border-yellow-500/30 text-[10px] font-bold uppercase tracking-widest flex items-center gap-1 shadow-lg shadow-yellow-500/5">
-                          <Sparkles size={10} className="animate-pulse" />
-                          Membre Gold
-                        </span>
-                        <span className="px-2.5 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20 text-[10px] font-bold uppercase tracking-widest">
-                          Super Admin
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 text-[10px] font-bold uppercase tracking-widest">Plan Gratuit</span>
-                        <span className="px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 text-[10px] font-bold uppercase tracking-widest">Actif</span>
-                      </>
-                    )}
+                    <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 text-[10px] font-bold uppercase tracking-widest">Plan Gratuit</span>
+                    <span className="px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 text-[10px] font-bold uppercase tracking-widest">Actif</span>
                   </div>
                 </div>
               </div>
@@ -732,121 +523,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <span className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>0 MB</span>
                 </div>
               </div>
-
-              {user?.email === 'benit800@gmail.com' && (
-                <div className="mt-6 border-t border-dashed border-white/10 pt-6 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h4 className={`text-sm font-bold ${isDark ? 'text-white' : 'text-slate-900'} flex items-center gap-2`}>
-                      <Activity size={16} className="text-yellow-500 animate-pulse" />
-                      Activités Réseau (Super Admin)
-                    </h4>
-                    <button 
-                      onClick={fetchAdminActivity}
-                      disabled={adminLoading}
-                      className="text-xs text-yellow-500 hover:underline font-bold"
-                    >
-                      {adminLoading ? "Actualisation..." : "Actualiser ↻"}
-                    </button>
-                  </div>
-                  
-                  {adminLoading && adminUsers.length === 0 ? (
-                    <div className="flex items-center gap-2 text-slate-400 text-xs py-2">
-                      <Loader2 className="animate-spin" size={14} />
-                      Chargement en direct de l'activité utilisateur...
-                    </div>
-                  ) : (
-                    <>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className={`p-3 rounded-xl border ${isDark ? 'border-white/5 bg-black/40' : 'border-slate-200 bg-white shadow-sm'}`}>
-                          <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400 block mb-1">Membres</span>
-                          <span className={`text-lg font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>{adminUsers.length}</span>
-                        </div>
-                        <div className={`p-3 rounded-xl border ${isDark ? 'border-white/5 bg-black/40' : 'border-slate-200 bg-white shadow-sm'}`}>
-                          <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400 block mb-1">Projets / Conversations</span>
-                          <span className={`text-lg font-black ${isDark ? 'text-yellow-500' : 'text-yellow-600'}`}>
-                            {adminUsers.reduce((acc, u) => acc + (u.conversations?.length || 0), 0)}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Search Bar inside Account tab */}
-                      <div className="relative mt-2">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                        <input
-                          type="text"
-                          value={adminSearchText}
-                          onChange={(e) => setAdminSearchText(e.target.value)}
-                          placeholder="Rechercher un utilisateur ou projet..."
-                          className={`w-full pl-9 pr-4 py-1.5 text-xs rounded-xl border focus:outline-none focus:ring-1 ${
-                            isDark 
-                              ? 'border-white/10 bg-black/45 text-white focus:border-yellow-500 focus:ring-yellow-500' 
-                              : 'border-slate-200 bg-white text-slate-900 focus:border-amber-500 focus:ring-amber-500'
-                          }`}
-                        />
-                      </div>
-
-                      {/* Interactive expandable user list of ALL users */}
-                      <div className="space-y-2 mt-2 max-h-[350px] overflow-y-auto pr-1">
-                        <span className="text-[9.5px] uppercase tracking-wider font-extrabold text-slate-500 block mb-1">Tous les Utilisateurs & Actions :</span>
-                        {adminUsers
-                          .filter(u => 
-                            u.username?.toLowerCase().includes(adminSearchText.toLowerCase()) ||
-                            u.id?.toLowerCase().includes(adminSearchText.toLowerCase()) ||
-                            u.conversations?.some((c: any) => c.title?.toLowerCase().includes(adminSearchText.toLowerCase()))
-                          )
-                          .map(u => {
-                            const isExpanded = expandedUserIds.includes(u.id);
-                            const userConvs = u.conversations || [];
-                            return (
-                              <div key={u.id} className={`rounded-xl border text-[11px] transition-all overflow-hidden ${isDark ? 'border-white/5 bg-black/30' : 'border-slate-200/60 bg-white shadow-sm'}`}>
-                                <button 
-                                  onClick={() => toggleUserExpanded(u.id)}
-                                  className="w-full flex items-center justify-between p-2.5 text-left hover:bg-white/5 transition-all"
-                                >
-                                  <div>
-                                    <span className={`font-black ${isDark ? 'text-white' : 'text-slate-800'}`}>{u.username || 'Utilisateur Anonyme'}</span>
-                                    <span className="text-[8px] font-mono text-slate-400 block">ID: {u.id}</span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-[9px] font-mono text-slate-400 bg-blue-500/10 px-1.5 py-0.5 rounded font-bold">
-                                      {userConvs.length} {userConvs.length === 1 ? 'projet' : 'projets'}
-                                    </span>
-                                    <span className="text-[9px] text-slate-400">{isExpanded ? '▲' : '▼'}</span>
-                                  </div>
-                                </button>
-                                
-                                {isExpanded && (
-                                  <div className={`p-2.5 border-t ${isDark ? 'border-white/5 bg-black/20' : 'border-slate-100 bg-slate-50'} space-y-2`}>
-                                    {userConvs.length === 0 ? (
-                                      <p className="text-slate-500 italic text-[10px]">Aucun projet démarré</p>
-                                    ) : (
-                                      userConvs.map((conv: any) => (
-                                        <div key={conv.id} className={`p-2 rounded border text-[10px] ${isDark ? 'border-white/5 bg-zinc-900/50' : 'border-slate-200 bg-white'}`}>
-                                          <div className="flex justify-between font-bold text-slate-400 mb-1">
-                                            <span className={isDark ? 'text-yellow-400/90' : 'text-amber-700'}>{conv.title}</span>
-                                            <span className="text-[8px] font-mono">{conv.createdAt ? new Date(conv.createdAt).toLocaleDateString('fr-FR') : ''}</span>
-                                          </div>
-                                          <div className={`p-1.5 rounded text-[10px] font-mono bg-black/20 text-slate-300 max-h-20 overflow-y-auto whitespace-pre-wrap border ${isDark ? 'border-white/5' : 'border-slate-100'}`}>
-                                            <span className="text-[8px] uppercase text-zinc-500 font-extrabold block scale-90 -ml-1">Dernière invite :</span>
-                                            {conv.latestPrompt || 'Aucun message'}
-                                          </div>
-                                          <div className="flex justify-between text-[8px] text-slate-500 mt-1">
-                                            <span>Messages: {conv.messageCount}</span>
-                                            <span>Model: {conv.modelName || 'Default'}</span>
-                                          </div>
-                                        </div>
-                                      ))
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
             </div>
 
             <div className="space-y-4">
@@ -927,308 +603,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 ))}
               </div>
             </div>
-          </div>
-        );
-      case 'admin':
-        const filteredUsers = adminUsers.filter(u => 
-          u.username?.toLowerCase().includes(adminSearchText.toLowerCase()) ||
-          u.id?.toLowerCase().includes(adminSearchText.toLowerCase()) ||
-          u.conversations?.some((c: any) => c.title?.toLowerCase().includes(adminSearchText.toLowerCase()))
-        );
-
-        return (
-          <div className="space-y-6 p-2 h-[80vh] overflow-y-auto pr-3">
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className={`text-lg font-bold flex items-center gap-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                    <Activity size={18} className="text-yellow-500 animate-pulse" />
-                    Panneau de Contrôle Admin - Benit Madimba
-                  </h3>
-                  <p className="text-xs text-slate-400">Gérez l'annonce système, modérez les règles et suivez l'activité en temps réel.</p>
-                </div>
-                <button 
-                  onClick={fetchAdminActivity}
-                  disabled={adminLoading}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                    isDark 
-                      ? 'bg-[#EAB308]/20 text-yellow-400 border border-yellow-500/30 hover:bg-yellow-500/35' 
-                      : 'bg-amber-100 text-amber-800 border border-amber-200 hover:bg-amber-200'
-                  }`}
-                >
-                  {adminLoading ? "Mise à jour..." : "Actualiser"}
-                </button>
-              </div>
-            </div>
-
-            {/* Section 1: Message Système / Annonce Globale aux Utilisateurs */}
-            <div className={`p-5 rounded-2xl border ${isDark ? 'border-amber-500/30 bg-amber-500/5' : 'border-amber-200 bg-amber-50/60'}`}>
-              <div className="flex items-center gap-2 mb-2">
-                <Bell size={18} className="text-amber-500" />
-                <h4 className={`text-sm font-extrabold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                  Message d'Annonce Système (Bannière Globale)
-                </h4>
-              </div>
-              <p className="text-xs text-slate-400 mb-3">
-                Changez le message affiché en haut du site pour tous les utilisateurs (ex: annoncer des corrections de bugs, maintenances ou nouveautés).
-              </p>
-
-              {/* Presets */}
-              <div className="flex flex-wrap gap-2 mb-3">
-                <button
-                  type="button"
-                  onClick={() => setAnnouncementMessage("La majorité des bugs sont corrigés par notre équipe ! Bonne création.")}
-                  className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20 hover:bg-amber-500/20 transition-all"
-                >
-                  🛠️ Bugs corrigés
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAnnouncementMessage("Nouveau réseau de modèles IA 100% gratuits activé (Gemini, Groq, OpenRouter) !")}
-                  className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20 hover:bg-amber-500/20 transition-all"
-                >
-                  ⚡ Modèles IA Gratuits
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAnnouncementMessage("Serveurs optimisés & stables. Toutes les fonctionnalités sont opérationnelles.")}
-                  className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20 hover:bg-amber-500/20 transition-all"
-                >
-                  🚀 Serveurs stables
-                </button>
-              </div>
-
-              <textarea
-                value={announcementMessage}
-                onChange={(e) => setAnnouncementMessage(e.target.value)}
-                rows={2}
-                placeholder="Rédigez le message de bannière..."
-                className={`w-full p-3 rounded-xl border text-xs focus:outline-none focus:ring-1 ${
-                  isDark 
-                    ? 'border-white/10 bg-black/50 text-white focus:border-amber-500' 
-                    : 'border-slate-300 bg-white text-slate-900 focus:border-amber-500'
-                }`}
-              />
-
-              <div className="flex items-center justify-between mt-3">
-                <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-400">
-                  <input
-                    type="checkbox"
-                    checked={isAnnouncementActive}
-                    onChange={(e) => setIsAnnouncementActive(e.target.checked)}
-                    className="w-4 h-4 rounded text-amber-500 accent-amber-500"
-                  />
-                  <span>Activer l'affichage de la bannière</span>
-                </label>
-
-                <button
-                  onClick={handleSaveAnnouncement}
-                  disabled={savingAnnouncement}
-                  className="px-4 py-2 rounded-xl text-xs font-bold bg-amber-500 text-black hover:bg-amber-400 transition-all flex items-center gap-1.5 shadow-lg shadow-amber-500/20 disabled:opacity-50"
-                >
-                  {savingAnnouncement ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-                  Publier le message
-                </button>
-              </div>
-
-              {announcementStatusMsg && (
-                <div className="mt-2 text-xs font-bold text-emerald-400 text-right">
-                  {announcementStatusMsg}
-                </div>
-              )}
-            </div>
-
-            {/* Stats Summary */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className={`p-4 rounded-2xl border ${isDark ? 'border-white/5 bg-white/5' : 'border-slate-100 bg-slate-50'}`}>
-                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Total Utilisateurs</span>
-                <p className={`text-xl font-extrabold ${isDark ? 'text-white' : 'text-slate-900'}`}>{adminUsers.length}</p>
-              </div>
-              <div className={`p-4 rounded-2xl border ${isDark ? 'border-white/5 bg-white/5' : 'border-slate-100 bg-slate-50'}`}>
-                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Total Projets / Designs</span>
-                <p className={`text-xl font-extrabold ${isDark ? 'text-yellow-500' : 'text-yellow-600'}`}>
-                  {adminUsers.reduce((acc, u) => acc + (u.conversations?.length || 0), 0)}
-                </p>
-              </div>
-              <div className={`p-4 rounded-2xl border ${isDark ? 'border-white/5 bg-white/5' : 'border-slate-100 bg-slate-50'}`}>
-                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Utilisateurs Bannis</span>
-                <p className="text-xl font-extrabold text-red-500">
-                  {adminUsers.filter(u => u.isBanned).length}
-                </p>
-              </div>
-            </div>
-
-            {/* Moderation Title & Search filter input */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <ShieldAlert size={18} className="text-red-500" />
-                <h4 className={`text-sm font-extrabold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                  Gestion des Règles & Bannissement des Utilisateurs
-                </h4>
-              </div>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                <input
-                  type="text"
-                  value={adminSearchText}
-                  onChange={(e) => setAdminSearchText(e.target.value)}
-                  placeholder="Rechercher par nom d'utilisateur, ID, ou titre..."
-                  className={`w-full pl-10 pr-4 py-2 text-sm rounded-xl border focus:outline-none focus:ring-1 ${
-                    isDark 
-                      ? 'border-white/10 bg-black/40 text-white focus:border-yellow-500 focus:ring-yellow-500' 
-                      : 'border-slate-200 bg-white text-slate-900 focus:border-amber-500 focus:ring-amber-500'
-                  }`}
-                />
-              </div>
-            </div>
-
-            {adminError && (
-              <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs text-center">
-                {adminError}
-              </div>
-            )}
-
-            {adminLoading && adminUsers.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 gap-3 text-slate-400">
-                <Loader2 className="animate-spin" size={24} />
-                <span className="text-xs">Chargement sécurisé de la base de données...</span>
-              </div>
-            ) : filteredUsers.length === 0 ? (
-              <div className="text-center py-12 text-slate-400 text-xs">
-                Aucun utilisateur ou projet correspondant trouvé.
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {filteredUsers.map((userObj) => {
-                  const isExpanded = expandedUserIds.includes(userObj.id);
-                  const totalConvs = userObj.conversations?.length || 0;
-                  const isBanned = !!userObj.isBanned;
-
-                  return (
-                    <div 
-                      key={userObj.id} 
-                      className={`rounded-2xl border transition-all ${
-                        isBanned
-                          ? (isDark ? 'border-red-500/30 bg-red-950/20' : 'border-red-200 bg-red-50/50')
-                          : (isDark ? 'border-white/5 bg-zinc-900/60' : 'border-slate-100 bg-white shadow-sm')
-                      }`}
-                    >
-                      {/* User Header Accordion Toggle */}
-                      <div className="w-full flex items-center justify-between p-4 flex-wrap gap-3">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm ${
-                            isBanned ? 'bg-red-500/20 text-red-400' : 'bg-slate-500/20 text-slate-800'
-                          }`}>
-                            {userObj.username?.[0]?.toUpperCase() || 'U'}
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <h4 className={`text-sm font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                                {userObj.username}
-                              </h4>
-                              {isBanned ? (
-                                <span className="px-2 py-0.5 rounded text-[10px] font-black bg-red-500/20 text-red-400 border border-red-500/30 flex items-center gap-1">
-                                  <Ban size={10} /> BANNI
-                                </span>
-                              ) : (
-                                <span className="px-2 py-0.5 rounded text-[10px] font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                                  🟢 Conforme
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-[10px] text-slate-400 font-mono">ID: {userObj.id}</p>
-                            {isBanned && userObj.banReason && (
-                              <p className="text-[10px] text-red-400 italic">Raison: {userObj.banReason}</p>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Ban / Unban Controls */}
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="text"
-                            placeholder="Raison du bannissement..."
-                            value={customBanReasons[userObj.id] || ''}
-                            onChange={(e) => setCustomBanReasons({ ...customBanReasons, [userObj.id]: e.target.value })}
-                            className={`px-2.5 py-1 text-xs rounded-lg border focus:outline-none ${
-                              isDark ? 'bg-black/40 border-white/10 text-white' : 'bg-slate-100 border-slate-200 text-slate-900'
-                            }`}
-                          />
-                          
-                          <button
-                            onClick={() => handleToggleBanUser(userObj)}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 shrink-0 ${
-                              isBanned
-                                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30'
-                                : 'bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30'
-                            }`}
-                          >
-                            {isBanned ? (
-                              <>
-                                <CheckCircle size={12} /> Débannir
-                              </>
-                            ) : (
-                              <>
-                                <Ban size={12} /> Bannir
-                              </>
-                            )}
-                          </button>
-
-                          <button 
-                            onClick={() => toggleUserExpanded(userObj.id)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-white transition-colors"
-                            title="Voir les activités"
-                          >
-                            <span className={`text-xs block transition-transform ${isExpanded ? 'rotate-180' : ''}`}>▼</span>
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Conversations details drawer */}
-                      {isExpanded && (
-                        <div className={`px-4 pb-4 pt-1 border-t ${isDark ? 'border-white/5' : 'border-slate-100'}`}>
-                          {totalConvs === 0 ? (
-                            <p className="text-xs text-slate-400 italic py-2">Aucune conversation active pour le moment.</p>
-                          ) : (
-                            <div className="space-y-3 mt-2">
-                              <p className="text-[10px] uppercase tracking-wider font-extrabold text-slate-400 mb-1">Historique des Prompts et Créations :</p>
-                              {userObj.conversations.map((conv: any) => (
-                                <div 
-                                  key={conv.id} 
-                                  className={`p-3 rounded-xl border ${
-                                    isDark ? 'border-white/5 bg-black/30' : 'border-slate-200/60 bg-slate-50'
-                                  }`}
-                                >
-                                  <div className="flex items-center justify-between mb-1.5">
-                                    <h5 className={`text-xs font-black ${isDark ? 'text-white' : 'text-slate-800'} flex items-center gap-1.5`}>
-                                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                                      {conv.title}
-                                    </h5>
-                                    <span className="text-[9px] font-mono text-slate-400">
-                                      {conv.createdAt ? new Date(conv.createdAt).toLocaleString('fr-FR') : 'Date inconnue'}
-                                    </span>
-                                  </div>
-                                  
-                                  <div className={`p-2 rounded bg-black/10 border ${isDark ? 'border-white/5' : 'border-slate-200'} text-xs font-mono max-h-32 overflow-y-auto whitespace-pre-wrap`}>
-                                    <span className="text-[9px] uppercase text-zinc-500 font-black block mb-1">Dernière action de l'utilisateur :</span>
-                                    <p className={isDark ? 'text-zinc-300' : 'text-zinc-800'}>{conv.latestPrompt}</p>
-                                  </div>
-
-                                  <div className="flex items-center justify-between mt-2 text-[10px] text-slate-500 font-semibold">
-                                    <span>Messages échangés: <b>{conv.messageCount}</b></span>
-                                    <span className="font-mono scale-90">ID: {conv.id}</span>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
           </div>
         );
       case 'help':
@@ -1412,49 +786,46 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         return (
           <div className="space-y-6 p-2">
             <div className="flex flex-col gap-1">
-              <div className="flex items-center gap-2">
-                <Sparkles size={18} className="text-amber-500" />
-                <h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>Modèles IA 100% Gratuits</h3>
-              </div>
-              <p className="text-xs text-slate-400">Choisissez le modèle IA gratuit de votre choix pour alimenter vos créations.</p>
+              <h3 className={`text-lg font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>Intelligence Artificielle</h3>
+              <p className="text-xs text-slate-400">Choisissez le moteur qui alimente vos créations.</p>
             </div>
             
             <div className="space-y-3">
               {[
                 { 
                   id: 'gemini-2.5-flash',
-                  name: 'Gemini 2.5 Flash (Gratuit)', 
+                  name: 'Gemini 2.5 Flash', 
                   provider: 'Google', 
-                  desc: 'Modèle rapide et intelligent. Inclus 100% gratuitement dans la plateforme.', 
-                  badge: '100% Gratuit' 
+                  desc: 'Modèle de production phare, rapide et intelligent. Idéal pour les clés API gratuites/standards.', 
+                  badge: 'Standard Free' 
                 },
                 { 
                   id: 'gemini-2.0-flash',
-                  name: 'Gemini 2.0 Flash (Gratuit)', 
+                  name: 'Gemini 2.0 Flash', 
                   provider: 'Google', 
-                  desc: 'Modèle haute vitesse optimisé pour le code et le design réactif.', 
-                  badge: '100% Gratuit' 
-                },
-                { 
-                  id: 'groq-llama-3.3-70b',
-                  name: 'Groq Llama 3.3 70B (Gratuit)', 
-                  provider: 'Groq Cloud', 
-                  desc: 'Inférence ultra-rapide propulsée par les puces LPU Groq.', 
-                  badge: '100% Gratuit' 
-                },
-                { 
-                  id: 'openrouter-free',
-                  name: 'OpenRouter DeepSeek R1 (Gratuit)', 
-                  provider: 'OpenRouter', 
-                  desc: 'Accès aux modèles gratuits de la communauté (DeepSeek R1, Llama 3.3).', 
-                  badge: '100% Gratuit' 
+                  desc: 'Modèle rapide avec d\'excellentes capacités de mise en page réactive et de design.', 
+                  badge: 'Rapide' 
                 },
                 { 
                   id: 'gemini-1.5-flash',
-                  name: 'Gemini 1.5 Flash (Gratuit)', 
+                  name: 'Gemini 1.5 Flash', 
                   provider: 'Google', 
-                  desc: 'Modèle classique très stable avec un grand contexte.', 
-                  badge: '100% Gratuit' 
+                  desc: 'Modèle classique stable et ultra-robuste avec un grand contexte.', 
+                  badge: 'Stable' 
+                },
+                { 
+                  id: 'gemini-3.5-flash',
+                  name: 'Gemini 3.5 Flash', 
+                  provider: 'Google', 
+                  desc: 'Modèle expérimental de l\'infrastructure.', 
+                  badge: 'Expérimental' 
+                },
+                { 
+                  id: 'zai-org/GLM-5.1-FP8', 
+                  name: 'GLM 5.1', 
+                  provider: 'Zhipu AI (via Modal)', 
+                  desc: 'Modèle ultra-performant pour le raisonnement logique et les structures complexes.', 
+                  badge: 'Nouveau' 
                 },
               ].map((m) => (
                 <button
@@ -1462,7 +833,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   onClick={() => onSelectModel?.(m.id)}
                   className={`w-full text-left p-4 rounded-2xl border transition-all relative group ${
                     selectedModel === m.id 
-                      ? 'border-amber-500 bg-amber-500/10 ring-1 ring-amber-500'
+                      ? 'border-orange-primary bg-orange-primary/5 ring-1 ring-orange-primary'
                       : `border-white/5 bg-white/5 hover:border-white/10 hover:bg-white/10`
                   }`}
                 >
@@ -1472,7 +843,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-white/10 text-white/40 uppercase font-black">{m.provider}</span>
                     </div>
                     {m.badge && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold uppercase tracking-wider">
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-orange-primary text-white font-bold uppercase tracking-wider">
                         {m.badge}
                       </span>
                     )}
@@ -1481,23 +852,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   
                   {selectedModel === m.id && (
                     <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                      <CheckCircle size={20} className="text-amber-500" />
+                      <CheckCircle size={20} className="text-orange-primary" />
                     </div>
                   )}
                 </button>
               ))}
             </div>
 
-            <div className={`p-4 rounded-2xl border ${isDark ? 'bg-amber-500/10 border-amber-500/20' : 'bg-amber-50 border-amber-200'}`}>
+            <div className={`p-4 rounded-2xl border ${isDark ? 'bg-blue-500/5 border-blue-500/20' : 'bg-blue-50 border-blue-100'}`}>
               <div className="flex gap-3">
-                <Info size={18} className="text-amber-500 shrink-0 mt-0.5" />
-                <div className="space-y-1">
-                  <h5 className={`text-xs font-bold ${isDark ? 'text-amber-400' : 'text-amber-900'}`}>Cycle de Secours Automatique (Failover Multi-Fournisseurs)</h5>
-                  <p className={`text-[11px] leading-relaxed ${isDark ? 'text-amber-300/80' : 'text-amber-800'}`}>
-                    Tous les modèles ci-dessus sont 100% gratuits. Si votre modèle principal rencontre un pic de trafic, le cycle passe automatiquement la main : 
-                    <b className="block mt-1">🔄 Gemini Free ➔ Groq Free ➔ OpenRouter Free</b>
-                  </p>
-                </div>
+                <Info size={16} className="text-blue-500 shrink-0 mt-0.5" />
+                <p className={`text-[11px] leading-relaxed ${isDark ? 'text-blue-400' : 'text-blue-700'}`}>
+                  Le modèle sélectionné sera utilisé pour toutes les nouvelles générations et mises à jour de sections. 
+                  Si un modèle est temporairement indisponible, le système basculera automatiquement sur Gemini.
+                </p>
               </div>
             </div>
           </div>

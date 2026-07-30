@@ -6,8 +6,8 @@ import { shadowWatchdog } from '../services/multiAgentService';
 import { UnderwaterWelcome } from './UnderwaterWelcome';
 import { MessageActionOverlay } from './MessageActionOverlay';
 import { TypingIndicator } from './TypingIndicator';
-import { MultiAgentSquad } from './MultiAgentSquad';
-import { translations, Language } from '../translations';
+
+// ... (rest of the file remains largely the same, applying changes to message mapping logic)
 
 interface ChatInterfaceProps {
   messages: Message[];
@@ -32,10 +32,6 @@ interface ChatInterfaceProps {
   isFocusMode?: boolean;
   setIsFocusMode?: (val: boolean) => void;
   onFeedback?: (index: number, type: 'like' | 'dislike') => void;
-  lang?: Language;
-  currentAgentStage?: 'architect' | 'designer' | 'developer' | 'tester' | 'inspector' | 'idle' | 'complete';
-  qaAuditSummary?: any;
-  qaLogs?: string[];
 }
 
 const ActionHistoryItem: React.FC<{ action: ActionHistory; isDark: boolean }> = ({ action, isDark }) => {
@@ -93,12 +89,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   isFocusMode = false,
   setIsFocusMode,
   onFeedback,
-  lang = 'fr',
-  currentAgentStage = 'idle',
-  qaAuditSummary,
-  qaLogs = []
 }) => {
-  const t = translations[lang];
   const [suggestion, setSuggestion] = React.useState<string>("");
   const mirrorRef = React.useRef<HTMLDivElement>(null);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
@@ -271,18 +262,11 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 </div>
                 
                 <h2 className="font-display text-3xl md:text-5xl font-black text-white mb-4 tracking-tighter">
-                  {lang === 'fr' ? (
-                    <>VOTRE VISION, <span className="text-orange-primary">NOS EXPERTS.</span></>
-                  ) : (
-                    <>YOUR VISION, <span className="text-orange-primary">OUR EXPERTS.</span></>
-                  )}
+                  VOTRE VISION, <span className="text-orange-primary">NOS EXPERTS.</span>
                 </h2>
                 
                 <p className={`text-sm md:text-base ${isDark ? 'text-white/60' : 'text-slate-500'} mb-10 max-w-lg leading-relaxed`}>
-                  {lang === 'fr' 
-                    ? "Décrivez votre projet web et laissez notre système d'agents experts (Gemini, Llama) s'occuper de l'architecture, du design et du code."
-                    : "Describe your web project and let our expert agent system (Gemini, Llama) handle the architecture, design, and code."
-                  }
+                  Décrivez votre projet web et laissez notre système multi-agents expert (GLM, Gemini, Llama) s'occuper de l'architecture, du design et du code.
                 </p>
                 
                 <div className="flex flex-wrap justify-center gap-2 mb-12">
@@ -294,9 +278,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 </div>
 
                 <div className="flex flex-col items-center gap-2 text-orange-primary/60 animate-bounce">
-                  <span className="text-[10px] font-black uppercase tracking-[0.3em]">
-                    {lang === 'fr' ? "Posez votre question ci-dessous" : "Ask your question below"}
-                  </span>
+                  <span className="text-[10px] font-black uppercase tracking-[0.3em]">Posez votre question ci-dessous</span>
                   <ChevronDown size={16} />
                 </div>
               </div>
@@ -408,20 +390,12 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         
         {isLoading && (
           <div className="flex flex-col gap-4 max-w-4xl mx-auto w-full">
-            <MultiAgentSquad 
-              currentStage={currentAgentStage} 
-              isGenerating={isLoading} 
-              isDark={isDark} 
-              qaLogs={qaLogs} 
-              auditSummary={qaAuditSummary} 
-            />
-
             <div className="flex items-center gap-3 mb-1">
               <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600'}`}>
                 <Loader2 size={12} className="animate-spin" />
               </div>
               <span className={`text-[10px] font-bold uppercase tracking-[0.2em] ${isDark ? 'text-white/40' : 'text-slate-400'}`}>
-                Cook IA Multi-Agents Engine
+                Cook IA
               </span>
             </div>
             <div className="pl-9 space-y-6">

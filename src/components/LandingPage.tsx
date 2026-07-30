@@ -32,18 +32,14 @@ import {
   Award
 } from 'lucide-react';
 import { supabase } from '../services/supabaseService';
-import { translations, Language } from '../translations';
 
 interface LandingPageProps {
   onEnter: (prompt?: string) => void;
-  lang: Language;
-  setLang: (l: Language) => void;
 }
 
 type DemoTab = 'saas' | 'ecommerce' | 'portfolio';
 
-export const LandingPage: React.FC<LandingPageProps> = ({ onEnter, lang, setLang }) => {
-  const t = translations[lang];
+export const LandingPage: React.FC<LandingPageProps> = ({ onEnter }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
     target: containerRef,
@@ -451,44 +447,18 @@ export default function DevPortfolio() {
         </div>
         
         <div className="hidden md:flex items-center gap-10">
-          <button onClick={() => scrollToSection('ideas')} className="text-xs font-bold uppercase tracking-widest text-white/50 hover:text-orange-primary transition-colors">
-            {lang === 'fr' ? "Concept" : "Concept"}
-          </button>
-          <button onClick={() => scrollToSection('agents')} className="text-xs font-bold uppercase tracking-widest text-white/50 hover:text-orange-primary transition-colors">
-            {lang === 'fr' ? "Réflexion des IA" : "AI Thought Process"}
-          </button>
-          <button onClick={() => scrollToSection('tech')} className="text-xs font-bold uppercase tracking-widest text-white/50 hover:text-orange-primary transition-colors">
-            {lang === 'fr' ? "Tech" : "Tech Stack"}
-          </button>
-          <button onClick={() => scrollToSection('stats')} className="text-xs font-bold uppercase tracking-widest text-white/50 hover:text-orange-primary transition-colors">
-            {lang === 'fr' ? "Garanties" : "Guarantees"}
-          </button>
+          <button onClick={() => scrollToSection('ideas')} className="text-xs font-bold uppercase tracking-widest text-white/50 hover:text-orange-primary transition-colors">Concept</button>
+          <button onClick={() => scrollToSection('agents')} className="text-xs font-bold uppercase tracking-widest text-white/50 hover:text-orange-primary transition-colors">Équipe d'Agents</button>
+          <button onClick={() => scrollToSection('tech')} className="text-xs font-bold uppercase tracking-widest text-white/50 hover:text-orange-primary transition-colors">Tech</button>
+          <button onClick={() => scrollToSection('stats')} className="text-xs font-bold uppercase tracking-widest text-white/50 hover:text-orange-primary transition-colors">Garanties</button>
         </div>
 
-        <div className="flex items-center gap-4">
-          {/* Language Selection */}
-          <div className="flex bg-white/5 border border-white/10 rounded-xl p-0.5" id="lang-switcher">
-            <button 
-              onClick={() => setLang('fr')}
-              className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${lang === 'fr' ? 'bg-orange-primary text-white shadow-md' : 'text-white/60 hover:text-white'}`}
-            >
-              FR
-            </button>
-            <button 
-              onClick={() => setLang('en')}
-              className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${lang === 'en' ? 'bg-orange-primary text-white shadow-md' : 'text-white/60 hover:text-white'}`}
-            >
-              EN
-            </button>
-          </div>
-
-          <button 
-            onClick={() => onEnter()}
-            className="group relative px-6 py-3 rounded-xl bg-white/5 hover:bg-orange-primary hover:text-white text-white text-xs font-bold uppercase tracking-widest border border-white/10 hover:border-transparent transition-all hover:scale-105"
-          >
-            {lang === 'fr' ? "Lancer la Console" : "Launch Console"}
-          </button>
-        </div>
+        <button 
+          onClick={() => onEnter()}
+          className="group relative px-6 py-3 rounded-xl bg-white/5 hover:bg-orange-primary hover:text-white text-white text-xs font-bold uppercase tracking-widest border border-white/10 hover:border-transparent transition-all hover:scale-105"
+        >
+          Lancer la Console
+        </button>
       </nav>
 
       {/* HERO SECTION (SURFACE: 0m) */}
@@ -508,7 +478,7 @@ export default function DevPortfolio() {
         {/* Brand visual tags */}
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/10 bg-white/5 text-[9px] font-bold uppercase tracking-widest mb-6 backdrop-blur-3xl text-orange-primary font-mono shadow-xl shadow-black/20">
           <Sparkles size={10} className="animate-spin" />
-          <span>{t.tagline}</span>
+          <span>Moteur Multi-Agent de Troisième Génération v.3.5</span>
         </div>
 
         <h1 className="font-display text-5xl sm:text-7xl md:text-8xl mb-8 text-center tracking-widest leading-none relative">
@@ -534,7 +504,8 @@ export default function DevPortfolio() {
         </h1>
 
         <p className="max-w-3xl text-center text-lg sm:text-2xl text-white/70 font-medium mb-12 px-2 leading-relaxed">
-          {t.heroDesc}
+          L'intelligence artificielle d'élite qui ne se contente pas de coder,<br className="hidden sm:inline" />
+          <span className="text-white font-extrabold border-b-2 border-orange-primary/30 pb-1">elle forge des écosystèmes full-stack complets en quelques secondes.</span>
         </p>
 
         {/* HIGH-END INTERACTIVE CONTROL DECK */}
@@ -551,9 +522,7 @@ export default function DevPortfolio() {
           {/* Core high-tech grid metrics indicators */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
             <div className="p-3 bg-white/[0.01] border border-white/5 rounded-xl flex flex-col justify-between hover:border-orange-primary/20 transition-all duration-300">
-              <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest font-bold">
-                {lang === 'fr' ? "Moteur Intelligent" : "AI Core Engine"}
-              </span>
+              <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest font-bold">Moteur Intelligent</span>
               <div className="flex items-center gap-2 mt-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_#10b981]" />
                 <span className="text-[11px] font-black font-mono text-white">COOK IA v3.5 Super-Active</span>
@@ -561,22 +530,18 @@ export default function DevPortfolio() {
             </div>
             
             <div className="p-3 bg-white/[0.01] border border-white/5 rounded-xl flex flex-col justify-between hover:border-orange-primary/20 transition-all duration-300">
-              <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest font-bold">
-                {lang === 'fr' ? "Agents de Synapse" : "Synaptic Agents"}
-              </span>
+              <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest font-bold">Agents de Synapse</span>
               <div className="flex items-center gap-2 mt-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-orange-primary animate-pulse shadow-[0_0_8px_#ff6b00]" />
-                <span className="text-[11px] font-black font-mono text-white">{activeUsersCount} {t.agentsConnected}</span>
+                <span className="text-[11px] font-black font-mono text-white">{activeUsersCount} EXPERTS CONNECTÉS</span>
               </div>
             </div>
 
             <div className="p-3 bg-white/[0.01] border border-white/5 rounded-xl flex flex-col justify-between hover:border-orange-primary/20 transition-all duration-300">
-              <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest font-bold">
-                {lang === 'fr' ? "Latence Active" : "Active Latency"}
-              </span>
+              <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest font-bold">Latence Active</span>
               <div className="flex items-center gap-2 mt-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-cyan-bio animate-pulse shadow-[0_0_8px_#00f5d4]" />
-                <span className="text-[11px] font-black font-mono text-white">{latence}ms ({t.activeLatency})</span>
+                <span className="text-[11px] font-black font-mono text-white">{latence}ms (Latence Cache)</span>
               </div>
             </div>
           </div>
@@ -586,50 +551,28 @@ export default function DevPortfolio() {
             <div className="flex items-center justify-between mb-2">
               <label className="text-[10px] font-mono uppercase tracking-widest font-black text-orange-primary flex items-center gap-1.5">
                 <Brain size={12} className="animate-pulse text-orange-primary" />
-                <span>{lang === 'fr' ? "Rédiger vos instructions de Forge" : "Write your forge instructions"}</span>
+                <span>Rédiger vos instructions de Forge</span>
               </label>
-              <span className="text-[9px] font-mono text-zinc-500 uppercase">{lang === 'fr' ? "Entrée Libre" : "Free Input"}</span>
+              <span className="text-[9px] font-mono text-zinc-500 uppercase">Input Libre</span>
             </div>
 
             <textarea
               value={customPrompt}
               onChange={(e) => setCustomPrompt(e.target.value)}
-              placeholder={t.placeholderInput}
+              placeholder="Ex: Crée un dashboard d'analytics de crypto-monnaies avec des graphiques en temps réel et un panneau latéral de contrôle..."
               className="w-full min-h-[90px] p-4 bg-black/60 border border-white/10 hover:border-white/20 focus:border-orange-primary/50 focus:ring-1 focus:ring-orange-primary/30 rounded-xl text-xs sm:text-sm text-white placeholder-zinc-600 focus:outline-none transition-all resize-none leading-relaxed font-sans shadow-inner"
             />
           </div>
 
           {/* Quick Select Preset Templates */}
           <div className="mb-6">
-            <div className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest font-bold mb-2.5">
-              {lang === 'fr' ? "Outils de Forge Instantanée (Cliquez pour remplir)" : "Instant Forge Presets (Click to fill)"}
-            </div>
+            <div className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest font-bold mb-2.5">Outils de Forge Instantanée (Cliquez pour remplir)</div>
             <div className="grid grid-cols-2 gap-2">
               {[
-                { 
-                  label: "📊 SaaS Analytics", 
-                  text: lang === 'fr' 
-                     ? "Un tableau de bord SaaS financier ultra moderne avec graphiques d'analyse interactive et widgets de KPI." 
-                     : "A ultra-modern financial SaaS dashboard with interactive analytics and KPI widgets." 
-                },
-                { 
-                  label: "🛍️ Shop Tactile", 
-                  text: lang === 'fr' 
-                    ? "Un e-commerce sombre de vêtements de luxe incluant panier actif, filtres par catégorie et vue produit." 
-                    : "A luxurious dark e-commerce marketplace featuring shopping cart, filters, and product views." 
-                },
-                { 
-                  label: "📂 Portfolio 3D", 
-                  text: lang === 'fr' 
-                    ? "Un portfolio d'architecte ultra-sleek avec galerie immersive, animations de transition et formulaire de contact." 
-                    : "An ultra-sleek design architect portfolio with immersive layout, transition animations, and contact forms." 
-                },
-                { 
-                  label: "✓ Task Board", 
-                  text: lang === 'fr' 
-                    ? "Une application de tableau de gestion de tâches style Agile/Kanban avec listes personnalisées." 
-                    : "An interactive Kanban style task management agile index flow with customizable lists." 
-                }
+                { label: "📊 SaaS Analytics", text: "Un tableau de bord SaaS financier ultra moderne avec graphiques d'analyse interactive et widgets de KPI." },
+                { label: "🛍️ Shop Tactile", text: "Un e-commerce sombre de vêtements de luxe incluant panier actif, filtres par catégorie et vue produit." },
+                { label: "📂 Portfolio 3D", text: "Un portfolio d'architecte ultra-sleek avec galerie immersive, animations de transition et formulaire de contact." },
+                { label: "✓ Task Board", text: "Une application de tableau de gestion de tâches style Agile/Kanban avec listes personnalisées." }
               ].map((template, i) => (
                 <button
                   key={i}
@@ -650,18 +593,18 @@ export default function DevPortfolio() {
               className="flex-1 w-full group relative px-8 py-4 sm:py-5 bg-gradient-to-r from-orange-primary to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-display font-black text-xs uppercase tracking-widest rounded-xl transition-all shadow-[0_15px_35px_rgba(255,107,0,0.3)] hover:shadow-[0_15px_45px_rgba(255,107,0,0.45)] hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-3"
             >
               <Zap size={15} className="text-white fill-white animate-pulse" />
-              <span>{customPrompt.trim() ? t.forgeBtn : t.launchCookIA}</span>
+              <span>{customPrompt.trim() ? "Forger ce Projet" : "Lancer le Moteur Cook IA"}</span>
               <ArrowRight size={15} className="group-hover:translate-x-1.5 transition-transform" />
             </button>
 
             <button
               onClick={() => {
-                setCustomPrompt(lang === 'fr' ? "Un dashboard SaaS d'analytics financières complet et design" : "A complete financial SaaS analytics dashboard with premium layout");
+                setCustomPrompt("Un dashboard SaaS d'analytics financières complet et design");
                 scrollToSection('ideas');
               }}
               className="px-8 py-4 sm:py-5 w-full sm:w-auto border border-white/10 hover:border-white/20 bg-white/[0.01] hover:bg-white/5 text-zinc-300 hover:text-white font-display font-black text-xs uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2"
             >
-              <span>{lang === 'fr' ? "Démo Interactive" : "Interactive Demo"}</span>
+              <span>Démo Interactive</span>
               <ChevronDown size={14} className="opacity-65" />
             </button>
           </div>
@@ -1000,13 +943,8 @@ export default function DevPortfolio() {
               transition={{ delay: i * 0.1, duration: 0.6 }}
               className={`flex items-start gap-6 p-8 rounded-2xl border ${agent.color} transition-all duration-300 shadow-xl shadow-black/10`}
             >
-              <div className="w-16 h-16 shrink-0 rounded-xl bg-gradient-to-br from-slate-800 to-black p-0.5 border-2 border-white/20 shadow-md">
-                <div className="w-full h-full rounded-[10px] bg-slate-950 flex flex-col items-center justify-center p-1 text-white relative overflow-hidden group">
-                  <div className="absolute inset-0 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:8px_8px] opacity-10" />
-                  <div className="p-1.5 rounded-lg bg-white/10 backdrop-blur-md text-white border border-white/20 group-hover:scale-110 transition-transform origin-center scale-75">
-                    {agent.icon}
-                  </div>
-                </div>
+              <div className="w-16 h-16 shrink-0 rounded-xl bg-white/5 flex items-center justify-center text-white border border-white/5 relative group-hover:scale-105 transition-transform">
+                {agent.icon}
               </div>
               <div>
                 <h4 className="font-display text-xl mb-2 text-white font-black tracking-wider uppercase">{agent.name}</h4>
