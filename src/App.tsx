@@ -1813,7 +1813,7 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
             <Preview 
               viewMode={viewMode}
               generatedCode={generatedCode}
-              files={[...messages].reverse().find(m => m.role === 'model' && m.files)?.files || []}
+              files={[...messages].reverse().find(m => m.role === 'model' && m.files)?.files || (generatedCode ? [{ path: 'index.html', content: generatedCode }] : [])}
               iframeRef={iframeRef}
               onRefresh={handleRefresh}
               onExpand={handleExpand}

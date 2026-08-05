@@ -57,13 +57,21 @@ export const Preview: React.FC<PreviewProps> = ({
   const [deviceViewport, setDeviceViewport] = React.useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [isOverlayMinimized, setIsOverlayMinimized] = React.useState(false);
 
-  React.useEffect(() => {
-    if (files.length > 0 && !selectedFilePath) {
-      setSelectedFilePath(files[0].path);
+  const effectiveFiles = React.useMemo(() => {
+    if (files && files.length > 0) return files;
+    if (generatedCode) {
+      return [{ path: 'index.html', content: generatedCode }];
     }
-  }, [files]);
+    return [];
+  }, [files, generatedCode]);
 
-  const selectedFile = files.find(f => f.path === selectedFilePath);
+  React.useEffect(() => {
+    if (effectiveFiles.length > 0 && (!selectedFilePath || !effectiveFiles.some(f => f.path === selectedFilePath))) {
+      setSelectedFilePath(effectiveFiles[0].path);
+    }
+  }, [effectiveFiles, selectedFilePath]);
+
+  const selectedFile = effectiveFiles.find(f => f.path === selectedFilePath) || effectiveFiles[0];
 
   // Apply Style Overrides
   React.useEffect(() => {
@@ -541,7 +549,7 @@ export const Preview: React.FC<PreviewProps> = ({
                   Project Files
                 </div>
                 <div className="flex-1 overflow-y-auto p-2 space-y-1 scrollbar-hide">
-                  {files.map((file) => (
+                  {effectiveFiles.map((file) => (
                     <button
                       key={file.path}
                       onClick={() => setSelectedFilePath(file.path)}
@@ -606,7 +614,7 @@ export const Preview: React.FC<PreviewProps> = ({
                       }
                     }}
                   >
-                    {selectedFile?.content || "<!-- Select a file to view code -->"}
+                    {selectedFile?.content || generatedCode || "<!-- Aucun code disponible pour le moment -->"}
                   </SyntaxHighlighter>
                 </div>
               </div>
