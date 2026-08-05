@@ -434,21 +434,41 @@ export default function App() {
   }, [user]);
 
   const loadConversations = async () => {
-    const { data, error } = await supabase
-      .from('conversations')
-      .select('*')
-      .order('created_at', { ascending: false });
-    
-    if (error) {
-      if (error.message.includes("Refresh Token Not Found") || error.message.includes("Invalid Refresh Token")) {
-        supabase.auth.signOut();
-        setUser(null);
-        setConversations([]);
+    try {
+      const savedLocal = localStorage.getItem('cook_ia_local_conversations');
+      const localConvs: Conversation[] = savedLocal ? JSON.parse(savedLocal) : [];
+
+      if (!user) {
+        setConversations(localConvs);
+        return;
       }
-      console.error("Error loading conversations:", error);
-      return;
+
+      const { data, error } = await supabase
+        .from('conversations')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        if (error.message?.includes("Refresh Token Not Found") || error.message?.includes("Invalid Refresh Token")) {
+          supabase.auth.signOut().catch(() => {});
+          setUser(null);
+        }
+        console.log("[Conversations] Supabase load note:", error.message || error);
+        setConversations(localConvs);
+        return;
+      }
+      if (data && data.length > 0) {
+        setConversations(data);
+      } else {
+        setConversations(localConvs);
+      }
+    } catch (e) {
+      console.log("[Conversations] Using local storage fallback.");
+      try {
+        const savedLocal = localStorage.getItem('cook_ia_local_conversations');
+        if (savedLocal) setConversations(JSON.parse(savedLocal));
+      } catch {}
     }
-    if (data) setConversations(data);
   };
 
   const handleSelectConversation = (id: string) => {
@@ -479,32 +499,93 @@ export default function App() {
   };
 
   const handleDeleteConversation = async (id: string) => {
-    const { error } = await supabase.from('conversations').delete().eq('id', id);
-    if (!error) {
+    if (id.startsWith('local_')) {
+      try {
+        const savedLocal = localStorage.getItem('cook_ia_local_conversations');
+        let localConvs: Conversation[] = savedLocal ? JSON.parse(savedLocal) : [];
+        localConvs = localConvs.filter(c => c.id !== id);
+        localStorage.setItem('cook_ia_local_conversations', JSON.stringify(localConvs));
+        setConversations(localConvs);
+        if (currentConversationId === id) handleNewChat();
+      } catch {}
+      return;
+    }
+
+    try {
+      const { error } = await supabase.from('conversations').delete().eq('id', id);
+      if (!error) {
+        setConversations(prev => prev.filter(c => c.id !== id));
+        if (currentConversationId === id) handleNewChat();
+      } else {
+        setConversations(prev => prev.filter(c => c.id !== id));
+        if (currentConversationId === id) handleNewChat();
+      }
+    } catch {
       setConversations(prev => prev.filter(c => c.id !== id));
       if (currentConversationId === id) handleNewChat();
     }
   };
 
   const saveConversation = async (msgs: Message[], title?: string) => {
-    if (!user) return;
-    
-    if (currentConversationId) {
-      await supabase
-        .from('conversations')
-        .update({ messages: msgs })
-        .eq('id', currentConversationId);
-    } else {
-      const newTitle = title || await generateTitle(msgs[1].content);
-      const { data } = await supabase
-        .from('conversations')
-        .insert([{ title: newTitle, messages: msgs, user_id: user.id }])
-        .select();
-      
-      if (data && data[0]) {
-        setCurrentConversationId(data[0].id);
-        setConversations(prev => [data[0], ...prev]);
+    const saveToLocalStorage = async (convId: string | null) => {
+      try {
+        const savedLocal = localStorage.getItem('cook_ia_local_conversations');
+        let localConvs: Conversation[] = savedLocal ? JSON.parse(savedLocal) : [];
+        const existingId = convId || currentConversationId || `local_${Date.now()}`;
+        const newTitle = title || (msgs[1]?.content ? msgs[1].content.substring(0, 30) : "Nouvelle conversation");
+        
+        const existingIndex = localConvs.findIndex(c => c.id === existingId);
+        const updatedConv: Conversation = {
+          id: existingId,
+          title: newTitle,
+          messages: msgs,
+          created_at: new Date().toISOString()
+        };
+
+        if (existingIndex >= 0) {
+          localConvs[existingIndex] = { ...localConvs[existingIndex], messages: msgs };
+        } else {
+          localConvs.unshift(updatedConv);
+        }
+
+        localStorage.setItem('cook_ia_local_conversations', JSON.stringify(localConvs));
+        if (!currentConversationId) setCurrentConversationId(existingId);
+        setConversations(localConvs);
+      } catch (err) {
+        console.log("[Local Storage] Error saving conversation:", err);
       }
+    };
+
+    if (!user) {
+      await saveToLocalStorage(currentConversationId);
+      return;
+    }
+    
+    try {
+      if (currentConversationId && !currentConversationId.startsWith('local_')) {
+        const { error } = await supabase
+          .from('conversations')
+          .update({ messages: msgs })
+          .eq('id', currentConversationId);
+        if (error) {
+          await saveToLocalStorage(currentConversationId);
+        }
+      } else {
+        const newTitle = title || await generateTitle(msgs[1]?.content || "Nouvelle conversation");
+        const { data, error } = await supabase
+          .from('conversations')
+          .insert([{ title: newTitle, messages: msgs, user_id: user.id }])
+          .select();
+        
+        if (data && data[0]) {
+          setCurrentConversationId(data[0].id);
+          setConversations(prev => [data[0], ...prev.filter(c => c.id !== data[0].id)]);
+        } else if (error) {
+          await saveToLocalStorage(null);
+        }
+      }
+    } catch (e) {
+      await saveToLocalStorage(currentConversationId);
     }
   };
 
@@ -590,7 +671,7 @@ export default function App() {
     try {
       const history = messages.map(m => ({
         role: m.role,
-        parts: [{ text: m.content }]
+        parts: [{ text: m.content || '' }]
       }));
 
       // 2. Engineer Phase
@@ -869,7 +950,7 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
 
     try {
       const history = await Promise.all(newMessages.map(async (m) => {
-        const parts: any[] = [{ text: m.content + (m.code ? `\n\nCode:\n${m.code}` : '') }];
+        const parts: any[] = [{ text: (m.content || '') + (m.code ? `\n\nCode:\n${m.code}` : '') }];
         if (m.images && m.images.length > 0) {
           for (const img of m.images) {
             if (img.startsWith('data:')) {
@@ -1726,6 +1807,7 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
               currentAgentStage={currentAgentStage}
               qaAuditSummary={qaAuditSummary}
               qaLogs={qaLogs}
+              onSelectView={(v) => setViewMode(v as any)}
             />
           ) : (
             <Preview 

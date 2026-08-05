@@ -127,3 +127,42 @@ WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "L'utilisateur peut voir ses propres messages" 
 ON public.support_messages FOR SELECT 
 USING (auth.uid() = user_id);
+
+
+-- 5. Table des annonces système (system_announcements)
+CREATE TABLE IF NOT EXISTS public.system_announcements (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    message TEXT NOT NULL,
+    active BOOLEAN DEFAULT true,
+    updated_by TEXT,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+ALTER TABLE public.system_announcements ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Tout le monde peut voir les annonces" ON public.system_announcements;
+CREATE POLICY "Tout le monde peut voir les annonces" 
+ON public.system_announcements FOR SELECT 
+USING (true);
+
+-- Insert default announcement
+INSERT INTO public.system_announcements (message, active, updated_by)
+VALUES ('La majorité des bugs sont corrigés par l''équipe !', true, 'Admin')
+ON CONFLICT DO NOTHING;
+
+
+-- 6. Table des journaux d'erreurs (error_logs)
+CREATE TABLE IF NOT EXISTS public.error_logs (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    error_message TEXT,
+    context TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+ALTER TABLE public.error_logs ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Tout le monde peut insérer des logs d'erreurs" ON public.error_logs;
+CREATE POLICY "Tout le monde peut insérer des logs d'erreurs" 
+ON public.error_logs FOR INSERT 
+WITH CHECK (true);
+

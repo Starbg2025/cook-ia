@@ -243,40 +243,33 @@ const cleanAndParseJSON = (text: string) => {
   try {
     return JSON.parse(target);
   } catch (error: any) {
-    console.warn("Standard JSON parsing failed. Trying repair truncated JSON...", error.message);
+    console.log("Standard JSON parsing note:", error.message);
     try {
       const repaired = repairTruncatedJSON(cleaned);
       return JSON.parse(repaired);
     } catch (repairError: any) {
-      console.warn("JSON repair failed, falling back to regex extraction...", repairError.message);
+      console.log("JSON repair note:", repairError.message);
       try {
         const fallback = extractPayloadRegexFallback(text);
         if (fallback.preview_code) {
           return fallback;
         }
       } catch (regexError: any) {
-        console.error("Regex fallback extraction failed:", regexError.message);
+        console.log("Regex fallback note:", regexError.message);
       }
     }
     throw new Error(`Failed to parse AI response as JSON: ${error.message}`);
   }
 };
 
-const isUserKeyOrQuotaError = (msg: string) => {
-  const normalized = msg.toLowerCase();
-  return (
-    normalized.includes("key") ||
-    normalized.includes("api_key") ||
-    normalized.includes("apikey") ||
-    normalized.includes("unauthorized") ||
-    normalized.includes("forbidden") ||
-    normalized.includes("quota") ||
-    normalized.includes("billing") ||
-    normalized.includes("limit") ||
-    normalized.includes("invalid") ||
-    normalized.includes("clã©") || // Handle encoding in error messages
-    normalized.includes("clé")
-  );
+const isInvalidUserKeyError = (msg: string, hasUserKey: boolean) => {
+  if (hasUserKey) {
+    const normalized = msg.toLowerCase();
+    if (normalized.includes("api_key_invalid") || normalized.includes("invalid api key")) {
+      return true;
+    }
+  }
+  return false;
 };
 
 const callGeminiProxy = async (prompt: string, history: any[], systemInstruction?: string, model?: string, images?: any[], responseMimeType?: string) => {
@@ -386,7 +379,7 @@ INSTRUCTIONS:
     const text = await callGeminiProxy(targetPrompt, [], "You are a world-class full-stack developer.", undefined, undefined, "application/json");
     return cleanAndParseJSON(text);
   } catch (error: any) {
-    if (isUserKeyOrQuotaError(error.message)) {
+    if (isInvalidUserKeyError(error.message, hasUserKey)) {
       throw error;
     }
     if (!hasUserKey) {
@@ -456,7 +449,7 @@ Return the result in JSON format with two fields:
     const text = await callGeminiProxy(userPrompt, history, systemInstruction, model, undefined, "application/json");
     return cleanAndParseJSON(text);
   } catch (error: any) {
-    if (isUserKeyOrQuotaError(error.message)) {
+    if (isInvalidUserKeyError(error.message, hasUserKey)) {
       throw error;
     }
     if (!hasUserKey) {
@@ -472,7 +465,7 @@ export const generateWebsite = async (
   history: { role: "user" | "model", parts: { text?: string, inlineData?: { mimeType: string, data: string } }[] }[],
   images?: { mimeType: string, data: string }[],
   videos?: { mimeType: string, data: string }[],
-  model: string = "gemini-2.5-flash"
+  model: string = "gemini-2.0-flash"
 ) => {
   const hasUserKey = !!getCustomHeaders()['x-gemini-key'];
   const isHealthy = shadowWatchdog.isHealthy();
@@ -502,7 +495,7 @@ export const generateWebsite = async (
     const text = await callGeminiProxy(prompt, history, systemInstruction, model, images, "application/json");
     return { ...cleanAndParseJSON(text), _provider: 'gemini' };
   } catch (error: any) {
-    if (isUserKeyOrQuotaError(error.message)) {
+    if (isInvalidUserKeyError(error.message, hasUserKey)) {
       throw error;
     }
     if (!hasUserKey) {
@@ -516,7 +509,7 @@ export const generateWebsite = async (
 export const answerQuestion = async (
   prompt: string,
   history: any[],
-  model: string = "gemini-2.5-flash"
+  model: string = "gemini-2.0-flash"
 ) => {
   const qaInstruction = "Tu es COOK IA, l'assistant senior web de classe mondiale créé par Benit Madimba. L'utilisateur te pose une question directe sur son projet, le code web ou le développement. Réponds-lui directement de manière claire, concise, structurée et bienveillante en français avec du formatage Markdown si utile. Ne génère AUCUN code HTML complet ou JSON de site web, réponds simplement sous forme de texte explicatif naturel.";
   
@@ -537,7 +530,7 @@ export const answerQuestion = async (
     const text = await callGeminiProxy(prompt, history, qaInstruction, model);
     return text;
   } catch (error: any) {
-    if (isUserKeyOrQuotaError(error.message)) throw error;
+    if (isInvalidUserKeyError(error.message, hasUserKey)) throw error;
     try {
       const res = await generateWithAIFallback(prompt, history, undefined, model);
       return typeof res === 'string' ? res : (res.explanation || res.text || JSON.stringify(res));

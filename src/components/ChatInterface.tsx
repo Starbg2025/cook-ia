@@ -6,7 +6,6 @@ import { shadowWatchdog } from '../services/multiAgentService';
 import { UnderwaterWelcome } from './UnderwaterWelcome';
 import { MessageActionOverlay } from './MessageActionOverlay';
 import { TypingIndicator } from './TypingIndicator';
-import { MultiAgentSquad } from './MultiAgentSquad';
 import { translations, Language } from '../translations';
 
 interface ChatInterfaceProps {
@@ -36,6 +35,7 @@ interface ChatInterfaceProps {
   currentAgentStage?: 'architect' | 'designer' | 'developer' | 'tester' | 'inspector' | 'idle' | 'complete';
   qaAuditSummary?: any;
   qaLogs?: string[];
+  onSelectView?: (view: string) => void;
 }
 
 const ActionHistoryItem: React.FC<{ action: ActionHistory; isDark: boolean }> = ({ action, isDark }) => {
@@ -96,7 +96,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   lang = 'fr',
   currentAgentStage = 'idle',
   qaAuditSummary,
-  qaLogs = []
+  qaLogs = [],
+  onSelectView
 }) => {
   const t = translations[lang];
   const [suggestion, setSuggestion] = React.useState<string>("");
@@ -332,7 +333,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                   {msg.role === 'model' && (
                     <MessageActionOverlay 
                       isDark={isDark}
-                      onCopy={() => navigator.clipboard.writeText(msg.content)}
+                      onCopy={() => navigator.clipboard.writeText(msg.content || '')}
                       onRewrite={(type) => console.log('Rewrite', type)}
                       onAnalyze={() => console.log('Analyze')}
                       onPin={() => console.log('Pin')}
@@ -357,12 +358,12 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                   )}
                   
                   <div className={`text-sm leading-relaxed ${isDark ? 'text-white/90' : 'text-slate-800'}`}>
-                    {msg.content.startsWith('[Planificateur]') || msg.content.startsWith('[Testeur]') || msg.content.startsWith('[Analyste]') ? (
+                    {((msg.content || '').startsWith('[Planificateur]') || (msg.content || '').startsWith('[Testeur]') || (msg.content || '').startsWith('[Analyste]')) ? (
                       <div className={`p-4 rounded-2xl border ${isDark ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-200'} italic text-xs`}>
-                        {msg.content}
+                        {msg.content || ''}
                       </div>
                     ) : (
-                      <div dangerouslySetInnerHTML={{ __html: msg.content.replace(/\n/g, '<br />') }} />
+                      <div dangerouslySetInnerHTML={{ __html: (msg.content || '').replace(/\n/g, '<br />') }} />
                     )}
                   </div>
 
@@ -408,14 +409,6 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         
         {isLoading && (
           <div className="flex flex-col gap-4 max-w-4xl mx-auto w-full">
-            <MultiAgentSquad 
-              currentStage={currentAgentStage} 
-              isGenerating={isLoading} 
-              isDark={isDark} 
-              qaLogs={qaLogs} 
-              auditSummary={qaAuditSummary} 
-            />
-
             <div className="flex items-center gap-3 mb-1">
               <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600'}`}>
                 <Loader2 size={12} className="animate-spin" />
@@ -447,6 +440,33 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       </div>
 
       <div className={`p-4 lg:p-6 ${isDark ? 'bg-[#0A0A0A]' : 'bg-white'}`}>
+        <div className="max-w-4xl mx-auto mb-3">
+          {isLoading && (
+            <div className="p-3.5 rounded-2xl bg-gradient-to-r from-orange-primary/20 via-amber-500/10 to-orange-primary/20 border border-orange-primary/40 flex items-center justify-between gap-3 text-white shadow-xl animate-pulse">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-8 h-8 rounded-full bg-orange-primary/30 border border-orange-primary/60 flex items-center justify-center shrink-0">
+                  <Loader2 size={16} className="animate-spin text-orange-primary" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-orange-primary truncate flex items-center gap-2">
+                    {loadingStatus || 'Cook IA génère votre site web...'}
+                  </p>
+                  <p className="text-[10px] text-white/60 truncate">Suivez la création en temps réel dans la fenêtre d'Aperçu Live</p>
+                </div>
+              </div>
+              {onSelectView && (
+                <button 
+                  onClick={() => onSelectView('preview')}
+                  className="px-3.5 py-1.5 bg-orange-primary hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-1.5 shrink-0 hover:scale-105 active:scale-95"
+                >
+                  <Eye size={14} />
+                  Voir l'Aperçu Live
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
         <div className={`max-w-4xl mx-auto relative border ${isDark ? 'border-white/10 bg-[#141414]' : 'border-slate-200 bg-slate-50'} rounded-[24px] transition-all focus-within:border-blue-500/50 shadow-sm`}>
           
           {selectedImages.length > 0 && (

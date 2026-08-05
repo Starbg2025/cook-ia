@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Zap, RotateCcw, ExternalLink, Pencil, FileCode, Folder, Download, ChevronRight, ChevronDown, MousePointer2, FileSearch, History, X, Sparkles, Smartphone, Tablet, Monitor, Loader2 } from 'lucide-react';
+import { Zap, RotateCcw, ExternalLink, Pencil, FileCode, Folder, Download, ChevronRight, ChevronDown, MousePointer2, FileSearch, History, X, Sparkles, Smartphone, Tablet, Monitor, Loader2, Eye, Minimize2, Maximize2 } from 'lucide-react';
 import { ViewMode, ProjectFile, StyleConfig, SectionEditState, ActionHistory } from '../types';
 import { ForgeStudio } from './ForgeStudio';
 
@@ -55,6 +55,7 @@ export const Preview: React.FC<PreviewProps> = ({
   const [showActionHistory, setShowActionHistory] = React.useState(false);
   const [showForgeStudio, setShowForgeStudio] = React.useState(false);
   const [deviceViewport, setDeviceViewport] = React.useState<'desktop' | 'tablet' | 'mobile'>('desktop');
+  const [isOverlayMinimized, setIsOverlayMinimized] = React.useState(false);
 
   React.useEffect(() => {
     if (files.length > 0 && !selectedFilePath) {
@@ -414,37 +415,68 @@ export const Preview: React.FC<PreviewProps> = ({
               }`}
             >
               {isLoading && (
-                <div className="absolute inset-0 z-30 bg-black/75 backdrop-blur-md flex flex-col items-center justify-center p-6 text-white">
-                  <div className="w-full max-w-md bg-[#141414] border border-white/10 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
-                    <div className="absolute -top-12 -right-12 w-32 h-32 bg-orange-primary/20 blur-[50px] rounded-full" />
-                    <div className="flex items-center gap-3 mb-6">
-                      <div className="w-8 h-8 rounded-full bg-orange-primary/20 border border-orange-primary/40 flex items-center justify-center shrink-0">
-                        <Loader2 size={16} className="animate-spin text-orange-primary" />
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 w-full max-w-lg px-4 pointer-events-none">
+                  {isOverlayMinimized ? (
+                    <div className="pointer-events-auto bg-[#141414]/90 backdrop-blur-md border border-orange-primary/30 rounded-full px-4 py-2 flex items-center justify-between gap-3 shadow-2xl text-white">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Loader2 size={14} className="animate-spin text-orange-primary shrink-0" />
+                        <span className="text-xs font-bold text-orange-primary uppercase text-[10px] tracking-wider shrink-0">{currentAgentStage || 'Architect'}</span>
+                        <span className="text-xs text-white/80 truncate">{loadingStatus || 'Cook IA construit...'}</span>
                       </div>
-                      <div>
-                        <h4 className="font-display font-bold text-sm tracking-tight text-white">Réflexion & Action en direct</h4>
-                        <p className="text-[11px] text-white/50">Cook IA construit votre application...</p>
-                      </div>
+                      <button 
+                        onClick={() => setIsOverlayMinimized(false)}
+                        className="px-2.5 py-1 bg-white/10 hover:bg-white/20 rounded-full text-[10px] font-bold text-white transition-all flex items-center gap-1 shrink-0"
+                        title="Agrandir les détails de construction"
+                      >
+                        <Maximize2 size={12} />
+                        Détails
+                      </button>
                     </div>
-
-                    <div className="space-y-3 mb-6">
-                      <div className="p-3 rounded-xl border bg-white/5 border-white/10 text-xs flex items-center justify-between">
-                        <span className="font-mono text-orange-primary uppercase text-[10px] tracking-wider">{currentAgentStage || 'Architect'}</span>
-                        <span className="text-white/70">{loadingStatus || 'Building website...'}</span>
-                      </div>
-                    </div>
-
-                    {actions && actions.length > 0 && (
-                      <div className="space-y-1.5 max-h-48 overflow-y-auto scrollbar-hide">
-                        {actions.map((act, idx) => (
-                          <div key={idx} className="flex items-center justify-between text-xs py-1.5 px-3 rounded-lg bg-white/5 font-mono text-white/60">
-                            <span className="truncate">{act.content}</span>
-                            <span>{act.status === 'completed' ? '✓' : '...'}</span>
+                  ) : (
+                    <div className="pointer-events-auto bg-[#141414]/95 backdrop-blur-xl border border-white/10 rounded-2xl p-4 shadow-2xl relative overflow-hidden text-white">
+                      <div className="absolute -top-12 -right-12 w-32 h-32 bg-orange-primary/20 blur-[50px] rounded-full pointer-events-none" />
+                      <div className="flex items-center justify-between gap-3 mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-orange-primary/20 border border-orange-primary/40 flex items-center justify-center shrink-0">
+                            <Loader2 size={16} className="animate-spin text-orange-primary" />
                           </div>
-                        ))}
+                          <div>
+                            <h4 className="font-display font-bold text-xs tracking-tight text-white flex items-center gap-2">
+                              Génération en direct
+                              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                            </h4>
+                            <p className="text-[10px] text-white/50">Cook IA assemble le code HTML/CSS...</p>
+                          </div>
+                        </div>
+                        <button 
+                          onClick={() => setIsOverlayMinimized(true)}
+                          className="px-2.5 py-1 bg-white/10 hover:bg-white/20 rounded-lg text-[10px] font-bold text-white/80 hover:text-white transition-all flex items-center gap-1"
+                          title="Réduire pour voir l'aperçu en grand"
+                        >
+                          <Minimize2 size={12} />
+                          Voir en direct
+                        </button>
                       </div>
-                    )}
-                  </div>
+
+                      <div className="space-y-2 mb-3">
+                        <div className="p-2.5 rounded-xl border bg-white/5 border-white/10 text-xs flex items-center justify-between">
+                          <span className="font-mono text-orange-primary uppercase text-[10px] font-bold tracking-wider">{currentAgentStage || 'Architect'}</span>
+                          <span className="text-white/80 text-xs truncate max-w-[280px]">{loadingStatus || 'Création du site...'}</span>
+                        </div>
+                      </div>
+
+                      {actions && actions.length > 0 && (
+                        <div className="space-y-1 max-h-32 overflow-y-auto scrollbar-hide">
+                          {actions.map((act, idx) => (
+                            <div key={idx} className="flex items-center justify-between text-[11px] py-1 px-2.5 rounded-lg bg-white/5 font-mono text-white/60">
+                              <span className="truncate">{act.content}</span>
+                              <span className="ml-2 text-green-400">{act.status === 'completed' ? '✓' : '...'}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -464,6 +496,8 @@ export const Preview: React.FC<PreviewProps> = ({
                   <iframe 
                     ref={iframeRef}
                     title="Preview"
+                    srcDoc={generatedCode}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; camera; microphone; geolocation"
                     className="w-full h-full flex-1 border-none bg-white"
                   />
                 </div>

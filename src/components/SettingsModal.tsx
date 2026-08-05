@@ -1450,7 +1450,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   badge: '100% Gratuit' 
                 },
                 { 
-                  id: 'gemini-1.5-flash',
+                  id: 'gemini-1.5-flash-latest',
                   name: 'Gemini 1.5 Flash (Gratuit)', 
                   provider: 'Google', 
                   desc: 'Modèle classique très stable avec un grand contexte.', 
