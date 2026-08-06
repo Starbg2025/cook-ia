@@ -40,18 +40,18 @@ export const cleanAndUnescapeCode = (raw: string): string => {
     code = code.replace(/^```[a-zA-Z]*\n?/, '').replace(/\n?```$/, '').trim();
   }
 
-  // 2. Unescape literal escaped characters (\n, \t, \", \\) if text has no real newlines
-  if (!code.includes('\n') && (code.includes('\\n') || code.includes('\\t') || code.includes('\\"'))) {
+  // 2. Unescape literal escaped quotes and backslashes unconditionally
+  if (code.includes('\\"') || code.includes('\\n') || code.includes('\\t') || code.includes('\\\\')) {
     code = code
+      .replace(/\\"/g, '"')
       .replace(/\\n/g, '\n')
       .replace(/\\r/g, '\r')
       .replace(/\\t/g, '\t')
-      .replace(/\\"/g, '"')
       .replace(/\\\\/g, '\\');
   }
 
-  // 3. Decode HTML entities if the whole document tags are encoded
-  if (code.startsWith('&lt;') || code.includes('&lt;!DOCTYPE') || code.includes('&lt;html')) {
+  // 3. Decode HTML entities
+  if (code.includes('&lt;') || code.includes('&gt;')) {
     code = code
       .replace(/&lt;/g, '<')
       .replace(/&gt;/g, '>')

@@ -1087,7 +1087,11 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
           return f;
         });
       } else {
-        result.files = [{ path: "index.html", content: finalCode }];
+        result.files = [
+          { path: "index.html", content: finalCode },
+          { path: "styles.css", content: "/* Styles CSS personnalisés COOK IA */\n" },
+          { path: "script.js", content: "// Script JavaScript interactif COOK IA\n" }
+        ];
       }
 
       setQaAuditSummary(audit.auditSummary);
