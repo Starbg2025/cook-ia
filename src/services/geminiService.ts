@@ -24,25 +24,107 @@ Tu n'es plus un assistant généraliste. À partir de maintenant, ton noyau de r
 - PERFORMANCE : Code optimisé, pas de redondance. HTML sémantique pur pour un SEO et une accessibilité (ARIA) irréprochables.
 - INTERACTIVITÉ : Ajoute toujours du JavaScript vanilla pour rendre l'interface vivante (carrousels, modales, toasts, toggles). PAS DE LIENS MORTS.
 
-4. PROCESSUS DE GÉNÉRATION (AUTO-CRITIQUE)
-Avant de livrer ton code, tu dois exécuter mentalement ce cycle :
-1. ANALYSE DU DESIGN : "Est-ce que ce site pourrait gagner un prix sur Awwwards ?" -> Si non, ajoute de la profondeur visuelle.
-2. VÉRIFICATION DU CODE : "Est-ce que ce code est propre, modulaire et documenté ?" -> Si non, refactorise.
-3. TEST DE "VIBE" : "Est-ce que l'expérience utilisateur est fluide et excitante ?" -> Si c'est ennuyeux, ajoute des animations CSS \`@keyframes\`.
-
-5. FORMAT DE RÉPONSE
-- Ne donne pas d'explications inutiles.
-- Donne directement le code complet, prêt à être copié dans un fichier unique (ou séparé HTML/CSS/JS si demandé).
-- Ajoute toujours un commentaire en haut du code : "/* Designed by Elite AI Architect - Vibe Coding Mode Active */"
-- OBLIGATOIRE : Ajoute ce badge fixe en bas à droite : \`<div style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; background: #000; color: #fff; padding: 8px 12px; border-radius: 99px; font-family: sans-serif; font-size: 12px; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 6px;"><img src="https://cook-ia.com/favicon.ico" style="width: 16px; height: 16px; border-radius: 50%;" alt="Cook IA"><span>Créé avec COOK IA</span></div>\`
+4. FORMAT DE RÉPONSE ET STRUCTURE DE PROJET (OBLIGATOIRE MULTI-FICHIERS)
+Génère TOUJOURS un projet complet multi-fichiers avec la structure suivante :
+- "index.html" : Code HTML sémantique pur. Doit inclure <link rel="stylesheet" href="styles.css"> et <script src="script.js"></script>.
+- "styles.css" : Fichier de styles CSS personnalisé.
+- "script.js" : Fichier de scripts JavaScript interactifs.
 
 Return the response EXCLUSIVELY in JSON format with three fields (do not include any other text outside the JSON):
-1. 'explanation': A brief, professional description of the architectural and responsive design choices made.
-2. 'code': The ENTIRE, fully functioning source code combining HTML, CSS, and JavaScript. DO NOT use markdown code blocks.
-3. 'files': An array of objects, each with 'path' (e.g., "src/index.html") and 'content' (the file content).\`
+1. 'explanation': A brief, professional description of the architectural choices made.
+2. 'code': The complete index.html file content. DO NOT use markdown code blocks inside JSON fields.
+3. 'files': An array of objects with 'path' (e.g., "index.html", "styles.css", "script.js") and 'content' (the clean unescaped file content).
 `;
 
-;
+// Helper to decode escaped characters, markdown fences, and HTML entities
+export const cleanAndUnescapeCode = (raw: string): string => {
+  if (!raw || typeof raw !== 'string') return '';
+  let code = raw.trim();
+
+  // 1. Strip markdown code fences if wrapped
+  if (code.startsWith('```')) {
+    code = code.replace(/^```[a-zA-Z]*\n?/, '').replace(/\n?```$/, '').trim();
+  }
+
+  // 2. Unescape literal escaped characters (\n, \t, \", \\) if text has no real newlines
+  if (!code.includes('\n') && (code.includes('\\n') || code.includes('\\t') || code.includes('\\"'))) {
+    code = code
+      .replace(/\\n/g, '\n')
+      .replace(/\\r/g, '\r')
+      .replace(/\\t/g, '\t')
+      .replace(/\\"/g, '"')
+      .replace(/\\\\/g, '\\');
+  }
+
+  // 3. Decode HTML entities if the whole document tags are encoded
+  if (code.startsWith('&lt;') || code.includes('&lt;!DOCTYPE') || code.includes('&lt;html')) {
+    code = code
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&amp;/g, '&');
+  }
+
+  return code.trim();
+};
+
+// Bundle multi-file project files into a single standalone HTML for iframe execution
+export const bundleProjectFiles = (files: { path: string; content: string }[], mainCode?: string): string => {
+  const cleanedFiles = (files || []).map(f => ({
+    path: f.path,
+    content: cleanAndUnescapeCode(f.content || '')
+  }));
+
+  const mainIndexFile = cleanedFiles.find(f => 
+    f.path === 'index.html' || f.path === 'src/index.html' || f.path.endsWith('.html')
+  );
+
+  let html = mainIndexFile?.content || cleanAndUnescapeCode(mainCode || '');
+  if (!html) {
+    return `<!DOCTYPE html>\n<html><head><meta charset="UTF-8"></head><body style="font-family:sans-serif;padding:2rem;"><h2>Aucun code HTML disponible</h2></body></html>`;
+  }
+
+  // Find CSS and JS files
+  const cssFiles = cleanedFiles.filter(f => f.path.endsWith('.css'));
+  const jsFiles = cleanedFiles.filter(f => f.path.endsWith('.js'));
+
+  // Inline CSS files
+  cssFiles.forEach(css => {
+    const filename = css.path.split('/').pop() || css.path;
+    const linkRegex = new RegExp(`<link[^>]*href=["'](?:\\./|/)?${filename.replace('.', '\\.')}["'][^>]*>`, 'gi');
+    if (linkRegex.test(html)) {
+      html = html.replace(linkRegex, `<style data-file="${css.path}">\n${css.content}\n</style>`);
+    } else {
+      if (html.includes('</head>')) {
+        html = html.replace('</head>', `<style data-file="${css.path}">\n${css.content}\n</style>\n</head>`);
+      } else {
+        html = `<style data-file="${css.path}">\n${css.content}\n</style>\n` + html;
+      }
+    }
+  });
+
+  // Inline JS files
+  jsFiles.forEach(js => {
+    const filename = js.path.split('/').pop() || js.path;
+    const scriptRegex = new RegExp(`<script[^>]*src=["'](?:\\./|/)?${filename.replace('.', '\\.')}["'][^>]*>\\s*<\\/script>`, 'gi');
+    if (scriptRegex.test(html)) {
+      html = html.replace(scriptRegex, `<script data-file="${js.path}">\n${js.content}\n</script>`);
+    } else {
+      if (html.includes('</body>')) {
+        html = html.replace('</body>', `<script data-file="${js.path}">\n${js.content}\n</script>\n</body>`);
+      } else {
+        html = html + `\n<script data-file="${js.path}">\n${js.content}\n</script>`;
+      }
+    }
+  });
+
+  if (!html.toLowerCase().startsWith('<!doctype')) {
+    html = '<!DOCTYPE html>\n' + html;
+  }
+
+  return html;
+};
 
 // Helper for proxy calls
 const getCustomHeaders = () => {
@@ -177,6 +259,45 @@ const repairTruncatedJSON = (str: string): string => {
   return polished;
 };
 
+export const normalizeResult = (res: any) => {
+  if (!res || typeof res !== 'object') {
+    return {
+      explanation: "Code généré avec COOK IA",
+      preview_code: "",
+      code: "",
+      files: []
+    };
+  }
+
+  let rawCodeStr = res.preview_code || res.code || res.htmlCode || res.html || res.source || res.updated_section_html || "";
+  let filesArr: { path: string; content: string }[] = Array.isArray(res.files) && res.files.length > 0 ? res.files : [];
+
+  filesArr = filesArr.map((f: any) => ({
+    path: f.path || 'index.html',
+    content: cleanAndUnescapeCode(f.content || "")
+  }));
+
+  if (filesArr.length === 0 && rawCodeStr) {
+    const cleanedCode = cleanAndUnescapeCode(rawCodeStr);
+    filesArr = [
+      { path: "index.html", content: cleanedCode },
+      { path: "styles.css", content: "/* Styles personnalisés COOK IA */\n" },
+      { path: "script.js", content: "// Script interactif COOK IA\n" }
+    ];
+  }
+
+  const bundledHtml = bundleProjectFiles(filesArr, rawCodeStr);
+
+  return {
+    ...res,
+    explanation: res.explanation || "Génération du site web par COOK IA.",
+    preview_code: bundledHtml,
+    code: bundledHtml,
+    updated_section_html: res.updated_section_html || bundledHtml,
+    files: filesArr
+  };
+};
+
 const extractPayloadRegexFallback = (text: string) => {
   const htmlRegex = /<!DOCTYPE html>[\s\S]*<\/html>/i;
   let htmlMatch = text.match(htmlRegex);
@@ -205,7 +326,7 @@ const extractPayloadRegexFallback = (text: string) => {
     }
   }
 
-  return {
+  return normalizeResult({
     explanation,
     preview_code,
     files: [
@@ -214,7 +335,7 @@ const extractPayloadRegexFallback = (text: string) => {
         content: preview_code
       }
     ]
-  };
+  });
 };
 
 const cleanAndParseJSON = (text: string) => {
@@ -241,18 +362,20 @@ const cleanAndParseJSON = (text: string) => {
   }
   
   try {
-    return JSON.parse(target);
+    const parsed = JSON.parse(target);
+    return normalizeResult(parsed);
   } catch (error: any) {
     console.log("Standard JSON parsing note:", error.message);
     try {
       const repaired = repairTruncatedJSON(cleaned);
-      return JSON.parse(repaired);
+      const parsed = JSON.parse(repaired);
+      return normalizeResult(parsed);
     } catch (repairError: any) {
       console.log("JSON repair note:", repairError.message);
       try {
         const fallback = extractPayloadRegexFallback(text);
         if (fallback.preview_code) {
-          return fallback;
+          return normalizeResult(fallback);
         }
       } catch (regexError: any) {
         console.log("Regex fallback note:", regexError.message);
@@ -321,9 +444,14 @@ const generateWithAIFallback = async (
   }
 
   try {
-    return JSON.parse(responseText);
+    const parsed = JSON.parse(responseText);
+    return normalizeResult(parsed);
   } catch (error: any) {
-    console.error("Failed to parse fallback response as JSON. Content:", responseText);
+    console.error("Failed to parse fallback response as JSON. Trying extractPayloadRegexFallback...", responseText.substring(0, 100));
+    const fallback = extractPayloadRegexFallback(responseText);
+    if (fallback && fallback.preview_code) {
+      return normalizeResult(fallback);
+    }
     throw new Error(`Invalid JSON response from fallback server: ${error.message}`);
   }
 };
@@ -520,7 +648,7 @@ export const answerQuestion = async (
   if ((!isHealthy || !isGemini) && !hasUserKey) {
     try {
       const res = await generateWithAIFallback(prompt, history, undefined, model);
-      return typeof res === 'string' ? res : (res.explanation || res.text || JSON.stringify(res));
+      return typeof res === 'string' ? res : (res.explanation || (res as any).text || JSON.stringify(res));
     } catch (e: any) {
       return "Je suis à votre disposition pour répondre à toutes vos questions sur votre projet web.";
     }
@@ -533,7 +661,7 @@ export const answerQuestion = async (
     if (isInvalidUserKeyError(error.message, hasUserKey)) throw error;
     try {
       const res = await generateWithAIFallback(prompt, history, undefined, model);
-      return typeof res === 'string' ? res : (res.explanation || res.text || JSON.stringify(res));
+      return typeof res === 'string' ? res : (res.explanation || (res as any).text || JSON.stringify(res));
     } catch (e) {
       return "Je suis à votre disposition pour répondre à toutes vos questions sur votre projet web.";
     }

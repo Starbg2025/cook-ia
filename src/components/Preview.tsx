@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Zap, RotateCcw, ExternalLink, Pencil, FileCode, Folder, Download, ChevronRight, ChevronDown, MousePointer2, FileSearch, History, X, Sparkles, Smartphone, Tablet, Monitor, Loader2, Eye, Minimize2, Maximize2 } from 'lucide-react';
 import { ViewMode, ProjectFile, StyleConfig, SectionEditState, ActionHistory } from '../types';
 import { ForgeStudio } from './ForgeStudio';
+import { cleanAndUnescapeCode, bundleProjectFiles } from '../services/geminiService';
 
 interface PreviewProps {
   viewMode: ViewMode;
@@ -57,13 +58,30 @@ export const Preview: React.FC<PreviewProps> = ({
   const [deviceViewport, setDeviceViewport] = React.useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [isOverlayMinimized, setIsOverlayMinimized] = React.useState(false);
 
+  const [isEditingCode, setIsEditingCode] = React.useState(false);
+  const [editableCode, setEditableCode] = React.useState('');
+
   const effectiveFiles = React.useMemo(() => {
-    if (files && files.length > 0) return files;
+    if (files && files.length > 0) {
+      return files.map(f => ({
+        path: f.path || 'index.html',
+        content: cleanAndUnescapeCode(f.content || '')
+      }));
+    }
     if (generatedCode) {
-      return [{ path: 'index.html', content: generatedCode }];
+      const cleanGen = cleanAndUnescapeCode(generatedCode);
+      return [
+        { path: 'index.html', content: cleanGen },
+        { path: 'styles.css', content: '/* Styles CSS personnalisés */\n' },
+        { path: 'script.js', content: '// Script JavaScript interactif\n' }
+      ];
     }
     return [];
   }, [files, generatedCode]);
+
+  const bundledSrcDoc = React.useMemo(() => {
+    return bundleProjectFiles(effectiveFiles, generatedCode);
+  }, [effectiveFiles, generatedCode]);
 
   React.useEffect(() => {
     if (effectiveFiles.length > 0 && (!selectedFilePath || !effectiveFiles.some(f => f.path === selectedFilePath))) {
@@ -72,6 +90,11 @@ export const Preview: React.FC<PreviewProps> = ({
   }, [effectiveFiles, selectedFilePath]);
 
   const selectedFile = effectiveFiles.find(f => f.path === selectedFilePath) || effectiveFiles[0];
+
+  React.useEffect(() => {
+    const currentContent = selectedFile?.content || generatedCode || '';
+    setEditableCode(currentContent);
+  }, [selectedFile, generatedCode]);
 
   // Apply Style Overrides
   React.useEffect(() => {
@@ -504,7 +527,7 @@ export const Preview: React.FC<PreviewProps> = ({
                   <iframe 
                     ref={iframeRef}
                     title="Preview"
-                    srcDoc={generatedCode}
+                    srcDoc={bundledSrcDoc}
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; camera; microphone; geolocation"
                     className="w-full h-full flex-1 border-none bg-white"
                   />
@@ -592,30 +615,75 @@ export const Preview: React.FC<PreviewProps> = ({
                   )}
                 </AnimatePresence>
 
-                <div className={`h-10 ${isDark ? 'bg-[#141414] border-white/5' : 'bg-slate-50 border-slate-200'} border-b flex items-center px-4 justify-between`}>
+                <div className={`h-10 ${isDark ? 'bg-[#141414] border-white/5' : 'bg-slate-50 border-slate-200'} border-b flex items-center px-4 justify-between shrink-0`}>
                   <div className="flex items-center gap-2">
-                    <span className={`text-[10px] font-mono ${isDark ? 'text-white/40' : 'text-slate-400'}`}>{selectedFilePath}</span>
+                    <span className={`text-[10px] font-mono font-bold ${isDark ? 'text-white/60' : 'text-slate-600'}`}>{selectedFilePath || 'index.html'}</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded bg-orange-primary/10 text-orange-primary font-bold uppercase">{selectedFilePath?.split('.').pop() || 'html'}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        const codeToCopy = selectedFile?.content || generatedCode || '';
+                        navigator.clipboard.writeText(codeToCopy);
+                        alert("Code copié dans le presse-papier !");
+                      }}
+                      className={`px-2 py-1 rounded text-[10px] font-bold flex items-center gap-1 transition-all ${isDark ? 'bg-white/5 hover:bg-white/10 text-white/70' : 'bg-slate-200 hover:bg-slate-300 text-slate-700'}`}
+                    >
+                      Copier
+                    </button>
+                    <button
+                      onClick={() => setIsEditingCode(!isEditingCode)}
+                      className={`px-2.5 py-1 rounded text-[10px] font-bold flex items-center gap-1 transition-all ${
+                        isEditingCode 
+                          ? 'bg-orange-primary text-white shadow' 
+                          : isDark ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-slate-200 hover:bg-slate-300 text-slate-800'
+                      }`}
+                    >
+                      {isEditingCode ? 'Mode Lecture' : 'Éditer Code'}
+                    </button>
                   </div>
                 </div>
-                <div className="flex-1 overflow-auto scrollbar-hide">
-                  <SyntaxHighlighter
-                    language={selectedFilePath?.split('.').pop() || 'javascript'}
-                    style={isDark ? tomorrow : oneLight}
-                    customStyle={{
-                      margin: 0,
-                      padding: '24px',
-                      fontSize: '13px',
-                      lineHeight: '1.6',
-                      background: 'transparent',
-                    }}
-                    codeTagProps={{
-                      style: {
-                        fontFamily: 'JetBrains Mono, monospace',
-                      }
-                    }}
-                  >
-                    {selectedFile?.content || generatedCode || "<!-- Aucun code disponible pour le moment -->"}
-                  </SyntaxHighlighter>
+                <div className="flex-1 overflow-auto scrollbar-hide relative flex flex-col">
+                  {isEditingCode ? (
+                    <textarea
+                      value={editableCode}
+                      onChange={(e) => {
+                        const newVal = e.target.value;
+                        setEditableCode(newVal);
+                        if (selectedFile) {
+                          selectedFile.content = newVal;
+                        }
+                        const newBundle = bundleProjectFiles(effectiveFiles, newVal);
+                        if (onCodeChange) {
+                          onCodeChange(newBundle);
+                        }
+                      }}
+                      className={`w-full h-full flex-1 p-6 font-mono text-xs leading-relaxed resize-none focus:outline-none ${
+                        isDark ? 'bg-[#0D0D0D] text-emerald-400 selection:bg-orange-primary/30' : 'bg-slate-900 text-emerald-300 selection:bg-orange-primary/30'
+                      }`}
+                      placeholder="Saisissez ou collez votre code ici..."
+                      spellCheck={false}
+                    />
+                  ) : (
+                    <SyntaxHighlighter
+                      language={selectedFilePath?.split('.').pop() || 'html'}
+                      style={isDark ? tomorrow : oneLight}
+                      customStyle={{
+                        margin: 0,
+                        padding: '24px',
+                        fontSize: '13px',
+                        lineHeight: '1.6',
+                        background: 'transparent',
+                      }}
+                      codeTagProps={{
+                        style: {
+                          fontFamily: 'JetBrains Mono, monospace',
+                        }
+                      }}
+                    >
+                      {selectedFile?.content || generatedCode || "<!-- Aucun code disponible pour le moment -->"}
+                    </SyntaxHighlighter>
+                  )}
                 </div>
               </div>
             </motion.div>

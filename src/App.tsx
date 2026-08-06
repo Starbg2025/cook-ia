@@ -1073,16 +1073,21 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
         ? "🧪 [Testeur QA] Verification qu'aucun bouton inutile ne subsiste dans le code..." 
         : "🧪 [QA Tester] Auditing buttons and attaching interactive click handlers...");
 
-      const audit = auditAndFixButtons(result.preview_code);
-      result.preview_code = audit.auditedCode;
+      const rawCode = result.preview_code || result.code || "";
+      const audit = auditAndFixButtons(rawCode);
+      const finalCode = audit.auditedCode || rawCode;
+      result.preview_code = finalCode;
+      result.code = finalCode;
 
-      if (result.files && Array.isArray(result.files)) {
+      if (result.files && Array.isArray(result.files) && result.files.length > 0) {
         result.files = result.files.map((f: any) => {
-          if (f.path === 'index.html' || f.path.endsWith('.html')) {
-            return { ...f, content: result.preview_code };
+          if (f.path === 'index.html' || f.path === 'src/index.html' || f.path.endsWith('.html')) {
+            return { ...f, content: finalCode };
           }
           return f;
         });
+      } else {
+        result.files = [{ path: "index.html", content: finalCode }];
       }
 
       setQaAuditSummary(audit.auditSummary);
@@ -1101,7 +1106,7 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
         : "🏆 [Final Inspector] Validating viewport responsiveness & issuing certification seal...");
 
       try {
-        await criticReview(enrichedUserMessage, result.preview_code);
+        await criticReview(enrichedUserMessage, finalCode);
       } catch (e) {
         console.debug("Critic review step executed.");
       }
@@ -1110,14 +1115,14 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
 
       const updatedMessages: Message[] = [...newMessages, { 
         role: 'model', 
-        content: result.explanation,
-        code: result.preview_code,
+        content: result.explanation || "Site web généré avec succès !",
+        code: finalCode,
         files: result.files,
         actionHistory: currentActions,
-        _provider: result._provider
+        _provider: (result as any)._provider
       }];
       setMessages(updatedMessages);
-      setGeneratedCode(result.preview_code);
+      setGeneratedCode(finalCode);
       setViewMode('preview');
       
       // Save to Supabase
