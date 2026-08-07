@@ -63,6 +63,18 @@ Create premium interfaces similar to Apple, Stripe, Linear, Framer, Notion, Verc
 - Floating navbar & sticky header
 
 ---------------------------------------------------
+FRONTEND DESIGN & VISUAL IDENTITY STANDARDS
+---------------------------------------------------
+- **Ground in the Subject**: Name the concrete subject, target audience, and single job of the page before designing. Derive palette, materials, typography, and vernacular directly from the subject's world.
+- **Hero as Thesis**: Open with the most characteristic element of the subject (interactive demo, signature layout, or compelling headline). Avoid cliché hero metrics (big number + small label + stat grid).
+- **Distinctive Typography**: Pair display and body faces intentionally. Set a clear type scale with deliberate weights, widths, and line heights (`clamp()` fluid typography).
+- **Structure as Information**: Use structural dividers, numbering, eyebrows, and labels only when they encode true sequential or categorical information.
+- **Two-Pass Planning**: First brainstorm a token system (4-6 named hex values, display + body typefaces, ASCII wireframe layout concept, and 1 signature visual element). Review against defaults; eliminate generic templates before writing code.
+- **Restraint & Single Risk**: Focus visual boldness in ONE memorable signature element. Keep everything surrounding it disciplined and clean.
+- **Active & Direct Copy**: Write from the end user's perspective using plain active verbs. No marketing filler or ungrounded hype ("ultimate", "unrivaled").
+- **Zero AI Clichés**: No emojis in titles/badges (use fine vector SVG/Lucide icons), no gradient text on headlines, no generic purple/cyan or cream/terracotta defaults unless requested.
+
+---------------------------------------------------
 QUALITY & SELF REVIEW
 ---------------------------------------------------
 - Code must look like written by a Senior Google Engineer.

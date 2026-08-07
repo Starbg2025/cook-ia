@@ -48,7 +48,7 @@ import {
   Ban
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { generateWebsite, generateTitle, updateSection, convertToReact, improveText, answerQuestion } from './services/geminiService';
+import { generateWebsite, generateTitle, updateSection, convertToReact, improveText, answerQuestion, bundleProjectFiles } from './services/geminiService';
 import { isInformationalQuestion } from './utils/intentDetection';
 import { analystReview, criticReview, plannerAgent, testerAgent, shadowWatchdog, auditAndFixButtons } from './services/multiAgentService';
 import { Message, ViewMode, Conversation, StyleConfig, SectionEditState, ActionHistory } from './types';
@@ -711,7 +711,11 @@ export default function App() {
     
     setIsDeploying(true);
     try {
-      const result = await deployToNetlify(siteName || 'cook-ia-project', generatedCode);
+      const latestModelMsg = [...messages].reverse().find(m => m.role === 'model' && (m.files || m.code));
+      const currentFiles = latestModelMsg?.files || [];
+      const standaloneCode = bundleProjectFiles(currentFiles, generatedCode);
+
+      const result = await deployToNetlify(siteName || 'cook-ia-project', standaloneCode, currentFiles);
       if (result.success) {
         window.open(result.url, '_blank');
         alert(`Site déployé avec succès sur Netlify !\nURL : ${result.url}`);
