@@ -2,7 +2,9 @@
  * Unsplash Image Search Service
  */
 
-const ACCESS_KEY = (import.meta as any).env?.VITE_UNSPLASH_ACCESS_KEY || "v_L7_q_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X_X"; // Placeholder
+const getAccessKey = () => {
+  return (import.meta as any).env?.VITE_UNSPLASH_ACCESS_KEY || "";
+};
 
 export interface UnsplashImage {
   id: string;
@@ -22,24 +24,34 @@ export interface UnsplashImage {
 
 export const searchImages = async (query: string, page: number = 1): Promise<UnsplashImage[]> => {
   try {
-    const response = await fetch(
-      `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&page=${page}&per_page=20&client_id=${ACCESS_KEY}`
-    );
-    
-    if (!response.ok) {
-      // Fallback to a public search if key is invalid/missing for demo purposes
-      // Note: Unsplash doesn't really have a keyless search, so we'll just return empty or throw
-      if (response.status === 401) {
-        console.warn("Unsplash API key is missing or invalid. Please set VITE_UNSPLASH_ACCESS_KEY.");
-        return [];
+    // 1. First try the server proxy route
+    const key = getAccessKey();
+    const proxyRes = await fetch(`/api/unsplash/search?query=${encodeURIComponent(query)}&page=${page}`, {
+      headers: key ? { 'x-unsplash-key': key } : {}
+    });
+
+    if (proxyRes.ok) {
+      const data = await proxyRes.json();
+      if (data && data.results) {
+        return data.results;
       }
-      throw new Error(`Unsplash API error: ${response.statusText}`);
     }
-    
-    const data = await response.json();
-    return data.results;
+
+    // 2. Direct fallback if proxy is unavailable but key is defined in client
+    if (key) {
+      const response = await fetch(
+        `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&page=${page}&per_page=20&client_id=${key}`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        return data.results || [];
+      }
+    }
+
+    return [];
   } catch (error) {
     console.error("Error searching Unsplash:", error);
     return [];
   }
 };
+

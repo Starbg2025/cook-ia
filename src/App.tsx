@@ -62,7 +62,6 @@ import { UrlInputModal } from './components/UrlInputModal';
 import { AuthModal } from './components/AuthModal';
 import { SettingsModal } from './components/SettingsModal';
 import { LandingPage } from './components/LandingPage';
-import { DesignCanvasStudio } from './components/DesignCanvasStudio';
 
 import { supabase, logErrorToSupabase } from './services/supabaseService';
 import { deployToNetlify } from './services/netlifyService';
@@ -104,7 +103,6 @@ export default function App() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isStyleEditorOpen, setIsStyleEditorOpen] = useState(false);
-  const [isCanvasStudioOpen, setIsCanvasStudioOpen] = useState(false);
   const [isImageSearchOpen, setIsImageSearchOpen] = useState(false);
   const [isUrlModalOpen, setIsUrlModalOpen] = useState(false);
   const [urlModalType, setUrlModalType] = useState<'clone' | 'ecommerce'>('clone');
@@ -1642,14 +1640,6 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
         </div>
 
         <div className="flex items-center gap-1.5 sm:gap-3">
-          <button
-            onClick={() => setIsCanvasStudioOpen(true)}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-lg text-[10px] sm:text-xs font-bold transition-all hover:scale-105 active:scale-95 shrink-0"
-            title="Studio Canva Design IA - Créez une maquette et connectez-la à Cook IA"
-          >
-            <Palette size={13} />
-            <span className="hidden sm:inline">Canva Design</span>
-          </button>
           {generatedCode && (
             <button
               onClick={openPublishModal}
@@ -1824,7 +1814,6 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
               }}
               onCloneSite={handleCloneSite}
               onEcommerceProduct={handleEcommerceProduct}
-              onOpenCanvasStudio={() => setIsCanvasStudioOpen(true)}
               isFocusMode={isFocusMode}
               setIsFocusMode={setIsFocusMode}
               onFeedback={handleFeedback}
@@ -2375,20 +2364,6 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
         onToggleRealtime={setIsRealtimeEnabled}
         selectedModel={selectedModel}
         onSelectModel={setSelectedModel}
-      />
-
-      <DesignCanvasStudio 
-        isOpen={isCanvasStudioOpen}
-        onClose={() => setIsCanvasStudioOpen(false)}
-        onGenerateWebsite={(designPrompt) => {
-          setPrompt(designPrompt);
-          setHasStarted(true);
-          setViewMode('chat');
-          setTimeout(() => {
-            handleSend();
-          }, 100);
-        }}
-        isDark={isDark}
       />
         </motion.div>
       )}

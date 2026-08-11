@@ -1373,6 +1373,32 @@ Return the response EXCLUSIVELY in JSON format with three fields (do not include
     }
   });
 
+  // Unsplash Search API Proxy
+  app.get("/api/unsplash/search", async (req, res) => {
+    const query = (req.query.query as string) || "technology";
+    const page = (req.query.page as string) || "1";
+    const unsplashKey = (req.headers['x-unsplash-key'] as string || process.env.UNSPLASH_ACCESS_KEY || process.env.VITE_UNSPLASH_ACCESS_KEY || "").trim();
+
+    if (!unsplashKey) {
+      return res.status(400).json({ error: "UNSPLASH_ACCESS_KEY variable or header is missing." });
+    }
+
+    try {
+      const response = await fetch(
+        `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&page=${page}&per_page=20&client_id=${unsplashKey}`
+      );
+      if (!response.ok) {
+        const errorText = await response.text();
+        return res.status(response.status).json({ error: errorText });
+      }
+      const data = await response.json();
+      res.json(data);
+    } catch (error: any) {
+      console.error("[Unsplash Proxy] Error:", error.message);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
 // Vite middleware for development
 async function startViteServer() {
   const isServerless = process.env.NETLIFY || process.env.LAMBDA_TASK_ROOT;

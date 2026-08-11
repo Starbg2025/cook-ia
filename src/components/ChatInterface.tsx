@@ -26,7 +26,6 @@ interface ChatInterfaceProps {
   onOpenImageSearch?: () => void;
   onCloneSite?: () => void;
   onEcommerceProduct?: () => void;
-  onOpenCanvasStudio?: () => void;
   onOpenSettings?: (tab?: any) => void;
   isDark?: boolean;
   isFocusMode?: boolean;
@@ -89,7 +88,6 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   onOpenImageSearch,
   onCloneSite,
   onEcommerceProduct,
-  onOpenCanvasStudio,
   onOpenSettings,
   isDark = true,
   isFocusMode = false,
@@ -549,15 +547,6 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
           </div>
           
           <div className="absolute left-3 bottom-3 flex items-center gap-1">
-            {onOpenCanvasStudio && (
-              <button 
-                onClick={onOpenCanvasStudio}
-                className={`p-2 rounded-lg ${isDark ? 'text-amber-400 hover:text-amber-300 hover:bg-white/5' : 'text-amber-600 hover:text-amber-700 hover:bg-slate-100'} transition-all flex items-center gap-1`}
-                title="Studio Canva Design IA - Créez un design visuel et connectez-le à Cook IA"
-              >
-                <Palette size={18} />
-              </button>
-            )}
             <button 
               onClick={onCloneSite}
               className={`p-2 rounded-lg ${isDark ? 'text-orange-primary hover:text-orange-400 hover:bg-white/5' : 'text-orange-600 hover:text-orange-700 hover:bg-slate-100'} transition-all`}
