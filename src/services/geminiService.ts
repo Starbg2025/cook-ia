@@ -1,6 +1,6 @@
 import { shadowWatchdog } from "./multiAgentService";
 
-const systemInstruction = `Tu es un moteur de génération Web autonome. Ta SEULE fonction est de renvoyer du code web prêt à l'emploi.
+const systemInstruction = `Tu es un moteur de génération Web autonome. Ta SEULE fonction est de renvoyer du code web prêt à l'emploi et parfaitement compatible avec un déploiement Netlify.
 
 RÈGLES D'EXÉCUTION STRICTES (VITALE) :
 1. Renvoie UNIQUEMENT le document HTML complet (de <!DOCTYPE html> à </html>).
@@ -8,12 +8,14 @@ RÈGLES D'EXÉCUTION STRICTES (VITALE) :
 3. Ne mets AUCUN texte avant ou après le code (pas de "Voici votre site", pas de politesses).
 4. Ne mets AUCUN saut de ligne échappé '\\n' dans le texte.
 
-DIRECTIVES DE DESIGN & CODE :
+DIRECTIVES DE DESIGN & COMPATIBILITÉ NETLIFY :
 1. Dans le <head>, inclus TOUJOURS :
    - <script src="https://cdn.tailwindcss.com"></script>
    - <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-2. Crée des designs riches, modernes et sombres par défaut (bg-slate-900, gradients, effets hover, cartes bien espacées).
-3. Utilise de vraies images Unsplash pour les produits (https://images.unsplash.com/photo-...).
+   - Un bloc <style> contenant un CSS autonome et des styles de secours (reset, variables CSS, typographie, grid/flex layout, thèmes sombres bg-slate-900, cartes, boutons) pour garantir un rendu visuel 100% fiable même si un CDN externe est lent ou restreint en production.
+2. Chemins d'accès : Utilise TOUJOURS des chemins relatifs (ex: ./style.css, ./script.js) et AUCUN chemin absolu commençant par '/' pour éviter les erreurs 404 sur sous-domaines Netlify.
+3. Crée des designs riches, modernes et sombres par défaut (bg-slate-900, gradients, effets hover, cartes bien espacées).
+4. Utilise de vraies images Unsplash pour les visuels (https://images.unsplash.com/photo-...).
 
 /* Designed by Studio Design Architect - Human Agency Mode Active */
 PROTOCOL SYSTEM CONFIGURATION: STUDIO DESIGN LEAD ARCHITECT
@@ -158,14 +160,25 @@ export const bundleProjectFiles = (files: { path: string; content: string }[], m
     html = html.replace('</head>', `${cdnInjections.join('\n')}\n</head>`);
   }
 
-  // Inject mobile overflow & responsive typography guard CSS
+  // Inject mobile overflow & responsive typography guard CSS + Netlify Standalone Fallback CSS
   const mobileFixCss = `<style id="cook-ia-mobile-fix">
+  :root {
+    --bg-slate-900: #0f172a;
+    --bg-slate-800: #1e293b;
+    --text-white: #ffffff;
+    --text-slate-300: #cbd5e1;
+    --accent-indigo: #6366f1;
+    --accent-purple: #a855f7;
+  }
   html, body {
     overflow-x: hidden !important;
     max-width: 100vw !important;
     width: 100% !important;
     margin: 0;
     padding: 0;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    background-color: var(--bg-slate-900, #0f172a);
+    color: var(--text-white, #ffffff);
   }
   *, *::before, *::after {
     box-sizing: border-box;
@@ -182,6 +195,33 @@ export const bundleProjectFiles = (files: { path: string; content: string }[], m
     max-width: 100% !important;
     box-sizing: border-box !important;
   }
+  /* Standalone Netlify Fallbacks for Core Utilities */
+  .bg-slate-900 { background-color: #0f172a !important; }
+  .bg-slate-800 { background-color: #1e293b !important; }
+  .bg-slate-950 { background-color: #020617 !important; }
+  .text-white { color: #ffffff !important; }
+  .text-slate-300 { color: #cbd5e1 !important; }
+  .text-slate-400 { color: #94a3b8 !important; }
+  .flex { display: flex !important; }
+  .grid { display: grid !important; }
+  .hidden { display: none !important; }
+  .items-center { align-items: center !important; }
+  .justify-between { justify-content: space-between !important; }
+  .justify-center { justify-content: center !important; }
+  .rounded-xl { border-radius: 0.75rem !important; }
+  .rounded-2xl { border-radius: 1rem !important; }
+  .rounded-full { border-radius: 9999px !important; }
+  .p-4 { padding: 1rem !important; }
+  .p-6 { padding: 1.5rem !important; }
+  .p-8 { padding: 2rem !important; }
+  .py-12 { padding-top: 3rem !important; padding-bottom: 3rem !important; }
+  .px-4 { padding-left: 1rem !important; padding-right: 1rem !important; }
+  .gap-4 { gap: 1rem !important; }
+  .gap-6 { gap: 1.5rem !important; }
+  .gap-8 { gap: 2rem !important; }
+  .w-full { width: 100% !important; }
+  .max-w-7xl { max-width: 80rem !important; margin-left: auto; margin-right: auto; }
+  .transition-all { transition-property: all; transition-duration: 300ms; }
 </style>`;
 
   if (!html.includes('id="cook-ia-mobile-fix"')) {
