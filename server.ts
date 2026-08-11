@@ -911,12 +911,14 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
     let openRouterKey = req.headers['x-openrouter-key'] as string || process.env.OPENROUTER_API_KEY || "";
     let nvidiaKey = req.headers['x-nvidia-key'] as string || process.env.NVIDIA_API_KEY || "";
 
+    const defaultSystemInstruction = "Tu es un générateur de sites web. Tu dois TOUJOURS inclure <script src=\"https://cdn.tailwindcss.com\"></script> dans le <head> de chaque site généré. Renvoie un document HTML complet.";
+
     try {
       const result = await runMultiProviderCycle({
         prompt,
         history,
         images,
-        systemInstruction: customSystem,
+        systemInstruction: customSystem || defaultSystemInstruction,
         geminiKey,
         groqKey,
         openRouterKey,

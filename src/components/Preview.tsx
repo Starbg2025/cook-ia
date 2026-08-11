@@ -528,6 +528,7 @@ export const Preview: React.FC<PreviewProps> = ({
                     ref={iframeRef}
                     title="Preview"
                     srcDoc={bundledSrcDoc}
+                    sandbox="allow-scripts allow-modals allow-same-origin allow-popups allow-forms"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; camera; microphone; geolocation"
                     className="w-full h-full flex-1 border-none bg-white"
                   />

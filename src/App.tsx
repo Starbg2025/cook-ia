@@ -1445,8 +1445,9 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
         <div className="fixed inset-0 bg-white">
           <iframe 
             srcDoc={generatedCode}
+            sandbox="allow-scripts allow-modals allow-same-origin allow-popups allow-forms"
             title="Published Site"
-            className="w-full h-full border-none"
+            className="w-full h-full border-none border-0"
           />
           <a 
             href="https://cook-ia.indevs.in/"

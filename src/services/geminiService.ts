@@ -1,6 +1,8 @@
 import { shadowWatchdog } from "./multiAgentService";
 
-const systemInstruction = `/* Designed by Studio Design Architect - Human Agency Mode Active */
+const systemInstruction = `Tu es un générateur de sites web. Tu dois TOUJOURS inclure <script src="https://cdn.tailwindcss.com"></script> dans le <head> de chaque site généré. Renvoie un document HTML complet.
+
+/* Designed by Studio Design Architect - Human Agency Mode Active */
 PROTOCOL SYSTEM CONFIGURATION: STUDIO DESIGN LEAD ARCHITECT
 
 ROLE
