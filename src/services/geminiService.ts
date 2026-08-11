@@ -1,6 +1,19 @@
 import { shadowWatchdog } from "./multiAgentService";
 
-const systemInstruction = `Tu es un générateur de sites web. Tu dois TOUJOURS inclure <script src="https://cdn.tailwindcss.com"></script> dans le <head> de chaque site généré. Renvoie un document HTML complet.
+const systemInstruction = `Tu es un moteur de génération Web autonome. Ta SEULE fonction est de renvoyer du code web prêt à l'emploi.
+
+RÈGLES D'EXÉCUTION STRICTES (VITALE) :
+1. Renvoie UNIQUEMENT le document HTML complet (de <!DOCTYPE html> à </html>).
+2. N'UTILISE AUCUN bloc de code Markdown. Ne mets JAMAIS '\`\`\`html' au début ni '\`\`\`' à la fin.
+3. Ne mets AUCUN texte avant ou après le code (pas de "Voici votre site", pas de politesses).
+4. Ne mets AUCUN saut de ligne échappé '\\n' dans le texte.
+
+DIRECTIVES DE DESIGN & CODE :
+1. Dans le <head>, inclus TOUJOURS :
+   - <script src="https://cdn.tailwindcss.com"></script>
+   - <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+2. Crée des designs riches, modernes et sombres par défaut (bg-slate-900, gradients, effets hover, cartes bien espacées).
+3. Utilise de vraies images Unsplash pour les produits (https://images.unsplash.com/photo-...).
 
 /* Designed by Studio Design Architect - Human Agency Mode Active */
 PROTOCOL SYSTEM CONFIGURATION: STUDIO DESIGN LEAD ARCHITECT
@@ -63,16 +76,20 @@ Return the response EXCLUSIVELY in JSON format with three fields (do not include
 // Helper to decode escaped characters, markdown fences, and HTML entities
 export const cleanAndUnescapeCode = (raw: string): string => {
   if (!raw || typeof raw !== 'string') return '';
-  let code = raw.trim();
+  let cleanHtml = raw;
 
-  // 1. Strip markdown code fences if wrapped
-  if (code.startsWith('```')) {
-    code = code.replace(/^```[a-zA-Z]*\n?/, '').replace(/\n?```$/, '').trim();
+  // 1. Enlève les balises ```html et ``` si Gemini en a mis
+  cleanHtml = cleanHtml.replace(/```html/gi, '').replace(/```/gi, '');
+
+  // 2. Enlève le texte parasite avant <!DOCTYPE html> s'il y en a
+  const htmlStartIndex = cleanHtml.indexOf('<!DOCTYPE html>');
+  if (htmlStartIndex !== -1) {
+    cleanHtml = cleanHtml.substring(htmlStartIndex);
   }
 
-  // 2. Unescape literal escaped quotes and backslashes unconditionally
-  if (code.includes('\\"') || code.includes('\\n') || code.includes('\\t') || code.includes('\\\\')) {
-    code = code
+  // 3. Unescape literal escaped quotes and backslashes unconditionally
+  if (cleanHtml.includes('\\"') || cleanHtml.includes('\\n') || cleanHtml.includes('\\t') || cleanHtml.includes('\\\\')) {
+    cleanHtml = cleanHtml
       .replace(/\\"/g, '"')
       .replace(/\\n/g, '\n')
       .replace(/\\r/g, '\r')
@@ -80,9 +97,9 @@ export const cleanAndUnescapeCode = (raw: string): string => {
       .replace(/\\\\/g, '\\');
   }
 
-  // 3. Decode HTML entities
-  if (code.includes('&lt;') || code.includes('&gt;')) {
-    code = code
+  // 4. Decode HTML entities
+  if (cleanHtml.includes('&lt;') || cleanHtml.includes('&gt;')) {
+    cleanHtml = cleanHtml
       .replace(/&lt;/g, '<')
       .replace(/&gt;/g, '>')
       .replace(/&quot;/g, '"')
@@ -90,7 +107,7 @@ export const cleanAndUnescapeCode = (raw: string): string => {
       .replace(/&amp;/g, '&');
   }
 
-  return code.trim();
+  return cleanHtml.trim();
 };
 
 // Bundle multi-file project files into a single standalone HTML for iframe execution

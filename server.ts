@@ -911,7 +911,20 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
     let openRouterKey = req.headers['x-openrouter-key'] as string || process.env.OPENROUTER_API_KEY || "";
     let nvidiaKey = req.headers['x-nvidia-key'] as string || process.env.NVIDIA_API_KEY || "";
 
-    const defaultSystemInstruction = "Tu es un générateur de sites web. Tu dois TOUJOURS inclure <script src=\"https://cdn.tailwindcss.com\"></script> dans le <head> de chaque site généré. Renvoie un document HTML complet.";
+    const defaultSystemInstruction = `Tu es un moteur de génération Web autonome. Ta SEULE fonction est de renvoyer du code web prêt à l'emploi.
+
+RÈGLES D'EXÉCUTION STRICTES (VITALE) :
+1. Renvoie UNIQUEMENT le document HTML complet (de <!DOCTYPE html> à </html>).
+2. N'UTILISE AUCUN bloc de code Markdown. Ne mets JAMAIS '\`\`\`html' au début ni '\`\`\`' à la fin.
+3. Ne mets AUCUN texte avant ou après le code (pas de "Voici votre site", pas de politesses).
+4. Ne mets AUCUN saut de ligne échappé '\\n' dans le texte.
+
+DIRECTIVES DE DESIGN & CODE :
+1. Dans le <head>, inclus TOUJOURS :
+   - <script src="https://cdn.tailwindcss.com"></script>
+   - <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+2. Crée des designs riches, modernes et sombres par défaut (bg-slate-900, gradients, effets hover, cartes bien espacées).
+3. Utilise de vraies images Unsplash pour les produits (https://images.unsplash.com/photo-...).`;
 
     try {
       const result = await runMultiProviderCycle({
