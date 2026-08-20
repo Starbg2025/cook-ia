@@ -1,152 +1,303 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Loader2, Cpu, Sparkles, ChevronDown, ChevronUp, CheckCircle2 } from 'lucide-react';
+import { 
+  Loader2, 
+  Cpu, 
+  Sparkles, 
+  ChevronDown, 
+  ChevronUp, 
+  CheckCircle2, 
+  Terminal, 
+  Code2, 
+  Layers, 
+  ShieldCheck, 
+  Eye, 
+  Zap, 
+  Flame, 
+  Check, 
+  FileCode,
+  Play,
+  Pause,
+  Clock,
+  ArrowRight,
+  Server
+} from 'lucide-react';
+import { ActionHistory } from '../types';
 
-interface TypingIndicatorProps {
+interface LiveActionResponseProps {
   status: string;
   isDark: boolean;
+  actions?: ActionHistory[];
+  currentAgentStage?: 'architect' | 'designer' | 'developer' | 'tester' | 'inspector' | 'idle' | 'complete';
+  onAbort?: () => void;
+  onOpenLivePreview?: () => void;
 }
 
-const REASONING_STEPS = [
-  "🧠 Understanding your request...",
-  "🔍 Identifying project type...",
-  "📋 Planning architecture...",
-  "🎨 Designing interface...",
-  "⚙️ Building components...",
-  "🗄️ Creating database...",
-  "🔌 Connecting APIs...",
-  "🧪 Testing interactions...",
-  "🐞 Detecting issues...",
-  "✅ Optimizing performance...",
-  "🚀 Finalizing project..."
+const AGENT_PIPELINE = [
+  { id: 'architect', name: 'Architecte IA', desc: 'Analyse du prompt & structure logicielle', icon: Cpu, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' },
+  { id: 'designer', name: 'Design Lead', desc: 'Système de design & composants UI/UX', icon: Sparkles, color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20' },
+  { id: 'developer', name: 'Codeur Fullstack', desc: 'Écriture TypeScript React & API', icon: Code2, color: 'text-orange-primary', bg: 'bg-orange-primary/10', border: 'border-orange-primary/20' },
+  { id: 'inspector', name: 'Inspecteur QA', desc: 'Validation syntaxe, tests & zéro-bug', icon: ShieldCheck, color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' }
 ];
 
-export const TypingIndicator: React.FC<TypingIndicatorProps> = ({ status, isDark }) => {
-  const [currentStepIndex, setCurrentStepIndex] = useState(0);
-  const [showAllSteps, setShowAllSteps] = useState(false);
+const MOCK_LIVE_FILES = [
+  { path: 'src/App.tsx', status: 'modified', lines: '+142 -12' },
+  { path: 'src/components/Dashboard.tsx', status: 'created', lines: '+88' },
+  { path: 'src/services/api.ts', status: 'created', lines: '+65' },
+  { path: 'src/index.css', status: 'modified', lines: '+24' }
+];
 
+export const TypingIndicator: React.FC<LiveActionResponseProps> = ({ 
+  status, 
+  isDark, 
+  actions = [],
+  currentAgentStage = 'developer',
+  onAbort,
+  onOpenLivePreview
+}) => {
+  const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
+  const [activeTab, setActiveTab] = useState<'reasoning' | 'terminal' | 'files'>('reasoning');
+  const [isExpanded, setIsExpanded] = useState<boolean>(true);
+
+  // Live timer for reasoning execution
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentStepIndex((prev) => (prev < REASONING_STEPS.length - 1 ? prev + 1 : prev));
-    }, 1200);
-
-    return () => clearInterval(interval);
+    const timer = setInterval(() => {
+      setElapsedSeconds(prev => prev + 0.1);
+    }, 100);
+    return () => clearInterval(timer);
   }, []);
 
-  const activeStepText = REASONING_STEPS[currentStepIndex];
+  const formatTime = (sec: number) => {
+    const s = Math.floor(sec);
+    const ms = Math.floor((sec % 1) * 10);
+    return `${s}.${ms}s`;
+  };
 
   return (
     <motion.div 
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      className={`flex flex-col gap-3 p-4 rounded-2xl border ${
+      exit={{ opacity: 0, scale: 0.98 }}
+      className={`flex flex-col rounded-2xl border overflow-hidden shadow-2xl transition-all ${
         isDark 
-          ? 'bg-black/60 border-orange-primary/30 shadow-[0_0_25px_rgba(255,107,0,0.15)] text-white' 
-          : 'bg-slate-900 border-slate-700 text-white shadow-xl'
+          ? 'bg-[#0B0F17]/95 border-orange-primary/30 shadow-[0_8px_32px_rgba(0,0,0,0.4)] text-white' 
+          : 'bg-white border-slate-200/90 text-slate-900 shadow-xl'
       }`}
     >
-      {/* Top Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="relative shrink-0">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 p-0.5 shadow-md">
-              <div className="w-full h-full rounded-[10px] bg-slate-950 flex flex-col items-center justify-center text-white relative overflow-hidden">
-                <div className="absolute inset-0 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:6px_6px] opacity-20" />
-                <Cpu className="w-4 h-4 text-orange-primary relative z-10" />
-              </div>
+      {/* Top Header: Live Status + Model Badge + Elapsed Time */}
+      <div className={`px-4 py-3 border-b flex items-center justify-between gap-3 ${
+        isDark ? 'bg-[#0E1420] border-white/[0.08]' : 'bg-slate-50 border-slate-200'
+      }`}>
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="relative shrink-0 flex items-center justify-center">
+            <div className="w-7 h-7 rounded-xl bg-gradient-to-tr from-orange-primary to-amber-500 flex items-center justify-center text-white shadow-md shadow-orange-primary/30">
+              <Zap size={14} className="fill-white animate-pulse" />
             </div>
-            <div className="absolute -bottom-1 -right-1 bg-orange-primary text-white p-0.5 rounded-full shadow animate-pulse">
-              <Loader2 size={10} className="animate-spin" />
-            </div>
+            <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-[#0E1420] animate-ping" />
           </div>
 
-          <div>
+          <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-orange-400 flex items-center gap-1">
-                <Sparkles size={12} className="text-amber-400 animate-pulse" /> COOK IA INFINITY
+              <span className="text-xs font-bold tracking-tight text-orange-primary flex items-center gap-1.5">
+                Cook IA Live Action
               </span>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-300 font-mono font-semibold border border-orange-500/30">
-                Adaptive Reasoning Engine
+              <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono font-bold ${
+                isDark ? 'bg-white/[0.06] text-white/70 border border-white/[0.08]' : 'bg-slate-200 text-slate-700'
+              }`}>
+                Claude / GPT-4o Multi-Agent
               </span>
             </div>
-            <p className="text-[11px] text-slate-400">Raisonnement dynamique en temps réel</p>
+            <div className="flex items-center gap-1.5 text-[11px] font-mono text-emerald-400">
+              <Clock size={11} />
+              <span>Exécution en direct ({formatTime(elapsedSeconds)})</span>
+            </div>
           </div>
         </div>
 
-        <button 
-          onClick={() => setShowAllSteps(!showAllSteps)}
-          className="text-xs text-slate-400 hover:text-white flex items-center gap-1 bg-white/5 hover:bg-white/10 px-2.5 py-1 rounded-lg border border-white/10 transition-colors"
-        >
-          <span>{showAllSteps ? 'Masquer' : 'Voir tout'}</span>
-          {showAllSteps ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-        </button>
-      </div>
+        {/* Action Controls (Preview & Collapse) */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {onOpenLivePreview && (
+            <button
+              onClick={onOpenLivePreview}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-orange-primary hover:bg-orange-hover text-white text-xs font-bold transition-all shadow-sm"
+              title="Ouvrir l'aperçu en direct"
+            >
+              <Eye size={12} />
+              <span className="hidden sm:inline">Aperçu Live</span>
+            </button>
+          )}
 
-      {/* Active Animated Reasoning Step Banner */}
-      <div className="bg-slate-950/80 border border-white/10 rounded-xl p-3 flex flex-col gap-2 relative overflow-hidden">
-        <div className="flex items-center justify-between text-xs">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="font-medium text-amber-300 truncate font-mono">
-              {activeStepText}
-            </span>
-          </div>
-          <span className="text-[10px] font-mono text-emerald-400 shrink-0 font-semibold animate-pulse flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-            {currentStepIndex + 1}/{REASONING_STEPS.length}
-          </span>
-        </div>
-
-        {/* Progress Bar */}
-        <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-          <motion.div 
-            className="bg-gradient-to-r from-orange-500 via-amber-400 to-emerald-400 h-full rounded-full"
-            initial={{ width: '0%' }}
-            animate={{ width: `${((currentStepIndex + 1) / REASONING_STEPS.length) * 100}%` }}
-            transition={{ duration: 0.3 }}
-          />
+          <button 
+            onClick={() => setIsExpanded(!isExpanded)}
+            className={`p-1.5 rounded-lg text-xs transition-colors ${
+              isDark ? 'text-white/60 hover:text-white hover:bg-white/[0.06]' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-200'
+            }`}
+            title={isExpanded ? 'Réduire' : 'Agrandir'}
+          >
+            {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </button>
         </div>
       </div>
 
-      {/* Status Detail if present */}
-      {status && status !== activeStepText && (
-        <div className="text-[11px] text-slate-400 italic px-1 flex items-center gap-1.5">
-          <Loader2 size={12} className="animate-spin text-orange-400 shrink-0" />
-          <span className="truncate">{status}</span>
-        </div>
-      )}
-
-      {/* Expandable All Steps Log */}
+      {/* Main Execution Body */}
       <AnimatePresence>
-        {showAllSteps && (
+        {isExpanded && (
           <motion.div 
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden border-t border-white/10 pt-2 mt-1"
+            className="p-4 space-y-4"
           >
-            <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-              {REASONING_STEPS.map((step, idx) => {
-                const isCompleted = idx < currentStepIndex;
-                const isCurrent = idx === currentStepIndex;
+            {/* Live Agent Pipeline Stage Indicator */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {AGENT_PIPELINE.map((stage, idx) => {
+                const StageIcon = stage.icon;
+                const isActive = stage.id === currentAgentStage;
+                const isPassed = idx < AGENT_PIPELINE.findIndex(p => p.id === currentAgentStage);
 
                 return (
-                  <div 
-                    key={idx}
-                    className={`flex items-center justify-between text-xs px-2.5 py-1.5 rounded-lg border text-mono transition-all ${
-                      isCurrent 
-                        ? 'bg-orange-500/20 border-orange-500/40 text-orange-200 font-semibold' 
-                        : isCompleted 
-                        ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300' 
-                        : 'bg-white/5 border-transparent text-slate-500'
+                  <div
+                    key={stage.id}
+                    className={`p-2.5 rounded-xl border transition-all relative overflow-hidden ${
+                      isActive 
+                        ? (isDark ? 'bg-orange-primary/15 border-orange-primary text-white shadow-lg ring-1 ring-orange-primary/30' : 'bg-orange-50 border-orange-400 text-slate-900') 
+                        : isPassed 
+                        ? (isDark ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300' : 'bg-emerald-50 border-emerald-200 text-emerald-800') 
+                        : (isDark ? 'bg-white/[0.02] border-white/[0.06] text-white/30' : 'bg-slate-50 border-slate-200 text-slate-400')
                     }`}
                   >
-                    <span className="truncate">{step}</span>
-                    {isCompleted && <CheckCircle2 size={12} className="text-emerald-400 shrink-0 ml-2" />}
-                    {isCurrent && <Loader2 size={12} className="animate-spin text-orange-400 shrink-0 ml-2" />}
+                    {isActive && (
+                      <motion.div 
+                        layoutId="activeGlow"
+                        className="absolute inset-0 bg-gradient-to-r from-orange-primary/20 via-transparent to-transparent pointer-events-none"
+                      />
+                    )}
+                    
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-1.5">
+                        <StageIcon size={14} className={isActive ? 'text-orange-primary animate-pulse' : isPassed ? 'text-emerald-400' : 'text-current'} />
+                        <span className="text-xs font-bold truncate">{stage.name}</span>
+                      </div>
+                      {isPassed && <Check size={12} className="text-emerald-400 shrink-0" strokeWidth={3} />}
+                      {isActive && <Loader2 size={12} className="animate-spin text-orange-primary shrink-0" />}
+                    </div>
+                    <p className="text-[10px] line-clamp-1 opacity-70">{stage.desc}</p>
                   </div>
                 );
               })}
+            </div>
+
+            {/* Current Active Step Banner */}
+            <div className={`p-3.5 rounded-xl border flex items-center justify-between gap-3 ${
+              isDark ? 'bg-[#080B11] border-white/[0.08]' : 'bg-slate-900 text-white border-slate-800'
+            }`}>
+              <div className="flex items-center gap-2.5 min-w-0">
+                <Loader2 size={15} className="animate-spin text-orange-primary shrink-0" />
+                <div className="min-w-0">
+                  <div className="text-xs font-bold text-white truncate font-mono">
+                    {status || "Génération du code source React & Express..."}
+                  </div>
+                  <div className="text-[10px] text-white/50 truncate">
+                    Validation des imports, du styling Tailwind et des liaisons de données Supabase
+                  </div>
+                </div>
+              </div>
+
+              <div className="hidden sm:flex items-center gap-1 text-[10px] font-mono text-orange-primary bg-orange-primary/10 px-2 py-0.5 rounded border border-orange-primary/20 shrink-0">
+                <Flame size={11} className="fill-orange-primary" />
+                <span>Turbo Engine</span>
+              </div>
+            </div>
+
+            {/* Sub-Tabs: Raisonnement / Terminal logs / Fichiers modifiés */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between border-b border-white/[0.06] pb-1.5">
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setActiveTab('reasoning')}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
+                      activeTab === 'reasoning'
+                        ? (isDark ? 'bg-white/10 text-white' : 'bg-slate-200 text-slate-900')
+                        : (isDark ? 'text-white/40 hover:text-white' : 'text-slate-400 hover:text-slate-700')
+                    }`}
+                  >
+                    <Cpu size={12} />
+                    <span>Pensées IA</span>
+                  </button>
+
+                  <button
+                    onClick={() => setActiveTab('terminal')}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
+                      activeTab === 'terminal'
+                        ? (isDark ? 'bg-white/10 text-white' : 'bg-slate-200 text-slate-900')
+                        : (isDark ? 'text-white/40 hover:text-white' : 'text-slate-400 hover:text-slate-700')
+                    }`}
+                  >
+                    <Terminal size={12} />
+                    <span>Console Live</span>
+                  </button>
+
+                  <button
+                    onClick={() => setActiveTab('files')}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
+                      activeTab === 'files'
+                        ? (isDark ? 'bg-white/10 text-white' : 'bg-slate-200 text-slate-900')
+                        : (isDark ? 'text-white/40 hover:text-white' : 'text-slate-400 hover:text-slate-700')
+                    }`}
+                  >
+                    <FileCode size={12} />
+                    <span>Fichiers</span>
+                  </button>
+                </div>
+
+                <span className="text-[10px] font-mono text-white/30">
+                  {actions.length} action(s)
+                </span>
+              </div>
+
+              {/* Tab Content */}
+              <div className={`rounded-xl p-3 text-xs font-mono max-h-44 overflow-y-auto custom-scrollbar border ${
+                isDark ? 'bg-[#080B11] border-white/[0.06]' : 'bg-slate-950 text-emerald-400 border-slate-800'
+              }`}>
+                {activeTab === 'reasoning' && (
+                  <div className="space-y-2 text-white/80">
+                    <div className="flex items-center gap-2 text-orange-primary font-bold">
+                      <Sparkles size={13} />
+                      <span>Analyse du projet & décision architecturale :</span>
+                    </div>
+                    <p className="text-white/60 leading-relaxed text-[11px]">
+                      • Modélisation de l'état global et des interfaces TypeScript de données.<br />
+                      • Composition modulaire des sections avec Tailwind CSS et animations fluides.<br />
+                      • Intégration de la persistance Supabase / API Express avec gestion complète des erreurs.
+                    </p>
+                  </div>
+                )}
+
+                {activeTab === 'terminal' && (
+                  <div className="space-y-1 text-slate-300 text-[11px]">
+                    <div className="text-white/40 font-bold">$ cook-ia-builder --target=production --framework=react-vite</div>
+                    <div className="text-emerald-400">✓ Validation du typage TypeScript terminée sans erreur</div>
+                    <div className="text-blue-400">ℹ Optimisation des paquets Tailwind CSS et des composants Lucide</div>
+                    <div className="text-amber-400 animate-pulse">⚡ Compilation des bundles JavaScript (HMR Ready)...</div>
+                  </div>
+                )}
+
+                {activeTab === 'files' && (
+                  <div className="space-y-1.5">
+                    {MOCK_LIVE_FILES.map((file, i) => (
+                      <div key={i} className="flex items-center justify-between py-1 px-2 rounded bg-white/[0.02] border border-white/[0.04]">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <FileCode size={13} className="text-orange-primary shrink-0" />
+                          <span className="truncate text-white/80 text-[11px]">{file.path}</span>
+                        </div>
+                        <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded border border-emerald-500/20">
+                          {file.lines}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </motion.div>
         )}
@@ -154,5 +305,3 @@ export const TypingIndicator: React.FC<TypingIndicatorProps> = ({ status, isDark
     </motion.div>
   );
 };
-
-

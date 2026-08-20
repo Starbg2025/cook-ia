@@ -1,19 +1,25 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Orbitron:wght@400..900&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300..800;1,300..800&family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=JetBrains+Mono:ital,wght@0,400..700;1,400..700&family=Fraunces:ital,opsz,wght@0,9..144,400..800;1,9..144,400..800&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Orbitron", sans-serif;
+  --font-sans: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Instrument Sans", "Plus Jakarta Sans", sans-serif;
+  --font-editorial: "Fraunces", Georgia, serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   
-  --color-abyssal-deep: #050a12;
-  --color-abyssal-blue: #0a1628;
-  --color-cyan-bio: #00f5d4;
-  --color-purple-neon: #7b2fff;
+  --color-abyssal-deep: #080B11;
+  --color-abyssal-blue: #0E1420;
+  --color-surface-dark: #121824;
+  --color-surface-hover: #1A2232;
+  --color-cyan-bio: #00F5D4;
+  --color-purple-neon: #7B2FFF;
   
   --color-orange-primary: #FF6B00;
-  --color-bg-dark: #050a12;
-  --color-card-dark: #0a1628;
+  --color-orange-hover: #E55C00;
+  --color-orange-glow: rgba(255, 107, 0, 0.25);
+  
+  --color-bg-dark: #080B11;
+  --color-card-dark: #0F1622;
   --color-border-dark: rgba(255, 255, 255, 0.08);
 }
 
@@ -22,16 +28,30 @@ body {
   color: #FFFFFF;
   font-family: var(--font-sans);
   overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-.google-sans {
-  font-family: var(--font-google);
+.font-editorial {
+  font-family: var(--font-editorial);
 }
 
 .glass {
-  background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(12px);
+  background: rgba(15, 22, 34, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-light {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.chat-input-shadow {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.24), 0 1px 2px rgba(255, 255, 255, 0.05);
 }
 
 .scrollbar-hide::-webkit-scrollbar {
@@ -40,6 +60,22 @@ body {
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* Claude / ChatGPT custom refined scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.22);
 }
 
 @layer base {

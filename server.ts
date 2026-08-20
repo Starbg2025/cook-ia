@@ -2,6 +2,7 @@ import express from "express";
 import dotenv from "dotenv";
 import fetch from "node-fetch";
 import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 import { createClient } from '@supabase/supabase-js';
 import { GoogleGenAI } from "@google/genai";
 
@@ -493,6 +494,49 @@ async function processTask(id: string) {
 export const app = express();
 const PORT = 3000;
 
+// Trust proxy for Cloud Run / reverse proxies
+app.set('trust proxy', 1);
+
+// Security Rate Limiters to prevent DoS and API quota exhaustion
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 120, // max 120 requests per minute
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: {
+    xForwardedForHeader: false,
+    forwardedHeader: false,
+    trustProxy: false
+  },
+  message: { success: false, message: "Trop de requêtes. Veuillez patienter un instant." }
+});
+
+const aiRateLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 45, // max 45 AI generations/calls per minute per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: {
+    xForwardedForHeader: false,
+    forwardedHeader: false,
+    trustProxy: false
+  },
+  message: { success: false, message: "Limite de requêtes IA atteinte pour cette minute. Veuillez réessayer dans quelques secondes." }
+});
+
+const deployRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: {
+    xForwardedForHeader: false,
+    forwardedHeader: false,
+    trustProxy: false
+  },
+  message: { success: false, message: "Limite de déploiement atteinte. Veuillez patienter avant de relancer un déploiement." }
+});
+
 app.use(helmet({
   contentSecurityPolicy: false,
   crossOriginEmbedderPolicy: false,
@@ -503,26 +547,30 @@ app.use(helmet({
   }
 }));
 
+// Apply general API rate limiting to all /api/ endpoints
+app.use('/api/', apiLimiter);
+
 app.use((req, res, next) => {
-  res.setHeader('Content-Security-Policy', "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; connect-src * 'unsafe-inline' https: wss:; img-src * data: blob:; frame-src *; style-src * 'unsafe-inline';");
   res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
   next();
 });
 
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+// Safe request body limits
+app.use(express.json({ limit: '15mb' }));
+app.use(express.urlencoded({ limit: '15mb', extended: true }));
 
 // Supabase Proxy for Logging
-
   app.post("/api/supabase/log-error", async (req, res) => {
     const { error, context } = req.body;
     try {
+      const sanitizedContext = typeof context === 'object' ? JSON.stringify(context).substring(0, 1000) : String(context || '').substring(0, 1000);
       const { error: dbError } = await supabase
         .from('error_logs')
         .insert([{ 
-          error_message: error, 
-          context: context,
+          error_message: String(error || 'Unknown error').substring(0, 500), 
+          context: sanitizedContext,
           created_at: new Date().toISOString()
         }]);
       
@@ -530,13 +578,12 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
       res.json({ success: true });
     } catch (err: any) {
       console.error("[Supabase Proxy] Failed to log error:", err.message);
-      res.status(500).json({ success: false, message: err.message });
+      res.status(500).json({ success: false, message: "Erreur lors de la journalisation" });
     }
   });
 
   app.post("/api/supabase/conversations", async (req, res) => {
-    // Proxy for creating/updating conversations if needed
-    // For now, I'll just proxy the specific log-error call to show the pattern
+    res.json({ success: true });
   });
 
   // Debug middleware
@@ -547,7 +594,7 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
     next();
   });
 
-  app.post(["/api/deploy", "/api/deploy/"], async (req, res) => {
+  app.post(["/api/deploy", "/api/deploy/"], deployRateLimiter, async (req, res) => {
     const { siteName, code, files, userId } = req.body;
     
     if (!siteName || (!code && !files)) {
@@ -589,20 +636,29 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
   // Watchdog API
   app.get("/api/watchdog/status", (req, res) => {
+    // Sanitize task outputs so private source code and tokens are never leaked to public observers
+    const sanitizedTasks = taskQueue.slice(-10).reverse().map(t => ({
+      id: t.id,
+      type: t.type,
+      status: t.status,
+      createdAt: t.createdAt,
+      error: t.error ? "Operation failed" : undefined
+    }));
+
     res.json({
       queueSize: taskQueue.length,
-      tasks: taskQueue.slice(-10).reverse() // Last 10 tasks
+      tasks: sanitizedTasks
     });
   });
 
-  app.post("/api/watchdog/enqueue", (req, res) => {
+  app.post("/api/watchdog/enqueue", deployRateLimiter, (req, res) => {
     const { type, payload } = req.body;
     const taskId = addToWatchdog(type, payload);
     res.json({ taskId });
   });
 
   // Agents Proxy
-  app.post("/api/ai/agents", async (req, res) => {
+  app.post("/api/ai/agents", aiRateLimiter, async (req, res) => {
     const { agentType, prompt, history, code } = req.body;
     let groqKey = req.headers['x-groq-key'] as string || process.env.GROQ_API_KEY;
     if (groqKey) groqKey = groqKey.trim();
@@ -875,7 +931,7 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
   });
 
   // Standard Gemini Proxy
-  app.post("/api/ai/gemini", async (req, res) => {
+  app.post("/api/ai/gemini", aiRateLimiter, async (req, res) => {
     const { prompt, history, images, systemInstruction: customSystem, model: requestedModel, responseMimeType } = req.body;
 
     if (prompt && typeof prompt === 'string') {
@@ -950,7 +1006,10 @@ RÈGLE 5 — STRUCTURE MULTI-PAGES / AUTHENTIFICATION :
 - Simule un flux d'authentification complet et fonctionnel (localStorage / React State) : Inscription -> Connexion -> Dashboard Privé -> Déconnexion, avec validation des formulaires.
 
 RÈGLE 6 — COMPATIBILITÉ DÉPLOIEMENT :
-- Produis un code 100% prêt pour un build Netlify sans erreur, incluant la configuration de redirection SPA et la gestion des routes.`;
+- Produis un code 100% prêt pour un build Netlify sans erreur, incluant la configuration de redirection SPA et la gestion des routes.
+
+RÈGLE 7 — MODIFICATION ET AMÉLIORATION ITÉRATIVE :
+- Lorsque l'utilisateur demande une modification ou une amélioration d'un site existant (fourni sous [CODE BASELINE DU SITE EXISTANT À MODIFIER]), ne recommence JAMAIS le site à zéro. Conserve l'intégralité du design, des données, de la navigation et des fonctionnalités existantes, et applique la modification demandée directement sur le code fourni.`;
 
     try {
       const result = await runMultiProviderCycle({
@@ -1199,7 +1258,7 @@ let bannedUsersMap: Record<string, { userId: string; username?: string; reason?:
               <p>Connexion à GitHub établie. Cette fenêtre va se fermer...</p>
               <script>
                 if (window.opener) {
-                  window.opener.postMessage({ type: 'GITHUB_AUTH_SUCCESS', token: '${accessToken}' }, '*');
+                  window.opener.postMessage({ type: 'GITHUB_AUTH_SUCCESS', token: '${accessToken}' }, window.location.origin);
                   setTimeout(() => window.close(), 1000);
                 } else {
                   window.location.href = '/';

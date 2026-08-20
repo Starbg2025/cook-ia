@@ -31,7 +31,20 @@ import {
   Bell,
   ShieldAlert,
   AlertTriangle,
-  Ban
+  Ban,
+  MessageSquare,
+  Code2,
+  Brain,
+  Bot,
+  Save,
+  CheckCheck,
+  Sliders,
+  Smile,
+  FileText,
+  Upload,
+  Camera,
+  Trash2,
+  Image as ImageIcon
 } from 'lucide-react';
 import { supabase } from '../services/supabaseService';
 import { translations, Language } from '../translations';
@@ -64,6 +77,9 @@ interface SettingsModalProps {
   selectedModel?: string;
   onSelectModel?: (model: string) => void;
   lang?: Language;
+  aiMode?: 'code' | 'chat';
+  onToggleAiMode?: (mode?: 'code' | 'chat') => void;
+  onUpdateUserProfile?: (data: any) => void;
 }
 
 type TabType = 'publish' | 'versions' | 'secrets' | 'integrations' | 'github' | 'general' | 'account' | 'help' | 'founder' | 'collaboration' | 'models' | 'admin';
@@ -95,7 +111,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onToggleRealtime,
   selectedModel = 'gemini-2.5-flash',
   onSelectModel,
-  lang = 'fr'
+  lang = 'fr',
+  aiMode = 'code',
+  onToggleAiMode,
+  onUpdateUserProfile
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>(initialTab);
   const [accessLevel, setAccessLevel] = useState('Restricted: Only people you specify can access');
@@ -109,6 +128,169 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [isSending, setIsSending] = useState(false);
   const [sendSuccess, setSendSuccess] = useState(false);
   const [localProjectName, setLocalProjectName] = useState(projectName);
+
+  // Profile & Custom Instructions states (Style ChatGPT & Claude)
+  const [profileFullName, setProfileFullName] = useState('');
+  const [profileUsername, setProfileUsername] = useState('');
+  const [profileBio, setProfileBio] = useState('');
+  const [profileRole, setProfileRole] = useState('Développeur Full Stack');
+  const [profileAvatarUrl, setProfileAvatarUrl] = useState('');
+  const [customInstructionsAbout, setCustomInstructionsAbout] = useState('');
+  const [customInstructionsStyle, setCustomInstructionsStyle] = useState('');
+  const [localAiMode, setLocalAiMode] = useState<'code' | 'chat'>(aiMode);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [profileSaveSuccess, setProfileSaveSuccess] = useState(false);
+
+  // Custom photo upload & URL states
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [showUrlInput, setShowUrlInput] = useState(false);
+  const [manualImageUrl, setManualImageUrl] = useState('');
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert("Veuillez sélectionner un fichier image valide (JPG, PNG, WebP, GIF).");
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      alert("L'image sélectionnée est trop volumineuse (maximum 10 Mo).");
+      return;
+    }
+
+    setIsUploadingImage(true);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const rawDataUrl = event.target?.result as string;
+      // High performance canvas compression & square cropping
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const maxDim = 400;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxDim) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          }
+        } else {
+          if (height > maxDim) {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.88);
+          setProfileAvatarUrl(compressedDataUrl);
+        } else {
+          setProfileAvatarUrl(rawDataUrl);
+        }
+        setIsUploadingImage(false);
+      };
+      img.onerror = () => {
+        setProfileAvatarUrl(rawDataUrl);
+        setIsUploadingImage(false);
+      };
+      img.src = rawDataUrl;
+    };
+    reader.onerror = () => {
+      alert("Erreur lors de la lecture du fichier image.");
+      setIsUploadingImage(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleApplyManualUrl = () => {
+    if (!manualImageUrl.trim()) return;
+    setProfileAvatarUrl(manualImageUrl.trim());
+    setShowUrlInput(false);
+    setManualImageUrl('');
+  };
+
+  // Sync profile data on open or user change
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('cook_ia_profile_data');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setProfileFullName(parsed.fullName || user?.profile?.full_name || user?.user_metadata?.full_name || '');
+        setProfileUsername(parsed.username || user?.profile?.username || user?.user_metadata?.username || user?.email?.split('@')[0] || '');
+        setProfileBio(parsed.bio || user?.profile?.bio || '');
+        setProfileRole(parsed.role || user?.profile?.role || 'Développeur Full Stack');
+        setProfileAvatarUrl(parsed.avatarUrl || user?.profile?.avatar_url || user?.user_metadata?.avatar_url || '');
+        setCustomInstructionsAbout(parsed.customInstructionsAbout || user?.profile?.custom_instructions_about || '');
+        setCustomInstructionsStyle(parsed.customInstructionsStyle || user?.profile?.custom_instructions_style || '');
+        if (parsed.aiMode) setLocalAiMode(parsed.aiMode);
+      } else if (user) {
+        setProfileFullName(user.profile?.full_name || user.user_metadata?.full_name || '');
+        setProfileUsername(user.profile?.username || user.user_metadata?.username || user.email?.split('@')[0] || '');
+        setProfileBio(user.profile?.bio || '');
+        setProfileRole(user.profile?.role || 'Développeur Full Stack');
+        setProfileAvatarUrl(user.profile?.avatar_url || user.user_metadata?.avatar_url || '');
+        setCustomInstructionsAbout(user.profile?.custom_instructions_about || '');
+        setCustomInstructionsStyle(user.profile?.custom_instructions_style || '');
+      }
+    } catch (e) {
+      console.warn("Error loading profile:", e);
+    }
+  }, [user, isOpen]);
+
+  useEffect(() => {
+    setLocalAiMode(aiMode);
+  }, [aiMode]);
+
+  const handleSaveProfile = async () => {
+    setIsSavingProfile(true);
+    const data = {
+      username: profileUsername.trim() || user?.email?.split('@')[0] || 'User',
+      fullName: profileFullName.trim(),
+      bio: profileBio.trim(),
+      role: profileRole.trim(),
+      avatarUrl: profileAvatarUrl,
+      customInstructionsAbout: customInstructionsAbout.trim(),
+      customInstructionsStyle: customInstructionsStyle.trim(),
+      aiMode: localAiMode
+    };
+
+    try {
+      localStorage.setItem('cook_ia_profile_data', JSON.stringify(data));
+      localStorage.setItem('cook_ia_ai_mode', localAiMode);
+      onToggleAiMode?.(localAiMode);
+      onUpdateUserProfile?.(data);
+
+      if (user?.id) {
+        await supabase.from('profiles').upsert({
+          id: user.id,
+          username: data.username,
+          full_name: data.fullName,
+          bio: data.bio,
+          role: data.role,
+          avatar_url: data.avatarUrl,
+          custom_instructions_about: data.customInstructionsAbout,
+          custom_instructions_style: data.customInstructionsStyle,
+          ai_mode: data.aiMode,
+          updated_at: new Date().toISOString()
+        });
+      }
+
+      setProfileSaveSuccess(true);
+      setTimeout(() => setProfileSaveSuccess(false), 3500);
+    } catch (err) {
+      console.error("Failed to save profile:", err);
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
 
   // Admin section states
   const [adminUsers, setAdminUsers] = useState<any[]>([]);
@@ -285,13 +467,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const tabs = isProjectSettings ? [
     { id: 'publish', label: 'Share', icon: Share2 },
+    { id: 'account', label: lang === 'fr' ? 'Profil & IA' : 'Profile & AI', icon: User },
     { id: 'versions', label: 'Versions', icon: History },
     { id: 'secrets', label: 'Secrets', icon: Key },
     { id: 'integrations', label: 'Integrations', icon: Layers },
   ] : [
+    { id: 'account', label: lang === 'fr' ? 'Profil & IA' : 'Profile & AI', icon: User },
     { id: 'general', label: 'Settings', icon: Settings },
     { id: 'models', label: 'AI Models', icon: Sparkles },
-    { id: 'account', label: 'Account', icon: User },
     ...(user?.email === 'benit800@gmail.com' ? [{ id: 'admin', label: 'Super Admin', icon: Activity }] : []),
     { id: 'founder', label: 'Fondateur', icon: ShieldCheck },
     { id: 'help', label: 'Help', icon: HelpCircle },
@@ -678,191 +861,599 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         );
       case 'account':
         return (
-          <div className="space-y-8 p-2">
-            <div className="flex flex-col gap-1">
-              <h3 className={`text-lg font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>Mon Compte</h3>
-              <p className="text-xs text-slate-400">Gérez vos informations personnelles et votre abonnement.</p>
+          <div className="space-y-6 p-1 sm:p-2">
+            {/* Header */}
+            <div className="flex items-center justify-between pb-2 border-b border-white/5">
+              <div>
+                <h3 className={`text-xl font-bold font-display ${isDark ? 'text-white' : 'text-slate-900'} flex items-center gap-2`}>
+                  <User className="text-orange-primary" size={22} />
+                  <span>{lang === 'fr' ? 'Profil & Personnalisation IA' : 'Profile & AI Customization'}</span>
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  {lang === 'fr' 
+                    ? "Gérez votre identité, vos instructions personnalisées façon ChatGPT/Claude et le comportement de l'IA."
+                    : "Manage your identity, ChatGPT/Claude style custom instructions, and AI behavior."}
+                </p>
+              </div>
+
+              {/* Status Badge */}
+              <div className="flex items-center gap-2">
+                {user?.email === 'benit800@gmail.com' ? (
+                  <span className="px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-400/20 to-yellow-500/20 text-yellow-400 border border-yellow-500/30 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-lg shadow-yellow-500/10">
+                    <Sparkles size={11} className="animate-pulse" />
+                    Super Admin Gold
+                  </span>
+                ) : (
+                  <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5">
+                    <CheckCheck size={12} />
+                    Profil Synchronisé
+                  </span>
+                )}
+              </div>
             </div>
 
-            <div className={`p-6 rounded-3xl border ${isDark ? 'border-white/10 bg-white/5' : 'border-slate-100 bg-slate-50'}`}>
-              <div className="flex items-center gap-6 mb-8">
-                <div className={`w-20 h-20 rounded-full ${user?.email === 'benit800@gmail.com' ? 'bg-gradient-to-r from-amber-400 to-yellow-600 text-black ring-4 ring-yellow-400 shadow-2xl' : 'bg-blue-600 text-white'} flex items-center justify-center font-bold text-2xl overflow-hidden shadow-2xl`}>
-                  {user?.user_metadata?.avatar_url ? (
-                    <img src={user.user_metadata.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
-                  ) : (
-                    user?.email?.[0].toUpperCase() || 'U'
-                  )}
-                </div>
-                <div className="flex flex-col gap-1">
-                  <h4 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-slate-900'} flex items-center gap-2`}>
-                    {user?.email === 'benit800@gmail.com' ? 'Welcome Admin' : (user?.user_metadata?.username || user?.email?.split('@')[0])}
-                    {user?.email === 'benit800@gmail.com' && (
-                      <span className="w-2.5 h-2.5 rounded-full bg-yellow-400 animate-pulse shadow-[0_0_8px_#f59e0b]" />
-                    )}
-                  </h4>
-                  <p className="text-sm text-slate-400">{user?.email}</p>
-                  <div className="flex items-center gap-2 mt-2">
-                    {user?.email === 'benit800@gmail.com' ? (
-                      <>
-                        <span className="px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-400/20 to-yellow-500/20 text-yellow-500 border border-yellow-500/30 text-[10px] font-bold uppercase tracking-widest flex items-center gap-1 shadow-lg shadow-yellow-500/5">
-                          <Sparkles size={10} className="animate-pulse" />
-                          Membre Gold
-                        </span>
-                        <span className="px-2.5 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20 text-[10px] font-bold uppercase tracking-widest">
-                          Super Admin
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 text-[10px] font-bold uppercase tracking-widest">Plan Gratuit</span>
-                        <span className="px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 text-[10px] font-bold uppercase tracking-widest">Actif</span>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
+            {/* Profile Card with Photo Import & General Info */}
+            <div className={`p-5 sm:p-6 rounded-2xl border ${isDark ? 'border-white/10 bg-white/[0.03]' : 'border-slate-200 bg-white shadow-sm'} space-y-6`}>
+              {/* Hidden file input for custom photo upload */}
+              <input 
+                ref={fileInputRef}
+                type="file" 
+                accept="image/png, image/jpeg, image/webp, image/gif" 
+                className="hidden" 
+                onChange={handleImageFileChange}
+              />
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className={`p-4 rounded-2xl border ${isDark ? 'border-white/5 bg-black/20' : 'border-slate-200 bg-white shadow-sm'}`}>
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 block mb-1">Sites créés</span>
-                  <span className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{conversationsCount}</span>
-                </div>
-                <div className={`p-4 rounded-2xl border ${isDark ? 'border-white/5 bg-black/20' : 'border-slate-200 bg-white shadow-sm'}`}>
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 block mb-1">Stockage utilisé</span>
-                  <span className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>0 MB</span>
-                </div>
-              </div>
-
-              {user?.email === 'benit800@gmail.com' && (
-                <div className="mt-6 border-t border-dashed border-white/10 pt-6 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h4 className={`text-sm font-bold ${isDark ? 'text-white' : 'text-slate-900'} flex items-center gap-2`}>
-                      <Activity size={16} className="text-yellow-500 animate-pulse" />
-                      Activités Réseau (Super Admin)
-                    </h4>
-                    <button 
-                      onClick={fetchAdminActivity}
-                      disabled={adminLoading}
-                      className="text-xs text-yellow-500 hover:underline font-bold"
-                    >
-                      {adminLoading ? "Actualisation..." : "Actualiser ↻"}
-                    </button>
-                  </div>
-                  
-                  {adminLoading && adminUsers.length === 0 ? (
-                    <div className="flex items-center gap-2 text-slate-400 text-xs py-2">
-                      <Loader2 className="animate-spin" size={14} />
-                      Chargement en direct de l'activité utilisateur...
-                    </div>
-                  ) : (
-                    <>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className={`p-3 rounded-xl border ${isDark ? 'border-white/5 bg-black/40' : 'border-slate-200 bg-white shadow-sm'}`}>
-                          <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400 block mb-1">Membres</span>
-                          <span className={`text-lg font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>{adminUsers.length}</span>
-                        </div>
-                        <div className={`p-3 rounded-xl border ${isDark ? 'border-white/5 bg-black/40' : 'border-slate-200 bg-white shadow-sm'}`}>
-                          <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400 block mb-1">Projets / Conversations</span>
-                          <span className={`text-lg font-black ${isDark ? 'text-yellow-500' : 'text-yellow-600'}`}>
-                            {adminUsers.reduce((acc, u) => acc + (u.conversations?.length || 0), 0)}
-                          </span>
-                        </div>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
+                {/* Photo Preview & Interactive Click to Upload */}
+                <div 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="relative group shrink-0 cursor-pointer"
+                  title="Cliquez pour importer une photo"
+                >
+                  <div className={`w-20 h-20 rounded-2xl overflow-hidden border-2 transition-all relative ${
+                    isDark ? 'border-white/20 bg-zinc-900 group-hover:border-amber-500' : 'border-slate-200 bg-slate-100 group-hover:border-amber-500'
+                  } shadow-xl flex items-center justify-center text-2xl font-bold`}>
+                    {isUploadingImage ? (
+                      <div className="flex flex-col items-center justify-center gap-1 text-amber-500">
+                        <Loader2 size={24} className="animate-spin" />
+                        <span className="text-[9px] font-bold">Import...</span>
                       </div>
+                    ) : profileAvatarUrl ? (
+                      <img src={profileAvatarUrl} alt="Photo de profil" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-orange-primary font-black">
+                        {(profileFullName || profileUsername || user?.email || 'U')[0].toUpperCase()}
+                      </span>
+                    )}
 
-                      {/* Search Bar inside Account tab */}
-                      <div className="relative mt-2">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                        <input
-                          type="text"
-                          value={adminSearchText}
-                          onChange={(e) => setAdminSearchText(e.target.value)}
-                          placeholder="Rechercher un utilisateur ou projet..."
-                          className={`w-full pl-9 pr-4 py-1.5 text-xs rounded-xl border focus:outline-none focus:ring-1 ${
-                            isDark 
-                              ? 'border-white/10 bg-black/45 text-white focus:border-yellow-500 focus:ring-yellow-500' 
-                              : 'border-slate-200 bg-white text-slate-900 focus:border-amber-500 focus:ring-amber-500'
+                    {/* Hover Overlay */}
+                    {!isUploadingImage && (
+                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white gap-1 backdrop-blur-xs">
+                        <Camera size={18} />
+                        <span className="text-[9px] font-bold uppercase">Changer</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Photo Import Action Controls */}
+                <div className="flex-1 w-full space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Photo de profil</span>
+                    {profileAvatarUrl && (
+                      <span className="text-[11px] text-emerald-400 font-semibold flex items-center gap-1">
+                        <Check size={12} strokeWidth={3} /> Photo personnalisée active
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* Button 1: Upload from device */}
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploadingImage}
+                      className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold text-xs shadow-md shadow-orange-500/20 hover:shadow-orange-500/30 hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                    >
+                      {isUploadingImage ? (
+                        <Loader2 size={14} className="animate-spin" />
+                      ) : (
+                        <Upload size={14} />
+                      )}
+                      <span>{isUploadingImage ? "Traitement..." : "Importer une photo"}</span>
+                    </button>
+
+                    {/* Button 2: Paste Image URL */}
+                    <button
+                      type="button"
+                      onClick={() => setShowUrlInput(!showUrlInput)}
+                      className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-all flex items-center gap-1.5 ${
+                        showUrlInput 
+                          ? (isDark ? 'bg-white/10 text-white border-white/20' : 'bg-slate-200 text-slate-900 border-slate-300')
+                          : (isDark ? 'border-white/10 bg-white/5 text-white/70 hover:text-white hover:bg-white/10' : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100')
+                      }`}
+                    >
+                      <LinkIcon size={13} />
+                      <span>{showUrlInput ? "Fermer URL" : "Lien d'image (URL)"}</span>
+                    </button>
+
+                    {/* Button 3: Remove photo (Reset to initials) */}
+                    {profileAvatarUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setProfileAvatarUrl('')}
+                        className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-all flex items-center gap-1.5 text-red-400 hover:text-red-300 ${
+                          isDark ? 'border-red-500/20 bg-red-500/10 hover:bg-red-500/20' : 'border-red-200 bg-red-50 hover:bg-red-100'
+                        }`}
+                        title="Supprimer la photo et afficher l'initiale"
+                      >
+                        <Trash2 size={13} />
+                        <span>Supprimer</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Collapsible URL Input Field */}
+                  {showUrlInput && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: -4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="flex items-center gap-2 pt-1"
+                    >
+                      <div className="relative flex-1">
+                        <ImageIcon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <input 
+                          type="url" 
+                          value={manualImageUrl}
+                          onChange={(e) => setManualImageUrl(e.target.value)}
+                          placeholder="https://exemple.com/ma-photo.jpg"
+                          className={`w-full pl-8 pr-3 py-1.5 rounded-xl border text-xs transition-all focus:outline-none focus:ring-2 focus:ring-amber-500/30 ${
+                            isDark ? 'bg-black/40 border-white/10 text-white placeholder-white/20' : 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400'
                           }`}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleApplyManualUrl();
+                            }
+                          }}
                         />
                       </div>
-
-                      {/* Interactive expandable user list of ALL users */}
-                      <div className="space-y-2 mt-2 max-h-[350px] overflow-y-auto pr-1">
-                        <span className="text-[9.5px] uppercase tracking-wider font-extrabold text-slate-500 block mb-1">Tous les Utilisateurs & Actions :</span>
-                        {adminUsers
-                          .filter(u => 
-                            u.username?.toLowerCase().includes(adminSearchText.toLowerCase()) ||
-                            u.id?.toLowerCase().includes(adminSearchText.toLowerCase()) ||
-                            u.conversations?.some((c: any) => c.title?.toLowerCase().includes(adminSearchText.toLowerCase()))
-                          )
-                          .map(u => {
-                            const isExpanded = expandedUserIds.includes(u.id);
-                            const userConvs = u.conversations || [];
-                            return (
-                              <div key={u.id} className={`rounded-xl border text-[11px] transition-all overflow-hidden ${isDark ? 'border-white/5 bg-black/30' : 'border-slate-200/60 bg-white shadow-sm'}`}>
-                                <button 
-                                  onClick={() => toggleUserExpanded(u.id)}
-                                  className="w-full flex items-center justify-between p-2.5 text-left hover:bg-white/5 transition-all"
-                                >
-                                  <div>
-                                    <span className={`font-black ${isDark ? 'text-white' : 'text-slate-800'}`}>{u.username || 'Utilisateur Anonyme'}</span>
-                                    <span className="text-[8px] font-mono text-slate-400 block">ID: {u.id}</span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-[9px] font-mono text-slate-400 bg-blue-500/10 px-1.5 py-0.5 rounded font-bold">
-                                      {userConvs.length} {userConvs.length === 1 ? 'projet' : 'projets'}
-                                    </span>
-                                    <span className="text-[9px] text-slate-400">{isExpanded ? '▲' : '▼'}</span>
-                                  </div>
-                                </button>
-                                
-                                {isExpanded && (
-                                  <div className={`p-2.5 border-t ${isDark ? 'border-white/5 bg-black/20' : 'border-slate-100 bg-slate-50'} space-y-2`}>
-                                    {userConvs.length === 0 ? (
-                                      <p className="text-slate-500 italic text-[10px]">Aucun projet démarré</p>
-                                    ) : (
-                                      userConvs.map((conv: any) => (
-                                        <div key={conv.id} className={`p-2 rounded border text-[10px] ${isDark ? 'border-white/5 bg-zinc-900/50' : 'border-slate-200 bg-white'}`}>
-                                          <div className="flex justify-between font-bold text-slate-400 mb-1">
-                                            <span className={isDark ? 'text-yellow-400/90' : 'text-amber-700'}>{conv.title}</span>
-                                            <span className="text-[8px] font-mono">{conv.createdAt ? new Date(conv.createdAt).toLocaleDateString('fr-FR') : ''}</span>
-                                          </div>
-                                          <div className={`p-1.5 rounded text-[10px] font-mono bg-black/20 text-slate-300 max-h-20 overflow-y-auto whitespace-pre-wrap border ${isDark ? 'border-white/5' : 'border-slate-100'}`}>
-                                            <span className="text-[8px] uppercase text-zinc-500 font-extrabold block scale-90 -ml-1">Dernière invite :</span>
-                                            {conv.latestPrompt || 'Aucun message'}
-                                          </div>
-                                          <div className="flex justify-between text-[8px] text-slate-500 mt-1">
-                                            <span>Messages: {conv.messageCount}</span>
-                                            <span>Model: {conv.modelName || 'Default'}</span>
-                                          </div>
-                                        </div>
-                                      ))
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                      </div>
-                    </>
+                      <button
+                        type="button"
+                        onClick={handleApplyManualUrl}
+                        className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition-all shrink-0 cursor-pointer"
+                      >
+                        Appliquer
+                      </button>
+                    </motion.div>
                   )}
                 </div>
-              )}
+              </div>
+
+              {/* Input Grid: Name, Username, Role, Email */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-white/5">
+                <div className="space-y-1.5">
+                  <label className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                    Nom complet / Prénom
+                  </label>
+                  <input 
+                    type="text"
+                    value={profileFullName}
+                    onChange={(e) => setProfileFullName(e.target.value)}
+                    placeholder="Ex: Benit Madimba"
+                    className={`w-full px-3.5 py-2.5 rounded-xl border text-sm transition-all focus:outline-none focus:ring-2 focus:ring-orange-primary/30 ${
+                      isDark ? 'bg-black/40 border-white/10 text-white placeholder-white/20' : 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400'
+                    }`}
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                    Nom d'utilisateur (@pseudo)
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm">@</span>
+                    <input 
+                      type="text"
+                      value={profileUsername}
+                      onChange={(e) => setProfileUsername(e.target.value.replace(/^@/, ''))}
+                      placeholder="benit"
+                      className={`w-full pl-8 pr-3.5 py-2.5 rounded-xl border text-sm transition-all focus:outline-none focus:ring-2 focus:ring-orange-primary/30 ${
+                        isDark ? 'bg-black/40 border-white/10 text-white placeholder-white/20' : 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400'
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                    Métier / Rôle professionnel
+                  </label>
+                  <input 
+                    type="text"
+                    value={profileRole}
+                    onChange={(e) => setProfileRole(e.target.value)}
+                    placeholder="Ex: Développeur Full Stack, Entrepreneur..."
+                    className={`w-full px-3.5 py-2.5 rounded-xl border text-sm transition-all focus:outline-none focus:ring-2 focus:ring-orange-primary/30 ${
+                      isDark ? 'bg-black/40 border-white/10 text-white placeholder-white/20' : 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400'
+                    }`}
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                    Adresse Email (Connecté)
+                  </label>
+                  <input 
+                    type="email"
+                    value={user?.email || 'Non connecté'}
+                    disabled
+                    className={`w-full px-3.5 py-2.5 rounded-xl border text-sm opacity-60 cursor-not-allowed ${
+                      isDark ? 'bg-black/20 border-white/10 text-white/70' : 'bg-slate-100 border-slate-200 text-slate-500'
+                    }`}
+                  />
+                </div>
+
+                <div className="sm:col-span-2 space-y-1.5">
+                  <label className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                    Biographie / Courte description
+                  </label>
+                  <input 
+                    type="text"
+                    value={profileBio}
+                    onChange={(e) => setProfileBio(e.target.value)}
+                    placeholder="Ex: Je crée des applications modernes, des boutiques en ligne et des interfaces web épurées."
+                    className={`w-full px-3.5 py-2.5 rounded-xl border text-sm transition-all focus:outline-none focus:ring-2 focus:ring-orange-primary/30 ${
+                      isDark ? 'bg-black/40 border-white/10 text-white placeholder-white/20' : 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400'
+                    }`}
+                  />
+                </div>
+              </div>
             </div>
 
-            <div className="space-y-4">
+            {/* AI Operating Mode Switcher (Code vs Chat/No Code) */}
+            <div className={`p-5 sm:p-6 rounded-2xl border ${isDark ? 'border-white/10 bg-white/[0.03]' : 'border-slate-200 bg-white shadow-sm'} space-y-4`}>
+              <div>
+                <h4 className={`text-sm font-bold uppercase tracking-wider ${isDark ? 'text-white' : 'text-slate-900'} flex items-center gap-2`}>
+                  <Bot className="text-orange-primary" size={18} />
+                  <span>Mode de Fonctionnement de l'IA</span>
+                </h4>
+                <p className="text-xs text-slate-400 mt-1">
+                  Choisissez si Cook IA doit générer du code web complet ou uniquement discuter / conseiller sans toucher au code existant.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
+                {/* Option 1: Code Mode */}
+                <button
+                  type="button"
+                  onClick={() => setLocalAiMode('code')}
+                  className={`p-4 rounded-xl border text-left transition-all relative overflow-hidden ${
+                    localAiMode === 'code'
+                      ? 'border-orange-primary bg-orange-primary/10 ring-2 ring-orange-primary/20 shadow-md'
+                      : (isDark ? 'border-white/10 bg-black/20 hover:bg-white/[0.04]' : 'border-slate-200 bg-slate-50 hover:bg-slate-100')
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2 text-orange-primary font-bold text-sm">
+                      <Code2 size={18} />
+                      <span>Mode Code & Développement</span>
+                    </div>
+                    {localAiMode === 'code' && (
+                      <span className="w-5 h-5 rounded-full bg-orange-primary text-white flex items-center justify-center">
+                        <Check size={12} strokeWidth={3} />
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    L'IA génère et met à jour en direct des pages web complètes (HTML/CSS/JS, React 18, Tailwind).
+                  </p>
+                </button>
+
+                {/* Option 2: Discussion / No Code Mode */}
+                <button
+                  type="button"
+                  onClick={() => setLocalAiMode('chat')}
+                  className={`p-4 rounded-xl border text-left transition-all relative overflow-hidden ${
+                    localAiMode === 'chat'
+                      ? 'border-blue-500 bg-blue-500/10 ring-2 ring-blue-500/20 shadow-md'
+                      : (isDark ? 'border-white/10 bg-black/20 hover:bg-white/[0.04]' : 'border-slate-200 bg-slate-50 hover:bg-slate-100')
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2 text-blue-400 font-bold text-sm">
+                      <MessageSquare size={18} />
+                      <span>Mode Conversation (Ne pas coder)</span>
+                    </div>
+                    {localAiMode === 'chat' && (
+                      <span className="w-5 h-5 rounded-full bg-blue-500 text-white flex items-center justify-center">
+                        <Check size={12} strokeWidth={3} />
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    L'IA répond en texte pur (conseils, architecture, questions/réponses) SANS générer ni écraser de code web.
+                  </p>
+                </button>
+              </div>
+            </div>
+
+            {/* Custom Instructions (ChatGPT & Claude Style) */}
+            <div className={`p-5 sm:p-6 rounded-2xl border ${isDark ? 'border-white/10 bg-white/[0.03]' : 'border-slate-200 bg-white shadow-sm'} space-y-5`}>
+              <div>
+                <h4 className={`text-sm font-bold uppercase tracking-wider ${isDark ? 'text-white' : 'text-slate-900'} flex items-center gap-2`}>
+                  <Brain className="text-purple-400" size={18} />
+                  <span>Instructions Personnalisées (Style ChatGPT / Claude)</span>
+                </h4>
+                <p className="text-xs text-slate-400 mt-1">
+                  Ces instructions sont injectées dans chaque échange pour que Cook IA adapte son ton, son niveau technique et ses réponses à vos attentes.
+                </p>
+              </div>
+
+              {/* Instruction 1: About User */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className={`text-xs font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+                    1. Que doit savoir Cook IA sur vous pour personnaliser ses réponses ?
+                  </label>
+                  <span className="text-[10px] text-slate-400">Vos compétences, vos projets, vos outils favoris</span>
+                </div>
+                <textarea
+                  rows={3}
+                  value={customInstructionsAbout}
+                  onChange={(e) => setCustomInstructionsAbout(e.target.value)}
+                  placeholder="Ex: Je suis un développeur fullstack qui aime React et Tailwind CSS. Je construis des projets innovants et j'apprécie un code propre, moderne et performant."
+                  className={`w-full p-3 rounded-xl border text-xs leading-relaxed transition-all focus:outline-none focus:ring-2 focus:ring-purple-500/30 resize-y ${
+                    isDark ? 'bg-black/40 border-white/10 text-white placeholder-white/25' : 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400'
+                  }`}
+                />
+                {/* Quick tags */}
+                <div className="flex flex-wrap gap-1.5 pt-0.5">
+                  {[
+                    "Développeur React & TypeScript",
+                    "Designer UI/UX axé minimalisme",
+                    "Entrepreneur / Créateur SaaS",
+                    "Débutant en développement web"
+                  ].map((tag, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setCustomInstructionsAbout(prev => prev ? `${prev}. ${tag}` : tag)}
+                      className={`text-[10px] px-2 py-0.5 rounded-lg border transition-all ${
+                        isDark ? 'border-white/10 bg-white/5 text-white/60 hover:text-white hover:bg-white/10' : 'border-slate-200 bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      + {tag}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Instruction 2: Response Style */}
+              <div className="space-y-2 pt-2 border-t border-white/5">
+                <div className="flex items-center justify-between">
+                  <label className={`text-xs font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+                    2. Comment souhaitez-vous que Cook IA formule ses réponses ?
+                  </label>
+                  <span className="text-[10px] text-slate-400">Ton, concision, style rédactionnel</span>
+                </div>
+                <textarea
+                  rows={3}
+                  value={customInstructionsStyle}
+                  onChange={(e) => setCustomInstructionsStyle(e.target.value)}
+                  placeholder="Ex: Sois direct, concis et précis. Évite les bavardages inutiles. Explique les choix techniques avec des exemples clairs. Privilégie le format Markdown."
+                  className={`w-full p-3 rounded-xl border text-xs leading-relaxed transition-all focus:outline-none focus:ring-2 focus:ring-purple-500/30 resize-y ${
+                    isDark ? 'bg-black/40 border-white/10 text-white placeholder-white/25' : 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400'
+                  }`}
+                />
+                {/* Quick tags */}
+                <div className="flex flex-wrap gap-1.5 pt-0.5">
+                  {[
+                    "Direct & concis sans bavardage",
+                    "Pédagogique avec explications pas à pas",
+                    "Focus performance & accessibilité",
+                    "Format Markdown structuré"
+                  ].map((tag, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setCustomInstructionsStyle(prev => prev ? `${prev}. ${tag}` : tag)}
+                      className={`text-[10px] px-2 py-0.5 rounded-lg border transition-all ${
+                        isDark ? 'border-white/10 bg-white/5 text-white/60 hover:text-white hover:bg-white/10' : 'border-slate-200 bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      + {tag}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Save Button & Feedback Alert */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+              <div className="text-xs">
+                {profileSaveSuccess && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center gap-2 text-emerald-400 font-bold bg-emerald-500/10 px-3 py-1.5 rounded-xl border border-emerald-500/20"
+                  >
+                    <CheckCheck size={15} />
+                    <span>Informations & préférences enregistrées avec succès !</span>
+                  </motion.div>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={handleSaveProfile}
+                disabled={isSavingProfile}
+                className="w-full sm:w-auto px-6 py-3 rounded-xl bg-gradient-to-r from-orange-primary to-amber-500 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-orange-primary/25 hover:shadow-orange-primary/40 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+              >
+                {isSavingProfile ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <Save size={16} />
+                )}
+                <span>{isSavingProfile ? "Enregistrement..." : "Enregistrer les informations"}</span>
+              </button>
+            </div>
+
+            {/* Account Usage Metrics */}
+            <div className="grid grid-cols-2 gap-4 pt-2">
+              <div className={`p-4 rounded-2xl border ${isDark ? 'border-white/5 bg-black/20' : 'border-slate-200 bg-white shadow-sm'}`}>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 block mb-1">Projets créés</span>
+                <span className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{conversationsCount}</span>
+              </div>
+              <div className={`p-4 rounded-2xl border ${isDark ? 'border-white/5 bg-black/20' : 'border-slate-200 bg-white shadow-sm'}`}>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 block mb-1">Statut synchronisation</span>
+                <span className="text-sm font-bold text-emerald-400 flex items-center gap-1.5 mt-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  Actif & Sauvegardé
+                </span>
+              </div>
+            </div>
+
+            {/* Admin Activity Inspection Section for Super Admin Benit */}
+            {user?.email === 'benit800@gmail.com' && (
+              <div className={`p-5 rounded-2xl border ${isDark ? 'border-amber-500/20 bg-amber-500/[0.03]' : 'border-amber-200 bg-amber-50/50'} space-y-4`}>
+                <div className="flex items-center justify-between">
+                  <h4 className={`text-sm font-bold ${isDark ? 'text-white' : 'text-slate-900'} flex items-center gap-2`}>
+                    <Activity size={16} className="text-yellow-500 animate-pulse" />
+                    <span>Activités Réseau (Super Admin)</span>
+                  </h4>
+                  <button 
+                    type="button"
+                    onClick={fetchAdminActivity}
+                    disabled={adminLoading}
+                    className="text-xs text-yellow-500 hover:underline font-bold"
+                  >
+                    {adminLoading ? "Actualisation..." : "Actualiser ↻"}
+                  </button>
+                </div>
+                
+                {adminLoading && adminUsers.length === 0 ? (
+                  <div className="flex items-center gap-2 text-slate-400 text-xs py-2">
+                    <Loader2 className="animate-spin" size={14} />
+                    Chargement en direct de l'activité utilisateur...
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className={`p-3 rounded-xl border ${isDark ? 'border-white/5 bg-black/40' : 'border-slate-200 bg-white shadow-sm'}`}>
+                        <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400 block mb-1">Membres</span>
+                        <span className={`text-lg font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>{adminUsers.length}</span>
+                      </div>
+                      <div className={`p-3 rounded-xl border ${isDark ? 'border-white/5 bg-black/40' : 'border-slate-200 bg-white shadow-sm'}`}>
+                        <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400 block mb-1">Projets / Conversations</span>
+                        <span className={`text-lg font-black ${isDark ? 'text-yellow-500' : 'text-yellow-600'}`}>
+                          {adminUsers.reduce((acc, u) => acc + (u.conversations?.length || 0), 0)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Search Bar inside Account tab */}
+                    <div className="relative mt-2">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                      <input
+                        type="text"
+                        value={adminSearchText}
+                        onChange={(e) => setAdminSearchText(e.target.value)}
+                        placeholder="Rechercher un utilisateur ou projet..."
+                        className={`w-full pl-9 pr-4 py-1.5 text-xs rounded-xl border focus:outline-none focus:ring-1 ${
+                          isDark 
+                            ? 'border-white/10 bg-black/45 text-white focus:border-yellow-500 focus:ring-yellow-500' 
+                            : 'border-slate-200 bg-white text-slate-900 focus:border-amber-500 focus:ring-amber-500'
+                        }`}
+                      />
+                    </div>
+
+                    {/* Interactive expandable user list of ALL users */}
+                    <div className="space-y-2 mt-2 max-h-[300px] overflow-y-auto pr-1">
+                      <span className="text-[9.5px] uppercase tracking-wider font-extrabold text-slate-500 block mb-1">Tous les Utilisateurs & Actions :</span>
+                      {adminUsers
+                        .filter(u => 
+                          u.username?.toLowerCase().includes(adminSearchText.toLowerCase()) ||
+                          u.id?.toLowerCase().includes(adminSearchText.toLowerCase()) ||
+                          u.conversations?.some((c: any) => c.title?.toLowerCase().includes(adminSearchText.toLowerCase()))
+                        )
+                        .map(u => {
+                          const isExpanded = expandedUserIds.includes(u.id);
+                          const userConvs = u.conversations || [];
+                          return (
+                            <div key={u.id} className={`rounded-xl border text-[11px] transition-all overflow-hidden ${isDark ? 'border-white/5 bg-black/30' : 'border-slate-200/60 bg-white shadow-sm'}`}>
+                              <button 
+                                type="button"
+                                onClick={() => toggleUserExpanded(u.id)}
+                                className="w-full flex items-center justify-between p-2.5 text-left hover:bg-white/5 transition-all"
+                              >
+                                <div>
+                                  <span className={`font-black ${isDark ? 'text-white' : 'text-slate-800'}`}>{u.username || 'Utilisateur Anonyme'}</span>
+                                  <span className="text-[8px] font-mono text-slate-400 block">ID: {u.id}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[9px] font-mono text-slate-400 bg-blue-500/10 px-1.5 py-0.5 rounded font-bold">
+                                    {userConvs.length} {userConvs.length === 1 ? 'projet' : 'projets'}
+                                  </span>
+                                  <span className="text-[9px] text-slate-400">{isExpanded ? '▲' : '▼'}</span>
+                                </div>
+                              </button>
+                              
+                              {isExpanded && (
+                                <div className={`p-2.5 border-t ${isDark ? 'border-white/5 bg-black/20' : 'border-slate-100 bg-slate-50'} space-y-2`}>
+                                  {userConvs.length === 0 ? (
+                                    <p className="text-slate-500 italic text-[10px]">Aucun projet démarré</p>
+                                  ) : (
+                                    userConvs.map((conv: any) => (
+                                      <div key={conv.id} className={`p-2 rounded border text-[10px] ${isDark ? 'border-white/5 bg-zinc-900/50' : 'border-slate-200 bg-white'}`}>
+                                        <div className="flex justify-between font-bold text-slate-400 mb-1">
+                                          <span className={isDark ? 'text-yellow-400/90' : 'text-amber-700'}>{conv.title}</span>
+                                          <span className="text-[8px] font-mono">{conv.createdAt ? new Date(conv.createdAt).toLocaleDateString('fr-FR') : ''}</span>
+                                        </div>
+                                        <div className={`p-1.5 rounded text-[10px] font-mono bg-black/20 text-slate-300 max-h-20 overflow-y-auto whitespace-pre-wrap border ${isDark ? 'border-white/5' : 'border-slate-100'}`}>
+                                          <span className="text-[8px] uppercase text-zinc-500 font-extrabold block scale-90 -ml-1">Dernière invite :</span>
+                                          {conv.latestPrompt || 'Aucun message'}
+                                        </div>
+                                        <div className="flex justify-between text-[8px] text-slate-500 mt-1">
+                                          <span>Messages: {conv.messageCount}</span>
+                                          <span>Model: {conv.modelName || 'Default'}</span>
+                                        </div>
+                                      </div>
+                                    ))
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Logout Button */}
+            <div className="pt-2">
               <button 
+                type="button"
                 onClick={async () => {
                   await supabase.auth.signOut();
                   window.location.reload();
                 }}
-                className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all border-red-500/10 hover:bg-red-500/5 text-red-500`}
+                className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all ${
+                  isDark ? 'border-red-500/20 bg-red-500/5 hover:bg-red-500/10 text-red-400' : 'border-red-200 bg-red-50 hover:bg-red-100 text-red-600'
+                }`}
               >
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-red-500/10">
+                  <div className="p-2 rounded-xl bg-red-500/10">
                     <LogOut size={18} />
                   </div>
-                  <span className="text-sm font-bold">Se déconnecter</span>
+                  <div className="text-left">
+                    <span className="text-sm font-bold block">{lang === 'fr' ? 'Se déconnecter de Cook IA' : 'Sign out of Cook IA'}</span>
+                    <span className="text-[11px] opacity-70 block">{user?.email}</span>
+                  </div>
                 </div>
+                <ChevronRight size={16} />
               </button>
             </div>
           </div>
@@ -1531,29 +2122,34 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               isDark ? 'bg-[#141414] border border-white/10' : 'bg-white'
             }`}
           >
-            <div className={`flex items-center justify-between p-4 border-b ${isDark ? 'border-white/5' : 'border-slate-100'}`}>
-              <div className="flex-1 overflow-x-auto scrollbar-hide">
-                <div className="flex items-center gap-1 min-w-max">
-                  {tabs.map((tab) => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id as TabType)}
-                      className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                        activeTab === tab.id 
-                          ? (isDark ? 'bg-white/10 text-white' : 'bg-slate-100 text-slate-900')
-                          : (isDark ? 'text-white/40 hover:text-white hover:bg-white/5' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50')
-                      }`}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
+            <div className={`flex items-center justify-between px-3 sm:px-4 py-3 border-b shrink-0 ${isDark ? 'border-white/5 bg-[#171717]' : 'border-slate-100 bg-slate-50/50'}`}>
+              <div className="flex-1 overflow-x-auto no-scrollbar py-0.5">
+                <div className="flex items-center gap-1.5 min-w-max">
+                  {tabs.map((tab) => {
+                    const TabIcon = tab.icon;
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id as TabType)}
+                        className={`flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-all shrink-0 ${
+                          activeTab === tab.id 
+                            ? (isDark ? 'bg-amber-500 text-black shadow-md shadow-amber-500/20 font-bold' : 'bg-slate-900 text-white shadow-sm font-bold')
+                            : (isDark ? 'text-white/50 hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/70')
+                        }`}
+                      >
+                        {TabIcon && <TabIcon size={14} className="shrink-0" />}
+                        <span>{tab.label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
               <button 
                 onClick={onClose}
-                className={`p-2 rounded-full transition-colors shrink-0 ml-2 ${isDark ? 'hover:bg-white/5 text-white/40' : 'hover:bg-slate-100 text-slate-400'}`}
+                className={`p-1.5 sm:p-2 rounded-full transition-colors shrink-0 ml-2 ${isDark ? 'hover:bg-white/10 text-white/50 hover:text-white' : 'hover:bg-slate-200 text-slate-400 hover:text-slate-700'}`}
+                title="Fermer"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
 

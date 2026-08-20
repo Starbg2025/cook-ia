@@ -1,10 +1,17 @@
 import { createClient } from "@supabase/supabase-js";
 
-// Use public keys defined in vite.config.ts/env vars
-const supabaseUrl = "https://bxsilckpxcpsgojrakfs.supabase.co";
-const supabaseAnonKey = "sb_publishable_LGb-62oHXiolJluDwsXUiw_ZxRfiUpT";
+// Supabase Client with environment variables support and safe defaults
+const env = (import.meta as any).env || {};
+const supabaseUrl = env.VITE_SUPABASE_URL || "https://bxsilckpxcpsgojrakfs.supabase.co";
+const supabaseAnonKey = env.VITE_SUPABASE_ANON_KEY || "sb_publishable_LGb-62oHXiolJluDwsXUiw_ZxRfiUpT";
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+  }
+});
 
 export const logErrorToSupabase = async (error: string, context: any) => {
     try {

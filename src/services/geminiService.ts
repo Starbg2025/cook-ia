@@ -136,6 +136,37 @@ export const cleanAndUnescapeCode = (raw: string): string => {
   return cleanHtml.trim();
 };
 
+// Automatic image URL sanitizer and browser fallback generator for 100% reliable image loading
+export const sanitizeAndFixImageUrls = (code: string): string => {
+  if (!code || typeof code !== 'string') return code;
+
+  let sanitized = code;
+
+  // 1. Replace deprecated/dead placeholder services
+  sanitized = sanitized.replace(/https?:\/\/(via|source|images)\.placeholder\.com[^\s"'>]*/gi, 'https://picsum.photos/800/600?random=1');
+  sanitized = sanitized.replace(/https?:\/\/source\.unsplash\.com[^\s"'>]*/gi, () => {
+    return 'https://picsum.photos/800/600?random=' + Math.floor(Math.random() * 500);
+  });
+  
+  // 2. Replace fake local image paths (e.g. src="/images/hero.jpg", src="assets/photo.png")
+  sanitized = sanitized.replace(/src=["'](\.?\/?(images|img|assets|photos)\/[^"']+)["']/gi, (match, path) => {
+    const p = path.toLowerCase();
+    if (p.includes('user') || p.includes('avatar') || p.includes('person') || p.includes('profile')) {
+      return 'src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80"';
+    }
+    const randomSeed = Math.floor(Math.random() * 800) + 1;
+    return `src="https://picsum.photos/800/600?random=${randomSeed}"`;
+  });
+
+  // 3. Inject auto-recovery onerror attribute into all <img ...> tags missing an onerror handler
+  const fallbackAttr = `onerror="this.onerror=null; this.src='https://picsum.photos/800/600?random=' + Math.floor(Math.random()*1000);"`;
+  sanitized = sanitized.replace(/<img\b(?![^>]*\bonerror=)[^>]*>/gi, (imgTag) => {
+    return imgTag.replace('<img', `<img ${fallbackAttr}`);
+  });
+
+  return sanitized;
+};
+
 // Bundle multi-file project files into a single standalone HTML for iframe execution
 export const bundleProjectFiles = (files: { path: string; content: string }[], mainCode?: string): string => {
   const cleanedFiles = (files || []).map(f => ({
@@ -184,15 +215,18 @@ export const bundleProjectFiles = (files: { path: string; content: string }[], m
     html = html.replace('</head>', `${cdnInjections.join('\n')}\n</head>`);
   }
 
-  // Inject mobile overflow & responsive typography guard CSS + Netlify Standalone Fallback CSS
+  // Inject mobile overflow & responsive typography guard CSS + Netlify Standalone Fallback CSS Engine
   const mobileFixCss = `<style id="cook-ia-mobile-fix">
   :root {
     --bg-slate-900: #0f172a;
     --bg-slate-800: #1e293b;
+    --bg-slate-950: #020617;
     --text-white: #ffffff;
     --text-slate-300: #cbd5e1;
+    --text-slate-400: #94a3b8;
     --accent-indigo: #6366f1;
     --accent-purple: #a855f7;
+    --accent-blue: #3b82f6;
   }
   html, body {
     overflow-x: hidden !important;
@@ -200,52 +234,163 @@ export const bundleProjectFiles = (files: { path: string; content: string }[], m
     width: 100% !important;
     margin: 0;
     padding: 0;
-    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     background-color: var(--bg-slate-900, #0f172a);
     color: var(--text-white, #ffffff);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
   }
   *, *::before, *::after {
     box-sizing: border-box;
   }
+  h1, h2, h3, h4, h5, h6 {
+    margin-top: 0;
+    font-weight: 700;
+    line-height: 1.25;
+  }
   h1 {
-    font-size: clamp(2rem, 7.5vw, 4.25rem) !important;
+    font-size: clamp(2rem, 6.5vw, 4rem) !important;
     line-height: 1.15 !important;
     overflow-wrap: break-word !important;
     word-break: break-word !important;
     hyphens: auto;
     max-width: 100% !important;
   }
+  h2 { font-size: clamp(1.5rem, 4vw, 2.5rem) !important; }
+  h3 { font-size: clamp(1.25rem, 3vw, 1.75rem) !important; }
+  p { margin-bottom: 1rem; color: #cbd5e1; }
+  a { color: inherit; text-decoration: none; }
+  img { max-width: 100%; height: auto; display: block; border-radius: 0.75rem; }
+  button, input, select, textarea {
+    font-family: inherit;
+    font-size: inherit;
+  }
   .hero, header, section, footer, main, container, .container {
     max-width: 100% !important;
     box-sizing: border-box !important;
   }
-  /* Standalone Netlify Fallbacks for Core Utilities */
+  
+  /* Robust Netlify Native CSS Utilities (Zero External CDN Dependency) */
   .bg-slate-900 { background-color: #0f172a !important; }
   .bg-slate-800 { background-color: #1e293b !important; }
   .bg-slate-950 { background-color: #020617 !important; }
+  .bg-slate-700 { background-color: #334155 !important; }
+  .bg-indigo-600 { background-color: #4f46e5 !important; }
+  .bg-indigo-500 { background-color: #6366f1 !important; }
+  .bg-purple-600 { background-color: #9333ea !important; }
+  .bg-blue-600 { background-color: #2563eb !important; }
+  .bg-emerald-600 { background-color: #059669 !important; }
+  
   .text-white { color: #ffffff !important; }
+  .text-slate-100 { color: #f1f5f9 !important; }
+  .text-slate-200 { color: #e2e8f0 !important; }
   .text-slate-300 { color: #cbd5e1 !important; }
   .text-slate-400 { color: #94a3b8 !important; }
+  .text-indigo-400 { color: #818cf8 !important; }
+  .text-purple-400 { color: #c084fc !important; }
+  
   .flex { display: flex !important; }
+  .inline-flex { display: inline-flex !important; }
   .grid { display: grid !important; }
   .hidden { display: none !important; }
+  .flex-col { flex-direction: column !important; }
+  .flex-wrap { flex-wrap: wrap !important; }
   .items-center { align-items: center !important; }
+  .items-start { align-items: flex-start !important; }
   .justify-between { justify-content: space-between !important; }
   .justify-center { justify-content: center !important; }
-  .rounded-xl { border-radius: 0.75rem !important; }
-  .rounded-2xl { border-radius: 1rem !important; }
-  .rounded-full { border-radius: 9999px !important; }
-  .p-4 { padding: 1rem !important; }
-  .p-6 { padding: 1.5rem !important; }
-  .p-8 { padding: 2rem !important; }
-  .py-12 { padding-top: 3rem !important; padding-bottom: 3rem !important; }
-  .px-4 { padding-left: 1rem !important; padding-right: 1rem !important; }
+  .justify-end { justify-content: flex-end !important; }
+  
+  .grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)) !important; }
+  @media (min-width: 640px) {
+    .sm\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+    .sm\:flex-row { flex-direction: row !important; }
+  }
+  @media (min-width: 1024px) {
+    .lg\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+    .lg\:grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
+    .lg\:flex-row { flex-direction: row !important; }
+  }
+  
+  .gap-2 { gap: 0.5rem !important; }
+  .gap-3 { gap: 0.75rem !important; }
   .gap-4 { gap: 1rem !important; }
   .gap-6 { gap: 1.5rem !important; }
   .gap-8 { gap: 2rem !important; }
+  .gap-12 { gap: 3rem !important; }
+  
+  .p-2 { padding: 0.5rem !important; }
+  .p-3 { padding: 0.75rem !important; }
+  .p-4 { padding: 1rem !important; }
+  .p-6 { padding: 1.5rem !important; }
+  .p-8 { padding: 2rem !important; }
+  .px-4 { padding-left: 1rem !important; padding-right: 1rem !important; }
+  .px-6 { padding-left: 1.5rem !important; padding-right: 1.5rem !important; }
+  .py-2 { padding-top: 0.5rem !important; padding-bottom: 0.5rem !important; }
+  .py-3 { padding-top: 0.75rem !important; padding-bottom: 0.75rem !important; }
+  .py-4 { padding-top: 1rem !important; padding-bottom: 1rem !important; }
+  .py-8 { padding-top: 2rem !important; padding-bottom: 2rem !important; }
+  .py-12 { padding-top: 3rem !important; padding-bottom: 3rem !important; }
+  .py-16 { padding-top: 4rem !important; padding-bottom: 4rem !important; }
+  
+  .m-auto { margin: auto !important; }
+  .mb-2 { margin-bottom: 0.5rem !important; }
+  .mb-4 { margin-bottom: 1rem !important; }
+  .mb-6 { margin-bottom: 1.5rem !important; }
+  .mb-8 { margin-bottom: 2rem !important; }
+  .mt-4 { margin-top: 1rem !important; }
+  .mt-8 { margin-top: 2rem !important; }
+  
   .w-full { width: 100% !important; }
+  .h-full { height: 100% !important; }
+  .min-h-screen { min-height: 100vh !important; }
+  .max-w-md { max-width: 28rem !important; margin-left: auto; margin-right: auto; }
+  .max-w-xl { max-width: 36rem !important; margin-left: auto; margin-right: auto; }
+  .max-w-4xl { max-width: 56rem !important; margin-left: auto; margin-right: auto; }
+  .max-w-6xl { max-width: 72rem !important; margin-left: auto; margin-right: auto; }
   .max-w-7xl { max-width: 80rem !important; margin-left: auto; margin-right: auto; }
-  .transition-all { transition-property: all; transition-duration: 300ms; }
+  
+  .rounded-md { border-radius: 0.375rem !important; }
+  .rounded-lg { border-radius: 0.5rem !important; }
+  .rounded-xl { border-radius: 0.75rem !important; }
+  .rounded-2xl { border-radius: 1rem !important; }
+  .rounded-3xl { border-radius: 1.5rem !important; }
+  .rounded-full { border-radius: 9999px !important; }
+  
+  .border { border: 1px solid #334155 !important; }
+  .border-slate-700 { border-color: #334155 !important; }
+  .border-slate-800 { border-color: #1e293b !important; }
+  .border-indigo-500\/30 { border-color: rgba(99, 102, 241, 0.3) !important; }
+  
+  .shadow-md { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important; }
+  .shadow-xl { box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4) !important; }
+  .shadow-2xl { box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6) !important; }
+  
+  .transition-all { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important; }
+  .hover\:scale-105:hover { transform: scale(1.05) !important; }
+  .hover\:opacity-90:hover { opacity: 0.9 !important; }
+  .hover\:bg-slate-700:hover { background-color: #334155 !important; }
+  .hover\:bg-indigo-500:hover { background-color: #6366f1 !important; }
+  
+  .cursor-pointer { cursor: pointer !important; }
+  .overflow-hidden { overflow: hidden !important; }
+  .object-cover { object-fit: cover !important; }
+  
+  /* Input & Form Styling */
+  input[type="text"], input[type="email"], input[type="password"], textarea, select {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background-color: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 0.5rem;
+    color: #ffffff;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  input:focus, textarea:focus, select:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+  }
 </style>`;
 
   if (!html.includes('id="cook-ia-mobile-fix"')) {
@@ -310,7 +455,8 @@ export const bundleProjectFiles = (files: { path: string; content: string }[], m
     html = '<!DOCTYPE html>\n' + html;
   }
 
-  return html;
+  // Sanitize image URLs & inject fallback onerror handler
+  return sanitizeAndFixImageUrls(html);
 };
 
 // Helper for proxy calls
@@ -732,7 +878,8 @@ export const updateSection = async (
   history: any[],
   model: string = "gemini-2.5-flash"
 ) => {
-  const systemInstruction = "You are an expert web developer specializing in targeted component updates.";
+  const profileContext = getUserProfilePromptContext();
+  const systemInstruction = `You are an expert web developer specializing in targeted component updates.${profileContext ? '\n' + profileContext : ''}`;
   const userPrompt = `TARGET SECTION HTML:
 \`\`\`html
 ${sectionHtml}
@@ -745,9 +892,10 @@ ${fullCode}
 
 USER REQUEST FOR THIS SECTION:
 ${prompt}
+${profileContext}
 
 INSTRUCTION:
-Modify ONLY the TARGET SECTION HTML to satisfy the user request. 
+Modify ONLY the TARGET SECTION HTML to satisfy the user request while respecting the user profile and design preferences. 
 Return the result in JSON format with two fields:
 1. 'explanation': What you changed.
 2. 'updated_section_html': The new HTML for that section only.`;
@@ -775,6 +923,37 @@ Return the result in JSON format with two fields:
   }
 };
 
+export const getUserProfilePromptContext = (): string => {
+  try {
+    const savedProfile = localStorage.getItem('cook_ia_profile_data');
+    if (!savedProfile) return "";
+    const parsed = JSON.parse(savedProfile);
+    const details: string[] = [];
+
+    if (parsed.fullName) details.push(`- Nom complet du créateur / utilisateur : ${parsed.fullName}`);
+    if (parsed.username) details.push(`- Pseudo / Identifiant : @${parsed.username}`);
+    if (parsed.role) details.push(`- Métier / Spécialité : ${parsed.role}`);
+    if (parsed.bio) details.push(`- Biographie : ${parsed.bio}`);
+    if (parsed.customInstructionsAbout) {
+      details.push(`- Contexte, projets & besoins spécifiques de l'utilisateur : ${parsed.customInstructionsAbout}`);
+    }
+    if (parsed.customInstructionsStyle) {
+      details.push(`- DIRECTIVES OBLIGATOIRES DE CODE, DESIGN ET STYLE (PRIORITÉ ABSOLUE) : ${parsed.customInstructionsStyle}`);
+    }
+
+    if (details.length > 0) {
+      return `\n\n══════════════════════════════════════════════════════════════════════════════
+[DIRECTIVES PRIORITAIRES & CONSIGNES DE CODE DU PROFIL UTILISATEUR]
+ATTENTION : L'utilisateur a défini des instructions personnalisées ci-dessous. Tu DOIS IMPÉRATIVEMENT coder, concevoir l'interface, structurer le HTML5/Tailwind/JS, choisir les palettes graphiques et intégrer les fonctionnalités en respectant scrupuleusement ces consignes :
+${details.join('\n')}
+══════════════════════════════════════════════════════════════════════════════\n`;
+    }
+  } catch (e) {
+    console.warn("Error reading profile data:", e);
+  }
+  return "";
+};
+
 export const generateWebsite = async (
   prompt: string, 
   history: { role: "user" | "model", parts: { text?: string, inlineData?: { mimeType: string, data: string } }[] }[],
@@ -786,10 +965,14 @@ export const generateWebsite = async (
   const isHealthy = shadowWatchdog.isHealthy();
   const isGemini = model.startsWith("gemini-") || model.startsWith("google/");
 
+  const profileContext = getUserProfilePromptContext();
+  const fullSystemInstruction = `${systemInstruction}${profileContext}`;
+  const fullPrompt = profileContext ? `${prompt}\n\n${profileContext}` : prompt;
+
   // Silent Fallback Protocol: If primary is unhealthy OR custom model is not a gemini model, go straight to fallback
   if ((!isHealthy || !isGemini) && !hasUserKey) {
     console.log(`[Watchdog] Skipping Gemini. Reason: ${!isHealthy ? 'unhealthy' : 'custom model: ' + model}`);
-    return await generateWithAIFallback(prompt, history, images, model);
+    return await generateWithAIFallback(fullPrompt, history, images, model);
   }
 
   try {
@@ -807,7 +990,7 @@ export const generateWebsite = async (
       })
     }).catch(err => console.error("[Watchdog] Failed to log session:", err));
 
-    const text = await callGeminiProxy(prompt, history, systemInstruction, model, images, "application/json");
+    const text = await callGeminiProxy(fullPrompt, history, fullSystemInstruction, model, images, "application/json");
     return { ...cleanAndParseJSON(text), _provider: 'gemini' };
   } catch (error: any) {
     if (isInvalidUserKeyError(error.message, hasUserKey)) {
@@ -817,40 +1000,45 @@ export const generateWebsite = async (
       shadowWatchdog.setUnhealthy();
     }
     console.debug("Gemini failed, trying fallback chain:", error);
-    return await generateWithAIFallback(prompt, history, images);
+    return await generateWithAIFallback(fullPrompt, history, images);
   }
 };
 
 export const answerQuestion = async (
   prompt: string,
   history: any[],
-  model: string = "gemini-2.0-flash"
+  model: string = "gemini-2.0-flash",
+  customInstructionOverride?: string
 ) => {
-  const qaInstruction = "Tu es COOK IA, l'assistant senior web de classe mondiale créé par Benit Madimba. L'utilisateur te pose une question directe sur son projet, le code web ou le développement. Réponds-lui directement de manière claire, concise, structurée et bienveillante en français avec du formatage Markdown si utile. Ne génère AUCUN code HTML complet ou JSON de site web, réponds simplement sous forme de texte explicatif naturel.";
+  const customContext = getUserProfilePromptContext();
+
+  const qaInstruction = customInstructionOverride || `Tu es COOK IA, un assistant conversationnel et d'ingénierie web de classe mondiale créé par Benit Madimba. L'utilisateur échange avec toi dans un mode d'assistance directe (style ChatGPT / Claude). Réponds-lui de manière claire, concise, chaleureuse, structurée et précise en français avec du formatage Markdown si utile. Ne génère PAS de site web HTML complet ni de blocs de code complexes non sollicités, réponds de façon textuelle naturelle et intelligente.${customContext}`;
   
   const hasUserKey = !!getCustomHeaders()['x-gemini-key'];
   const isHealthy = shadowWatchdog.isHealthy();
   const isGemini = model.startsWith("gemini-") || model.startsWith("google/");
 
+  const fullPrompt = customContext ? `${prompt}\n\n${customContext}` : prompt;
+
   if ((!isHealthy || !isGemini) && !hasUserKey) {
     try {
-      const res = await generateWithAIFallback(prompt, history, undefined, model);
+      const res = await generateWithAIFallback(fullPrompt, history, undefined, model);
       return typeof res === 'string' ? res : (res.explanation || (res as any).text || JSON.stringify(res));
     } catch (e: any) {
-      return "Je suis à votre disposition pour répondre à toutes vos questions sur votre projet web.";
+      return "Je suis à votre disposition pour répondre à toutes vos questions.";
     }
   }
 
   try {
-    const text = await callGeminiProxy(prompt, history, qaInstruction, model);
+    const text = await callGeminiProxy(fullPrompt, history, qaInstruction, model);
     return text;
   } catch (error: any) {
     if (isInvalidUserKeyError(error.message, hasUserKey)) throw error;
     try {
-      const res = await generateWithAIFallback(prompt, history, undefined, model);
+      const res = await generateWithAIFallback(fullPrompt, history, undefined, model);
       return typeof res === 'string' ? res : (res.explanation || (res as any).text || JSON.stringify(res));
     } catch (e) {
-      return "Je suis à votre disposition pour répondre à toutes vos questions sur votre projet web.";
+      return "Je suis à votre disposition pour répondre à toutes vos questions.";
     }
   }
 };

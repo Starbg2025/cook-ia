@@ -99,6 +99,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
     try {
       if (mode === 'signup') {
+        if (password.length < 8) {
+          throw new Error('Le mot de passe doit contenir au moins 8 caractères.');
+        }
+        if (!/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
+          throw new Error('Le mot de passe doit contenir au moins une lettre majuscule et un chiffre.');
+        }
+
         const { data, error } = await supabase.auth.signUp({
           email,
           password,

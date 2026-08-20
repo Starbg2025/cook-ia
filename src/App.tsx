@@ -48,7 +48,7 @@ import {
   Ban
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { generateWebsite, generateTitle, updateSection, convertToReact, improveText, answerQuestion, bundleProjectFiles } from './services/geminiService';
+import { generateWebsite, generateTitle, updateSection, convertToReact, improveText, answerQuestion, bundleProjectFiles, getUserProfilePromptContext } from './services/geminiService';
 import { isInformationalQuestion } from './utils/intentDetection';
 import { analystReview, criticReview, plannerAgent, testerAgent, shadowWatchdog, auditAndFixButtons } from './services/multiAgentService';
 import { Message, ViewMode, Conversation, StyleConfig, SectionEditState, ActionHistory } from './types';
@@ -99,7 +99,12 @@ export default function App() {
   const [publishStep, setPublishStep] = useState<number>(0);
   const [vercelUrl, setVercelUrl] = useState<string | null>(null);
   const [isCopied, setIsCopied] = useState(false);
-  const [isHistoryOpen, setIsHistoryOpen] = useState(true);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 1024;
+    }
+    return true;
+  });
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isStyleEditorOpen, setIsStyleEditorOpen] = useState(false);
@@ -194,6 +199,55 @@ export default function App() {
       return true;
     }
   });
+
+  const [aiMode, setAiMode] = useState<'code' | 'chat'>(() => {
+    try {
+      const saved = localStorage.getItem('cook_ia_ai_mode');
+      if (saved === 'chat' || saved === 'code') return saved;
+      const savedProfile = localStorage.getItem('cook_ia_profile_data');
+      if (savedProfile) {
+        const parsed = JSON.parse(savedProfile);
+        if (parsed.aiMode === 'chat' || parsed.aiMode === 'code') return parsed.aiMode;
+      }
+    } catch {}
+    return 'code';
+  });
+
+  const [userProfile, setUserProfile] = useState<any>(() => {
+    try {
+      const saved = localStorage.getItem('cook_ia_profile_data');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return null;
+  });
+
+  useEffect(() => {
+    const syncProfile = () => {
+      try {
+        const saved = localStorage.getItem('cook_ia_profile_data');
+        if (saved) {
+          setUserProfile(JSON.parse(saved));
+        }
+      } catch {}
+    };
+    syncProfile();
+    window.addEventListener('storage', syncProfile);
+    return () => window.removeEventListener('storage', syncProfile);
+  }, []);
+
+  const handleToggleAiMode = (newMode?: 'code' | 'chat') => {
+    const target = newMode || (aiMode === 'code' ? 'chat' : 'code');
+    setAiMode(target);
+    try {
+      localStorage.setItem('cook_ia_ai_mode', target);
+      const savedProfile = localStorage.getItem('cook_ia_profile_data');
+      if (savedProfile) {
+        const parsed = JSON.parse(savedProfile);
+        parsed.aiMode = target;
+        localStorage.setItem('cook_ia_profile_data', JSON.stringify(parsed));
+      }
+    } catch {}
+  };
 
   useEffect(() => {
     try {
@@ -1003,18 +1057,29 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
       }
 
       let enrichedUserMessage = userMessage;
+      const profilePromptContext = getUserProfilePromptContext();
+      if (profilePromptContext) {
+        enrichedUserMessage += profilePromptContext;
+      }
       const urls = currentImages.filter(img => !img.startsWith('data:'));
       if (urls.length > 0) {
         enrichedUserMessage += "\n\nReference Images (URLs):\n" + urls.join('\n');
       }
 
-      // CHECK IF USER IS ASKING A QUESTION (WITHOUT REQUESTING WEBSITE CREATION OR MODIFICATION)
-      if (isInformationalQuestion(userMessage, !!generatedCode)) {
+      // If existing code is present, pass it as baseline for modification
+      if (generatedCode && generatedCode.trim().length > 100) {
+        enrichedUserMessage += `\n\n[CODE BASELINE DU SITE EXISTANT À MODIFIER] :\nL'utilisateur demande une modification ou une amélioration sur son site existant ci-dessous. Tu DOIS conserver l'intégralité du design, des fonctionnalités et du contenu actuels et appliquer directement les modifications demandées sur ce code source :\n\`\`\`html\n${generatedCode.substring(0, 18000)}\n\`\`\``;
+      }
+
+      // CHECK IF IN CHAT MODE (NO CODE) OR USER IS ASKING AN INFORMATIONAL QUESTION
+      if (aiMode === 'chat' || isInformationalQuestion(userMessage, !!generatedCode)) {
         setCurrentAgentStage('architect');
-        setLoadingStatus(lang === 'fr' ? "💬 [Assistant COOK IA] Traitement de votre question..." : "💬 [COOK IA Assistant] Processing question...");
+        setLoadingStatus(lang === 'fr' 
+          ? (aiMode === 'chat' ? "💬 [Mode Conversation] Réponse directe (sans code)..." : "💬 [Assistant COOK IA] Traitement de votre question...") 
+          : (aiMode === 'chat' ? "💬 [Chat Mode] Answering (No Code)..." : "💬 [COOK IA Assistant] Processing question..."));
         const aQa = addAction('thought', lang === 'fr' 
-          ? "💬 [Assistant IA] Réponse directe à votre question sans modification du site web..." 
-          : "💬 [AI Assistant] Answering question directly without modifying website...");
+          ? (aiMode === 'chat' ? "💬 [Mode Conversation Actif] Réponse textuelle conversationnelle sans génération de code..." : "💬 [Assistant IA] Réponse directe à votre question sans modification du site web...") 
+          : (aiMode === 'chat' ? "💬 [Chat Mode Active] Text response without generating code..." : "💬 [AI Assistant] Answering question directly without modifying website..."));
 
         const textResponse = await answerQuestion(enrichedUserMessage, history.slice(0, -1), selectedModel);
         completeAction(aQa);
@@ -1586,31 +1651,34 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
         </svg>
       </a>
 
-      {/* Header */}
-      <header className={`h-14 border-b flex items-center justify-between px-2 sm:px-4 shrink-0 z-50 ${isDark ? 'bg-abyssal-deep border-white/5' : 'bg-white border-slate-200'}`}>
-        <div className="flex items-center gap-1.5 sm:gap-4">
+      {/* Header (Claude & ChatGPT Inspired) */}
+      <header className={`h-13 border-b flex items-center justify-between px-3 sm:px-5 shrink-0 z-50 ${isDark ? 'bg-[#080B11]/95 border-white/[0.08] backdrop-blur-md' : 'bg-white/95 border-slate-200 backdrop-blur-md'}`}>
+        <div className="flex items-center gap-2 sm:gap-3">
           <button 
             onClick={() => setIsHistoryOpen(!isHistoryOpen)}
-            className={`p-1.5 sm:p-2 rounded-lg transition-colors ${isDark ? 'text-white/60 hover:bg-white/5 hover:text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}
+            className={`p-1.5 sm:p-2 rounded-xl transition-all ${isDark ? 'text-white/60 hover:bg-white/[0.06] hover:text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}
+            title="Toggle Sidebar"
           >
             <Menu size={18} />
           </button>
-          <div className="flex items-center gap-1.5">
-            <div className="w-5 h-5 sm:w-6 sm:h-6 bg-orange-primary rounded-md flex items-center justify-center shadow-[0_0_15px_rgba(255,107,0,0.4)]">
-              <Zap size={12} className="text-white fill-white sm:w-3.5 sm:h-3.5" />
+          <div className="flex items-center gap-2 cursor-pointer" onClick={handleNewChat}>
+            <div className="w-7 h-7 bg-gradient-to-tr from-orange-primary to-amber-500 rounded-xl flex items-center justify-center shadow-md shadow-orange-primary/20 border border-white/20">
+              <Zap size={14} className="text-white fill-white" />
             </div>
-            <span className={`font-display font-black text-xs sm:text-sm tracking-tight ${isDark ? 'text-white' : 'text-slate-900'} hidden min-[360px]:inline`}>COOK IA</span>
+            <span className={`font-extrabold text-sm tracking-tight ${isDark ? 'text-white' : 'text-slate-900'} hidden min-[360px]:inline`}>
+              Cook IA
+            </span>
           </div>
         </div>
 
-        {/* View Mode Switcher */}
-        <div className={`flex items-center p-0.5 sm:p-1 rounded-xl border ${isDark ? 'bg-[#141414] border-white/5' : 'bg-slate-50 border-slate-200'}`}>
+        {/* View Mode Switcher (Modern Segmented Pill) */}
+        <div className={`flex items-center p-1 rounded-xl border ${isDark ? 'bg-[#0E1420] border-white/[0.08]' : 'bg-slate-100/80 border-slate-200'}`}>
           <button 
             onClick={() => setViewMode('chat')}
-            className={`flex items-center gap-1 px-2 sm:px-4 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-bold transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all ${
               viewMode === 'chat' 
-                ? (isDark ? 'bg-white/10 text-white shadow-lg' : 'bg-white text-slate-900 shadow-sm') 
-                : (isDark ? 'text-white/40 hover:text-white/60' : 'text-slate-400 hover:text-slate-600')
+                ? (isDark ? 'bg-orange-primary text-white shadow-md shadow-orange-primary/25' : 'bg-white text-slate-900 shadow-sm') 
+                : (isDark ? 'text-white/50 hover:text-white' : 'text-slate-500 hover:text-slate-900')
             }`}
           >
             <MessageSquare size={13} />
@@ -1618,10 +1686,10 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
           </button>
           <button 
             onClick={() => setViewMode('code')}
-            className={`flex items-center gap-1 px-2 sm:px-4 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-bold transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all ${
               viewMode === 'code' 
-                ? (isDark ? 'bg-white/10 text-white shadow-lg' : 'bg-white text-slate-900 shadow-sm') 
-                : (isDark ? 'text-white/40 hover:text-white/60' : 'text-slate-400 hover:text-slate-600')
+                ? (isDark ? 'bg-orange-primary text-white shadow-md shadow-orange-primary/25' : 'bg-white text-slate-900 shadow-sm') 
+                : (isDark ? 'text-white/50 hover:text-white' : 'text-slate-500 hover:text-slate-900')
             }`}
           >
             <Code size={13} />
@@ -1629,62 +1697,108 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
           </button>
           <button 
             onClick={() => setViewMode('preview')}
-            className={`flex items-center gap-1 px-2 sm:px-4 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-bold transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all ${
               viewMode === 'preview' 
-                ? (isDark ? 'bg-white/10 text-white shadow-lg' : 'bg-white text-slate-900 shadow-sm') 
-                : (isDark ? 'text-white/40 hover:text-white/60' : 'text-slate-400 hover:text-slate-600')
+                ? (isDark ? 'bg-orange-primary text-white shadow-md shadow-orange-primary/25' : 'bg-white text-slate-900 shadow-sm') 
+                : (isDark ? 'text-white/50 hover:text-white' : 'text-slate-500 hover:text-slate-900')
             }`}
           >
             <Eye size={13} />
-            <span className="hidden min-[480px]:inline">Preview</span>
+            <span className="hidden min-[480px]:inline">Aperçu</span>
           </button>
         </div>
 
-        <div className="flex items-center gap-1.5 sm:gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-2.5">
           {generatedCode && (
             <button
               onClick={openPublishModal}
-              className="flex items-center gap-1 px-2 py-1.5 sm:px-3.5 sm:py-1.5 bg-gradient-to-r from-orange-primary to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-lg text-[10px] sm:text-xs font-bold transition-all shadow-[0_4px_12px_rgba(255,107,0,0.25)] animate-pulse hover:animate-none hover:scale-[1.03] active:scale-95 shrink-0"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-orange-primary to-amber-500 hover:from-orange-hover hover:to-amber-600 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-orange-primary/25 hover:scale-[1.02] active:scale-[0.98] shrink-0"
               title="Déployez votre site web et mobile en direct"
               id="header-deploy-button"
             >
-              <Rocket size={12} className="fill-white" />
-              <span className="hidden sm:inline">Déployer (Web & Mobile)</span>
-              <span className="sm:hidden">Déployer</span>
+              <Rocket size={13} className="fill-white" />
+              <span className="hidden sm:inline">Déployer</span>
             </button>
           )}
+
+          {/* Language toggle */}
+          <button
+            onClick={() => setLang(lang === 'fr' ? 'en' : 'fr')}
+            className={`px-2 py-1 rounded-lg text-xs font-bold font-mono transition-colors ${
+              isDark ? 'text-white/60 hover:bg-white/[0.06] hover:text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+            }`}
+            title="Langue / Language"
+          >
+            {lang.toUpperCase()}
+          </button>
+
           <a 
             href="https://discord.gg/Pc6reuApRF" 
             target="_blank" 
             rel="noreferrer"
-            className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-[#5865F2] text-white rounded-lg text-xs font-bold hover:bg-[#4752C4] transition-all shadow-lg"
+            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 bg-[#5865F2] hover:bg-[#4752C4] text-white rounded-xl text-xs font-bold transition-all shadow-sm"
           >
             Discord
           </a>
-          <a 
-            href="https://discord.gg/Pc6reuApRF" 
-            target="_blank" 
-            rel="noreferrer"
-            className="flex sm:hidden p-2 bg-[#5865F2] text-white rounded-lg transition-all shadow-lg"
-          >
-            <svg 
-              viewBox="0 0 127.14 96.36" 
-              className="w-4.5 h-4.5 fill-current"
-            >
-              <path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.71,32.65-1.82,56.6.39,80.21a105.73,105.73,0,0,0,32.77,16.15,77.7,77.7,0,0,0,7.33-11.86,67.42,67.42,0,0,1-11.7-5.58c.97-.71,1.94-1.46,2.85-2.21a71.64,71.64,0,0,0,64.29,0c.92.75,1.88,1.5,2.85,2.21a67.07,67.07,0,0,1-11.7,5.58,77.66,77.66,0,0,0,7.33,11.86,105.41,105.41,0,0,0,32.81-16.15C131.58,52.41,126.77,28.73,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,46,96.12,53,91.08,65.69,84.69,65.69Z"/>
-            </svg>
-          </a>
+
           <button 
             onClick={() => setTheme(isDark ? 'light' : 'dark')}
-            className={`p-2 rounded-lg transition-colors ${isDark ? 'text-white/60 hover:bg-white/5 hover:text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}
+            className={`p-1.5 sm:p-2 rounded-xl transition-colors ${isDark ? 'text-white/60 hover:bg-white/[0.06] hover:text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}
+            title="Thème clair / sombre"
           >
-            {isDark ? <Sun size={18} /> : <Moon size={18} />}
+            {isDark ? <Sun size={17} /> : <Moon size={17} />}
+          </button>
+
+          {/* User Profile Button (Visible on Mobile & Desktop) */}
+          <button
+            onClick={() => {
+              if (!user) {
+                setIsAuthModalOpen(true);
+                return;
+              }
+              setSettingsTab('account');
+              setIsProjectSettings(false);
+              setIsSettingsModalOpen(true);
+            }}
+            className={`flex items-center gap-1.5 p-1 sm:px-2 sm:py-1 rounded-xl transition-all border ${
+              isDark 
+                ? 'border-white/10 hover:border-amber-500/50 hover:bg-white/[0.06] text-white' 
+                : 'border-slate-200 hover:border-amber-500/50 hover:bg-slate-100 text-slate-900'
+            }`}
+            title={lang === 'fr' ? "Mon Profil & Instructions IA" : "My Profile & AI Instructions"}
+            id="header-profile-button"
+          >
+            <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-gradient-to-tr from-amber-400 to-orange-500 flex items-center justify-center font-bold text-xs text-white overflow-hidden shadow-sm ring-1 ring-orange-500/30">
+              {userProfile?.avatarUrl ? (
+                <img src={userProfile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+              ) : user?.user_metadata?.avatar_url ? (
+                <img src={user.user_metadata.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-[10px] sm:text-xs uppercase">{user?.email?.[0] || 'U'}</span>
+              )}
+            </div>
+            <div className="hidden min-[520px]:flex flex-col items-start leading-none text-left max-w-[85px] truncate">
+              <span className="text-[11px] font-bold truncate w-full">
+                {user?.email === 'benit800@gmail.com' ? 'Benit' : (userProfile?.username ? `@${userProfile.username}` : (user?.user_metadata?.username || user?.email?.split('@')[0] || (lang === 'fr' ? 'Profil' : 'Profile')))}
+              </span>
+              <span className="text-[9px] text-amber-500 font-semibold truncate">
+                {userProfile?.role || (user?.email === 'benit800@gmail.com' ? 'Fondateur' : 'Profil & IA')}
+              </span>
+            </div>
           </button>
         </div>
       </header>
 
       {/* Main Layout */}
       <div className="flex-1 flex overflow-hidden relative">
+        {/* Mobile Backdrop Overlay */}
+        {isHistoryOpen && (
+          <div 
+            onClick={() => setIsHistoryOpen(false)}
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs z-30 md:hidden"
+          />
+        )}
+
         {/* History Sidebar */}
         <motion.div 
           initial={false}
@@ -1715,6 +1829,7 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
               onSelectView={(view) => setViewMode(view as any)}
               onCloneSite={handleCloneSite}
               onEcommerceProduct={handleEcommerceProduct}
+              onGoHome={() => setHasStarted(false)}
               currentView={viewMode}
               user={user}
             />
@@ -1822,6 +1937,8 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
               qaAuditSummary={qaAuditSummary}
               qaLogs={qaLogs}
               onSelectView={(v) => setViewMode(v as any)}
+              aiMode={aiMode}
+              onToggleAiMode={handleToggleAiMode}
             />
           ) : (
             <Preview 
@@ -2365,6 +2482,9 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
         onToggleRealtime={setIsRealtimeEnabled}
         selectedModel={selectedModel}
         onSelectModel={setSelectedModel}
+        aiMode={aiMode}
+        onToggleAiMode={handleToggleAiMode}
+        onUpdateUserProfile={(data) => setUserProfile(data)}
       />
         </motion.div>
       )}

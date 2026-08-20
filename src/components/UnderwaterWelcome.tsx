@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
-import { Zap, Sparkles, ChevronDown } from 'lucide-react';
+import { Zap, Sparkles, ChevronDown, Cpu, Layers, ShieldCheck } from 'lucide-react';
 
 interface UnderwaterWelcomeProps {
   isDark: boolean;
@@ -26,13 +26,13 @@ export const UnderwaterWelcome: React.FC<UnderwaterWelcomeProps> = ({ isDark, on
 
     const createParticles = () => {
       particles = [];
-      for (let i = 0; i < 50; i++) {
+      for (let i = 0; i < 40; i++) {
         particles.push({
           x: Math.random() * canvas.width,
           y: Math.random() * canvas.height + canvas.height,
-          size: Math.random() * 3 + 1,
-          speed: Math.random() * 0.5 + 0.2,
-          opacity: Math.random() * 0.5 + 0.1
+          size: Math.random() * 2.5 + 1,
+          speed: Math.random() * 0.4 + 0.15,
+          opacity: Math.random() * 0.4 + 0.1
         });
       }
     };
@@ -40,35 +40,21 @@ export const UnderwaterWelcome: React.FC<UnderwaterWelcomeProps> = ({ isDark, on
     const draw = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
-      // Draw Bubbles
+      // Draw subtle particles
       particles.forEach(p => {
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(0, 245, 212, ${p.opacity})`;
+        ctx.fillStyle = `rgba(255, 107, 0, ${p.opacity * 0.8})`;
         ctx.fill();
         
         p.y -= p.speed;
-        p.x += Math.sin(p.y / 50) * 0.5;
+        p.x += Math.sin(p.y / 60) * 0.4;
 
         if (p.y < -20) {
           p.y = canvas.height + 20;
           p.x = Math.random() * canvas.width;
         }
       });
-
-      // Draw volumetric rays (subtle)
-      const gradient = ctx.createConicGradient(Math.PI, canvas.width / 2, 0);
-      gradient.addColorStop(0.4, 'transparent');
-      gradient.addColorStop(0.5, 'rgba(0, 245, 212, 0.03)');
-      gradient.addColorStop(0.6, 'transparent');
-      
-      ctx.save();
-      ctx.translate(canvas.width / 2, 0);
-      ctx.rotate(Math.sin(Date.now() / 2000) * 0.1);
-      ctx.translate(-canvas.width / 2, 0);
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.restore();
 
       animationFrame = requestAnimationFrame(draw);
     };
@@ -85,79 +71,69 @@ export const UnderwaterWelcome: React.FC<UnderwaterWelcomeProps> = ({ isDark, on
   }, []);
 
   return (
-    <div className="relative w-full h-full flex flex-col items-center justify-center overflow-hidden bg-abyssal-deep">
+    <div className="relative w-full h-full flex flex-col items-center justify-center overflow-hidden bg-[#080B11]">
       <canvas 
         ref={canvasRef} 
-        className="absolute inset-0 pointer-events-none opacity-20"
+        className="absolute inset-0 pointer-events-none opacity-30"
       />
       
-      {/* Background Gradient */}
-      <div className="absolute inset-0 bg-radial-[at_50%_0%] from-abyssal-blue/30 via-abyssal-deep to-abyssal-deep opacity-80" />
+      {/* Background Radial Glow */}
+      <div className="absolute inset-0 bg-radial-[at_50%_20%] from-orange-primary/10 via-[#080B11]/80 to-[#080B11] opacity-90" />
 
       <motion.div 
-        initial={{ opacity: 0, y: 30 }}
+        initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8, ease: "easeOut" }}
+        transition={{ duration: 0.7, ease: "easeOut" }}
         className="relative z-10 flex flex-col items-center text-center px-4 max-w-2xl"
       >
-        <div className="w-20 h-20 mb-10 relative">
-          <div className="absolute inset-0 bg-orange-primary rounded-2xl blur-2xl opacity-20 animate-pulse" />
-          <div className="relative w-full h-full bg-orange-primary rounded-2xl flex items-center justify-center shadow-2xl">
-            <Zap size={40} className="text-white fill-white" />
+        <div className="w-16 h-16 sm:w-20 sm:h-20 mb-6 relative">
+          <div className="absolute inset-0 bg-orange-primary rounded-2xl blur-xl opacity-30 animate-pulse" />
+          <div className="relative w-full h-full bg-gradient-to-tr from-orange-primary to-amber-500 rounded-2xl flex items-center justify-center shadow-2xl border border-white/20">
+            <Zap size={36} className="text-white fill-white" />
           </div>
         </div>
 
-        <h1 className="font-display text-4xl md:text-6xl mb-6 text-white tracking-tighter uppercase font-black">
-          COOK IA <span className="text-orange-primary">V.3</span>
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.05] border border-white/[0.08] text-white/70 text-xs font-semibold mb-4 backdrop-blur-md">
+          <Sparkles size={13} className="text-orange-primary" />
+          <span>Cook IA 3.5 Ultimate Edition</span>
+        </div>
+
+        <h1 className="text-3xl sm:text-5xl font-black mb-4 text-white tracking-tight leading-tight">
+          L'ingénierie Web par <span className="bg-gradient-to-r from-orange-primary to-amber-400 bg-clip-text text-transparent">Intelligence Artificielle</span>
         </h1>
 
-        <p className="text-white/60 text-lg md:text-xl font-medium mb-10 leading-relaxed">
-          Propulsez vos idées web dans une nouvelle dimension. <br className="hidden md:block" />
-          Génération full-stack ultra-performante par IA.
+        <p className="text-white/60 text-sm sm:text-base font-normal mb-8 max-w-lg leading-relaxed">
+          Générez des plateformes web réactives, complètes avec backend, base de données Supabase et déploiement instantané.
         </p>
 
         <div className="flex flex-col items-center gap-6">
-          <div className="flex flex-wrap justify-center gap-3">
-            {["React 18", "Next.js", "Express", "Supabase"].map((tech) => (
-              <div key={tech} className="px-4 py-1.5 rounded-full border border-white/10 bg-white/5 text-white/40 text-[10px] font-bold uppercase tracking-widest backdrop-blur-sm">
-                {tech}
-              </div>
-            ))}
+          <div className="flex flex-wrap justify-center gap-2 max-w-md">
+            {[
+              { label: "React 18", icon: Layers },
+              { label: "Express API", icon: Cpu },
+              { label: "Supabase DB", icon: ShieldCheck },
+              { label: "Tailwind CSS", icon: Sparkles }
+            ].map((tech) => {
+              const Icon = tech.icon;
+              return (
+                <div key={tech.label} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/[0.08] bg-white/[0.03] text-white/60 text-[11px] font-medium backdrop-blur-sm">
+                  <Icon size={12} className="text-orange-primary" />
+                  <span>{tech.label}</span>
+                </div>
+              );
+            })}
           </div>
 
           <motion.div 
             animate={{ y: [0, 5, 0] }}
             transition={{ duration: 2, repeat: Infinity }}
-            className="flex flex-col items-center gap-2 text-orange-primary/60 mt-8"
+            className="flex flex-col items-center gap-1.5 text-orange-primary/80 mt-4"
           >
-            <span className="text-[10px] font-black uppercase tracking-[0.4em]">Décrivez votre projet ci-dessous</span>
-            <ChevronDown size={20} />
+            <span className="text-[11px] font-bold tracking-wider uppercase">Décrivez votre projet ci-dessous</span>
+            <ChevronDown size={18} />
           </motion.div>
         </div>
       </motion.div>
-
-
-      {/* Underwater Rays effect with pure CSS as fallback/overlay */}
-      <div className="absolute top-0 left-0 w-full h-full pointer-events-none overflow-hidden opacity-20">
-        <div className="light-ray" style={{
-          position: 'absolute',
-          top: '-100px',
-          left: '50%',
-          width: '2px',
-          height: '1000px',
-          background: 'linear-gradient(to bottom, var(--color-orange-primary), transparent)',
-          transform: 'rotate(20deg)',
-          filter: 'blur(10px)',
-          animation: 'rayMove 10s infinite alternate'
-        }} />
-      </div>
-
-      <style>{`
-        @keyframes rayMove {
-          from { transform: translateX(-100px) rotate(15deg); }
-          to { transform: translateX(100px) rotate(25deg); }
-        }
-      `}</style>
     </div>
   );
 };
