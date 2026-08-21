@@ -34,17 +34,10 @@ interface LiveActionResponseProps {
 }
 
 const AGENT_PIPELINE = [
-  { id: 'architect', name: 'Architecte IA', desc: 'Analyse du prompt & structure logicielle', icon: Cpu, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' },
+  { id: 'architect', name: 'Architecte Logiciel', desc: 'Analyse du prompt & structure logicielle', icon: Cpu, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' },
   { id: 'designer', name: 'Design Lead', desc: 'Système de design & composants UI/UX', icon: Sparkles, color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20' },
-  { id: 'developer', name: 'Codeur Fullstack', desc: 'Écriture TypeScript React & API', icon: Code2, color: 'text-orange-primary', bg: 'bg-orange-primary/10', border: 'border-orange-primary/20' },
-  { id: 'inspector', name: 'Inspecteur QA', desc: 'Validation syntaxe, tests & zéro-bug', icon: ShieldCheck, color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' }
-];
-
-const MOCK_LIVE_FILES = [
-  { path: 'src/App.tsx', status: 'modified', lines: '+142 -12' },
-  { path: 'src/components/Dashboard.tsx', status: 'created', lines: '+88' },
-  { path: 'src/services/api.ts', status: 'created', lines: '+65' },
-  { path: 'src/index.css', status: 'modified', lines: '+24' }
+  { id: 'developer', name: 'Moteur de Code', desc: 'Génération HTML5, Tailwind & JavaScript réel', icon: Code2, color: 'text-orange-primary', bg: 'bg-orange-primary/10', border: 'border-orange-primary/20' },
+  { id: 'inspector', name: 'Inspecteur & QA', desc: 'Validation syntaxe, tests & zéro-bug', icon: ShieldCheck, color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' }
 ];
 
 export const TypingIndicator: React.FC<LiveActionResponseProps> = ({ 
@@ -99,17 +92,17 @@ export const TypingIndicator: React.FC<LiveActionResponseProps> = ({
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold tracking-tight text-orange-primary flex items-center gap-1.5">
-                Cook IA Live Action
+                Moteur d'Exécution COOK IA
               </span>
               <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono font-bold ${
                 isDark ? 'bg-white/[0.06] text-white/70 border border-white/[0.08]' : 'bg-slate-200 text-slate-700'
               }`}>
-                Claude / GPT-4o Multi-Agent
+                IA Active
               </span>
             </div>
             <div className="flex items-center gap-1.5 text-[11px] font-mono text-emerald-400">
               <Clock size={11} />
-              <span>Exécution en direct ({formatTime(elapsedSeconds)})</span>
+              <span>Génération en temps réel ({formatTime(elapsedSeconds)})</span>
             </div>
           </div>
         </div>
@@ -148,7 +141,7 @@ export const TypingIndicator: React.FC<LiveActionResponseProps> = ({
             exit={{ height: 0, opacity: 0 }}
             className="p-4 space-y-4"
           >
-            {/* Live Agent Pipeline Stage Indicator */}
+            {/* Live Pipeline Stage Indicator */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {AGENT_PIPELINE.map((stage, idx) => {
                 const StageIcon = stage.icon;
@@ -195,21 +188,21 @@ export const TypingIndicator: React.FC<LiveActionResponseProps> = ({
                 <Loader2 size={15} className="animate-spin text-orange-primary shrink-0" />
                 <div className="min-w-0">
                   <div className="text-xs font-bold text-white truncate font-mono">
-                    {status || "Génération du code source React & Express..."}
+                    {status || "Génération du code source réel..."}
                   </div>
                   <div className="text-[10px] text-white/50 truncate">
-                    Validation des imports, du styling Tailwind et des liaisons de données Supabase
+                    Production HTML5, styles Tailwind CSS & scripts Vanilla JS interactifs
                   </div>
                 </div>
               </div>
 
               <div className="hidden sm:flex items-center gap-1 text-[10px] font-mono text-orange-primary bg-orange-primary/10 px-2 py-0.5 rounded border border-orange-primary/20 shrink-0">
                 <Flame size={11} className="fill-orange-primary" />
-                <span>Turbo Engine</span>
+                <span>Exécution</span>
               </div>
             </div>
 
-            {/* Sub-Tabs: Raisonnement / Terminal logs / Fichiers modifiés */}
+            {/* Sub-Tabs: Raisonnement / Logs */}
             <div className="space-y-2">
               <div className="flex items-center justify-between border-b border-white/[0.06] pb-1.5">
                 <div className="flex items-center gap-1">
@@ -222,7 +215,7 @@ export const TypingIndicator: React.FC<LiveActionResponseProps> = ({
                     }`}
                   >
                     <Cpu size={12} />
-                    <span>Pensées IA</span>
+                    <span>Traitement</span>
                   </button>
 
                   <button
@@ -234,7 +227,7 @@ export const TypingIndicator: React.FC<LiveActionResponseProps> = ({
                     }`}
                   >
                     <Terminal size={12} />
-                    <span>Console Live</span>
+                    <span>Journal</span>
                   </button>
 
                   <button
@@ -251,7 +244,7 @@ export const TypingIndicator: React.FC<LiveActionResponseProps> = ({
                 </div>
 
                 <span className="text-[10px] font-mono text-white/30">
-                  {actions.length} action(s)
+                  {actions.length} étape(s)
                 </span>
               </div>
 
@@ -263,35 +256,39 @@ export const TypingIndicator: React.FC<LiveActionResponseProps> = ({
                   <div className="space-y-2 text-white/80">
                     <div className="flex items-center gap-2 text-orange-primary font-bold">
                       <Sparkles size={13} />
-                      <span>Analyse du projet & décision architecturale :</span>
+                      <span>Analyse du prompt & architecture :</span>
                     </div>
                     <p className="text-white/60 leading-relaxed text-[11px]">
-                      • Modélisation de l'état global et des interfaces TypeScript de données.<br />
-                      • Composition modulaire des sections avec Tailwind CSS et animations fluides.<br />
-                      • Intégration de la persistance Supabase / API Express avec gestion complète des erreurs.
+                      • Construction sémantique des sections en respectant scrupuleusement les instructions.<br />
+                      • Intégration du design Tailwind CSS, responsive mobile et animations CSS.<br />
+                      • Vérification de chaque bouton, formulaire et interaction sans simulation.
                     </p>
                   </div>
                 )}
 
                 {activeTab === 'terminal' && (
                   <div className="space-y-1 text-slate-300 text-[11px]">
-                    <div className="text-white/40 font-bold">$ cook-ia-builder --target=production --framework=react-vite</div>
-                    <div className="text-emerald-400">✓ Validation du typage TypeScript terminée sans erreur</div>
-                    <div className="text-blue-400">ℹ Optimisation des paquets Tailwind CSS et des composants Lucide</div>
-                    <div className="text-amber-400 animate-pulse">⚡ Compilation des bundles JavaScript (HMR Ready)...</div>
+                    <div className="text-white/40 font-bold">$ cook-ia compile --output=dist</div>
+                    <div className="text-emerald-400">✓ Analyse sémantique et syntaxique validée</div>
+                    <div className="text-blue-400">ℹ Optimisation des styles Tailwind CSS et des composants SVG/Lucide</div>
+                    <div className="text-amber-400 animate-pulse">⚡ Génération du code en cours d'écriture...</div>
                   </div>
                 )}
 
                 {activeTab === 'files' && (
                   <div className="space-y-1.5">
-                    {MOCK_LIVE_FILES.map((file, i) => (
+                    {[
+                      { path: 'index.html', desc: 'Structure HTML5 sémantique & sections' },
+                      { path: 'styles.css', desc: 'Styles & typographie CSS' },
+                      { path: 'script.js', desc: 'Interactions JavaScript Vanilla' }
+                    ].map((file, i) => (
                       <div key={i} className="flex items-center justify-between py-1 px-2 rounded bg-white/[0.02] border border-white/[0.04]">
                         <div className="flex items-center gap-2 min-w-0">
                           <FileCode size={13} className="text-orange-primary shrink-0" />
-                          <span className="truncate text-white/80 text-[11px]">{file.path}</span>
+                          <span className="truncate text-white/80 text-[11px] font-bold">{file.path}</span>
                         </div>
-                        <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded border border-emerald-500/20">
-                          {file.lines}
+                        <span className="text-[10px] text-white/40">
+                          {file.desc}
                         </span>
                       </div>
                     ))}

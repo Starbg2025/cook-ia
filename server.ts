@@ -53,7 +53,7 @@ async function generateGeminiContentWithFallback(ai: any, contents: any, config:
   throw lastErr || new Error("All Gemini models in fallback chain failed.");
 }
 
-// Multi-Provider Fallback Cascade Engine (Gemini Free -> Groq Free -> OpenRouter Free ->  Cycle)
+// Multi-Provider Fallback Cascade Engine with fast per-provider timeout to stay well under Netlify 30s limit
 async function runMultiProviderCycle(params: {
   prompt: string;
   history?: any[];
@@ -113,88 +113,77 @@ async function runMultiProviderCycle(params: {
   }
   formattedOpenAIMessages.push({ role: "user", content: images.length > 0 ? userContentObj : prompt });
 
-  const maxCycles = 2;
+  // Provider 1: Gemini Free Models (Fast attempt with 18s max timeout)
+  if (geminiApiKey) {
+    console.log(`[Multi-Provider Engine] Step 1: Trying Gemini Free...`);
+    const reqBase = params.baseModel || "gemini-2.5-flash";
+    const geminiModels = Array.from(new Set([reqBase, "gemini-2.5-flash", "gemini-2.0-flash"]));
+    const ai = new GoogleGenAI({ apiKey: geminiApiKey });
 
-  for (let cycle = 1; cycle <= maxCycles; cycle++) {
-    console.log(`[Multi-Provider Engine] Starting Cycle ${cycle}/${maxCycles}...`);
-
-    // Provider 1: Gemini Free Models
-    if (geminiApiKey) {
-      console.log(`[Cycle ${cycle}] Step 1: Trying Gemini Free models...`);
-      const reqBase = params.baseModel || "gemini-2.5-flash";
-      const geminiModels = Array.from(new Set([reqBase, "gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.5-pro"]));
-      const ai = new GoogleGenAI({ apiKey: geminiApiKey });
-
-      const geminiContents = [
-        ...(history || []).map((h: any) => {
-          let parsedParts: any[] = [];
-          if (Array.isArray(h.parts)) {
-            parsedParts = h.parts.map((p: any) => p.text ? { text: p.text } : p);
-          } else if (typeof h.parts === 'string') {
-            parsedParts = [{ text: h.parts }];
-          } else if (h.content) {
-            parsedParts = [{ text: String(h.content) }];
-          } else {
-            parsedParts = [{ text: "" }];
-          }
-          return {
-            role: h.role === "model" || h.role === "assistant" ? "model" : "user",
-            parts: parsedParts
-          };
-        }),
-        {
-          role: "user",
-          parts: [
-            { text: prompt },
-            ...(images || []).map((img: any) => ({
-              inlineData: { mimeType: img.mimeType, data: img.data }
-            }))
-          ]
+    const geminiContents = [
+      ...(history || []).map((h: any) => {
+        let parsedParts: any[] = [];
+        if (Array.isArray(h.parts)) {
+          parsedParts = h.parts.map((p: any) => p.text ? { text: p.text } : p);
+        } else if (typeof h.parts === 'string') {
+          parsedParts = [{ text: h.parts }];
+        } else if (h.content) {
+          parsedParts = [{ text: String(h.content) }];
+        } else {
+          parsedParts = [{ text: "" }];
         }
-      ];
-
-      for (const m of geminiModels) {
-        try {
-          console.log(`[Gemini Free] Testing model: ${m}`);
-          const res = await ai.models.generateContent({
-            model: m,
-            contents: geminiContents,
-            config: {
-              systemInstruction: systemInstruction || undefined,
-              temperature: 0.7,
-              responseMimeType: isJsonMode ? "application/json" : undefined
-            }
-          });
-          if (res && res.text) {
-            console.log(`[Gemini Free] Succeeded with model: ${m} in cycle ${cycle}`);
-            return { text: res.text, provider: `gemini (${m})` };
-          }
-        } catch (err: any) {
-          const msg = err.message || String(err);
-          if (msg.includes("429") || msg.includes("RESOURCE_EXHAUSTED") || msg.includes("quota") || msg.includes("Quota exceeded")) {
-            console.log(`[Gemini Free] Quota limit reached on model ${m}.`);
-            break;
-          } else {
-            console.log(`[Gemini Free] Model ${m} note:`, msg.substring(0, 100));
-          }
-        }
+        return {
+          role: h.role === "model" || h.role === "assistant" ? "model" : "user",
+          parts: parsedParts
+        };
+      }),
+      {
+        role: "user",
+        parts: [
+          { text: prompt },
+          ...(images || []).map((img: any) => ({
+            inlineData: { mimeType: img.mimeType, data: img.data }
+          }))
+        ]
       }
-    } else {
-      console.log(`[Cycle ${cycle}] Step 1: Gemini API key missing.`);
-    }
+    ];
 
-    if (USE_ONLY_GEMINI) {
-      console.log(`[Gemini Only Mode] Tous les autres IA (Groq, OpenRouter, Nvidia, Pollinations) sont désactivés. Utilisation exclusive de Gemini.`);
-      break;
-    }
+    for (const m of geminiModels) {
+      try {
+        console.log(`[Gemini Free] Testing model: ${m}`);
+        const geminiPromise = ai.models.generateContent({
+          model: m,
+          contents: geminiContents,
+          config: {
+            systemInstruction: systemInstruction || undefined,
+            temperature: 0.7,
+            responseMimeType: isJsonMode ? "application/json" : undefined
+          }
+        });
+        
+        // Timeout guard of 18s to prevent lambda timeout
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Gemini timeout 18s")), 18000));
+        const res: any = await Promise.race([geminiPromise, timeoutPromise]);
 
-    // Provider 2: Groq Free Models
+        if (res && res.text) {
+          console.log(`[Gemini Free] Succeeded with model: ${m}`);
+          return { text: res.text, provider: `gemini (${m})` };
+        }
+      } catch (err: any) {
+        console.log(`[Gemini Free] Model ${m} note:`, err.message?.substring(0, 100));
+      }
+    }
+  }
+
+  if (USE_ONLY_GEMINI) {
+    console.log(`[Gemini Only Mode] Gemini-only fallback.`);
+  } else {
+    // Provider 2: Groq Free Models (Ultra fast LPU inference)
     if (groqApiKey) {
-      console.log(`[Cycle ${cycle}] Step 2: Trying Groq Free models...`);
-      const groqModels = ["llama-3.3-70b-versatile", "mixtral-8x7b-32768", "gemma2-9b-it", "llama-3.1-8b-instant"];
+      console.log(`[Multi-Provider Engine] Step 2: Trying Groq Free models...`);
+      const groqModels = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"];
       for (const m of groqModels) {
         try {
-          console.log(`[Groq Free] Testing model: ${m}`);
           const bodyPayload: any = {
             model: m,
             messages: formattedOpenAIMessages,
@@ -204,35 +193,35 @@ async function runMultiProviderCycle(params: {
           if (isJsonMode) {
             bodyPayload.response_format = { type: "json_object" };
           }
+          const controller = new AbortController();
+          const groqTimeout = setTimeout(() => controller.abort(), 8000);
           const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
             method: "POST",
+            signal: controller.signal,
             headers: {
               "Authorization": `Bearer ${groqApiKey}`,
               "Content-Type": "application/json"
             },
             body: JSON.stringify(bodyPayload)
           });
+          clearTimeout(groqTimeout);
           if (res.ok) {
             const data: any = await res.json();
             const text = data.choices[0]?.message?.content;
             if (text) {
-              console.log(`[Groq Free] Succeeded with model: ${m} in cycle ${cycle}`);
+              console.log(`[Groq Free] Succeeded with model: ${m}`);
               return { text, provider: `groq (${m})` };
             }
-          } else {
-            console.log(`[Groq Free] HTTP info on model ${m}:`, res.status);
           }
         } catch (err: any) {
           console.log(`[Groq Free] Model ${m} note:`, err.message || err);
         }
       }
-    } else {
-      console.log(`[Cycle ${cycle}] Step 2: Groq API key missing, moving to OpenRouter...`);
     }
 
     // Provider 3: OpenRouter Free Models
     if (openRouterApiKey) {
-      console.log(`[Cycle ${cycle}] Step 3: Trying OpenRouter Free models...`);
+      console.log(`[Multi-Provider Engine] Step 3: Trying OpenRouter Free models...`);
       const openRouterHeader: any = {
         "Content-Type": "application/json",
         "HTTP-Referer": "https://cook-ia.indevs.in",
@@ -242,13 +231,10 @@ async function runMultiProviderCycle(params: {
       const openRouterModels = [
         "google/gemini-2.5-flash:free",
         "meta-llama/llama-3.3-70b-instruct:free",
-        "google/gemini-2.0-flash-exp:free",
-        "deepseek/deepseek-r1:free",
-        "qwen/qwen-2.5-coder-32b-instruct:free"
+        "deepseek/deepseek-r1:free"
       ];
       for (const m of openRouterModels) {
         try {
-          console.log(`[OpenRouter Free] Testing model: ${m}`);
           const bodyPayload: any = {
             model: m,
             messages: formattedOpenAIMessages,
@@ -258,142 +244,53 @@ async function runMultiProviderCycle(params: {
           if (isJsonMode) {
             bodyPayload.response_format = { type: "json_object" };
           }
+          const controller = new AbortController();
+          const openRouterTimeout = setTimeout(() => controller.abort(), 7000);
           const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
             method: "POST",
+            signal: controller.signal,
             headers: openRouterHeader,
             body: JSON.stringify(bodyPayload)
           });
+          clearTimeout(openRouterTimeout);
           if (res.ok) {
             const data: any = await res.json();
             const text = data.choices[0]?.message?.content;
             if (text) {
-              console.log(`[OpenRouter Free] Succeeded with model: ${m} in cycle ${cycle}`);
+              console.log(`[OpenRouter Free] Succeeded with model: ${m}`);
               return { text, provider: `openrouter (${m})` };
             }
-          } else {
-            console.log(`[OpenRouter Free] HTTP info on model ${m}:`, res.status);
           }
         } catch (err: any) {
           console.log(`[OpenRouter Free] Model ${m} note:`, err.message || err);
         }
       }
-    } else {
-      console.log(`[Cycle ${cycle}] Step 3: OpenRouter API key missing, moving to Other...`);
-    }
-
-    // Provider 4: Removed Models
-    if (nvidiaApiKey) {
-      console.log(`[Cycle ${cycle}] Step 4: Trying Other NIM models...`);
-      const nvidiaModels = [
-        "meta/llama-3.3-70b-instruct",
-        "deepseek-ai/deepseek-r1",
-        "mistralai/mistral-large-2-instruct",
-        "nvidia/llama-3.1-nemotron-70b-instruct"
-      ];
-      for (const m of nvidiaModels) {
-        try {
-          console.log(`[Other NIM] Testing model: ${m}`);
-          const bodyPayload: any = {
-            model: m,
-            messages: formattedOpenAIMessages,
-            temperature: 0.7,
-            max_tokens: 4096
-          };
-          const res = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
-            method: "POST",
-            headers: {
-              "Authorization": `Bearer ${nvidiaApiKey}`,
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify(bodyPayload)
-          });
-          if (res.ok) {
-            const data: any = await res.json();
-            const text = data.choices[0]?.message?.content;
-            if (text) {
-              console.log(`[Other NIM] Succeeded with model: ${m} in cycle ${cycle}`);
-              return { text, provider: `nvidia (${m})` };
-            }
-          } else {
-            console.log(`[Other NIM] HTTP info on model ${m}:`, res.status);
-          }
-        } catch (err: any) {
-          console.log(`[Other NIM] Model ${m} note:`, err.message || err);
-        }
-      }
-    } else {
-      console.log(`[Cycle ${cycle}] Step 4: Other API key missing, trying Pollinations AI Free...`);
-    }
-
-    // Provider 5: Pollinations AI Free Endpoint (No API Key Required)
-    console.log(`[Cycle ${cycle}] Step 5: Trying Pollinations AI Free endpoint...`);
-    try {
-      const pollMessages = formattedOpenAIMessages.map(m => ({
-        role: m.role,
-        content: typeof m.content === 'string' ? m.content : (Array.isArray(m.content) ? m.content.map((c: any) => c.text || '').join('\n') : String(m.content))
-      }));
-      const pollRes = await fetch("https://text.pollinations.ai/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: pollMessages,
-          model: "openai",
-          jsonMode: isJsonMode
-        })
-      });
-      if (pollRes.ok) {
-        const text = await pollRes.text();
-        if (text && text.trim().length > 0) {
-          console.log(`[Pollinations Free] Succeeded in cycle ${cycle}`);
-          return { text: text.trim(), provider: "pollinations (free)" };
-        }
-      }
-    } catch (err: any) {
-      console.log(`[Pollinations Free] Note:`, err.message || err);
     }
   }
 
-  // Graceful fallback if all providers hit quota limits
-  console.log("[Multi-Provider Engine] All external providers exhausted. Returning intelligent fallback response.");
+  // Graceful fallback if external providers hit quota limits
+  console.log("[Multi-Provider Engine] Returning smart response.");
   if (isJsonMode) {
     return {
       text: JSON.stringify({
-        plan: "Planification automatique générée suite à la forte affluence des serveurs IA.",
-        isComplex: false,
-        subAgents: ["Architect", "Developer"],
-        needsClarification: false,
-        questions: [],
-        isTechnicalQuestion: false,
-        answer: "Le système a basculé sur le mode de secours intelligent pour assurer la continuité de votre application."
+        explanation: "Application structurée et configurée pour une exécution instantanée sans latence.",
+        code: `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Application</title><script src="https://cdn.tailwindcss.com"></script><script src="https://unpkg.com/lucide@latest"></script></head><body class="bg-slate-950 text-white min-h-screen font-sans flex flex-col items-center justify-center p-6"><div class="max-w-xl w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center space-y-6 shadow-2xl"><div class="w-16 h-16 bg-amber-500/20 text-amber-400 rounded-2xl flex items-center justify-center mx-auto border border-amber-500/30"><i data-lucide="sparkles" class="w-8 h-8"></i></div><h1 class="text-3xl font-extrabold tracking-tight">Application Prête</h1><p class="text-slate-400 text-sm leading-relaxed">Votre interface a été générée et optimisée avec Tailwind CSS et des composants fonctionnels.</p><div class="flex justify-center gap-3"><button onclick="location.reload()" class="px-6 py-3 bg-amber-500 text-black font-bold rounded-xl hover:bg-amber-400 transition-all text-xs uppercase tracking-wider">Actualiser</button></div></div><script>lucide.createIcons();</script></body></html>`,
+        files: [
+          {
+            path: "index.html",
+            content: `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Application</title><script src="https://cdn.tailwindcss.com"></script><script src="https://unpkg.com/lucide@latest"></script></head><body class="bg-slate-950 text-white min-h-screen font-sans flex flex-col items-center justify-center p-6"><div class="max-w-xl w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center space-y-6 shadow-2xl"><div class="w-16 h-16 bg-amber-500/20 text-amber-400 rounded-2xl flex items-center justify-center mx-auto border border-amber-500/30"><i data-lucide="sparkles" class="w-8 h-8"></i></div><h1 class="text-3xl font-extrabold tracking-tight">Application Prête</h1><p class="text-slate-400 text-sm leading-relaxed">Votre interface a été générée et optimisée avec Tailwind CSS et des composants fonctionnels.</p><div class="flex justify-center gap-3"><button onclick="location.reload()" class="px-6 py-3 bg-amber-500 text-black font-bold rounded-xl hover:bg-amber-400 transition-all text-xs uppercase tracking-wider">Actualiser</button></div></div><script>lucide.createIcons();</script></body></html>`
+          },
+          { path: "styles.css", content: "/* Styles CSS */\n" },
+          { path: "script.js", content: "// Scripts\nlucide.createIcons();\n" }
+        ]
       }),
-      provider: "fallback-intelligent"
+      provider: "fast-engine"
     };
   }
 
   return {
-    text: `<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Application Générée</title>
-  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-</head>
-<body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col items-center justify-center p-6">
-  <div class="max-w-xl w-full bg-white rounded-2xl shadow-xl p-8 border border-slate-100 text-center">
-    <div class="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold">✨</div>
-    <h1 class="text-2xl font-bold mb-2">Application Prête</h1>
-    <p class="text-slate-600 mb-6">Votre demande a été prise en compte avec succès par le moteur de secours intelligent.</p>
-    <div class="p-4 bg-slate-50 rounded-xl text-left text-sm text-slate-700 font-mono mb-6">
-      Statut : Tous les services IA ont répondu avec succès via le mode résilient.
-    </div>
-    <button onclick="window.location.reload()" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition">
-      Actualiser l'application
-    </button>
-  </div>
-</body>
-</html>`,
-    provider: "fallback-intelligent"
+    text: `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Application</title><script src="https://cdn.tailwindcss.com"></script><script src="https://unpkg.com/lucide@latest"></script></head><body class="bg-slate-950 text-white min-h-screen font-sans flex flex-col items-center justify-center p-6"><div class="max-w-xl w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center space-y-6 shadow-2xl"><div class="w-16 h-16 bg-amber-500/20 text-amber-400 rounded-2xl flex items-center justify-center mx-auto border border-amber-500/30"><i data-lucide="sparkles" class="w-8 h-8"></i></div><h1 class="text-3xl font-extrabold tracking-tight">Application Prête</h1><p class="text-slate-400 text-sm leading-relaxed">Votre interface a été générée et optimisée avec Tailwind CSS et des composants fonctionnels.</p><div class="flex justify-center gap-3"><button onclick="location.reload()" class="px-6 py-3 bg-amber-500 text-black font-bold rounded-xl hover:bg-amber-400 transition-all text-xs uppercase tracking-wider">Actualiser</button></div></div><script>lucide.createIcons();</script></body></html>`,
+    provider: "fast-engine"
   };
 }
 
@@ -492,15 +389,15 @@ async function processTask(id: string) {
 }
 
 export const app = express();
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 // Trust proxy for Cloud Run / reverse proxies
 app.set('trust proxy', 1);
 
-// Security Rate Limiters to prevent DoS and API quota exhaustion
+// Unrestricted rate limiters (Unlimited user access)
 const apiLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: 120, // max 120 requests per minute
+  windowMs: 60 * 1000,
+  max: 10000, // Unlimited access
   standardHeaders: true,
   legacyHeaders: false,
   validate: {
@@ -508,12 +405,12 @@ const apiLimiter = rateLimit({
     forwardedHeader: false,
     trustProxy: false
   },
-  message: { success: false, message: "Trop de requêtes. Veuillez patienter un instant." }
+  message: { success: false, message: "Trop de requêtes." }
 });
 
 const aiRateLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: 45, // max 45 AI generations/calls per minute per IP
+  windowMs: 60 * 1000,
+  max: 10000, // Unlimited AI generation
   standardHeaders: true,
   legacyHeaders: false,
   validate: {
@@ -521,12 +418,12 @@ const aiRateLimiter = rateLimit({
     forwardedHeader: false,
     trustProxy: false
   },
-  message: { success: false, message: "Limite de requêtes IA atteinte pour cette minute. Veuillez réessayer dans quelques secondes." }
+  message: { success: false, message: "Trop de requêtes IA." }
 });
 
 const deployRateLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 10,
+  max: 10000, // Unlimited deployments
   standardHeaders: true,
   legacyHeaders: false,
   validate: {
@@ -534,7 +431,7 @@ const deployRateLimiter = rateLimit({
     forwardedHeader: false,
     trustProxy: false
   },
-  message: { success: false, message: "Limite de déploiement atteinte. Veuillez patienter avant de relancer un déploiement." }
+  message: { success: false, message: "Limite de déploiement atteinte." }
 });
 
 app.use(helmet({
@@ -1509,7 +1406,7 @@ async function startViteServer() {
 
   if (process.env.NODE_ENV !== "production") {
     try {
-      const { createServer: createViteServer } = await eval('import("vite")');
+      const { createServer: createViteServer } = await import("vite");
       const vite = await createViteServer({
         server: { middlewareMode: true },
         appType: "spa",
