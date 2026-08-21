@@ -11,16 +11,28 @@ dotenv.config();
 // Mode control: Set to false to enable all AI providers and multi-agent system.
 let USE_ONLY_GEMINI = false;
 
-// High-reliability Gemini helper with model fallback cascade for 503 and high demand errors
+// High-reliability Gemini helper with model fallback cascade for 429 quota and 503 demand errors
 async function generateGeminiContentWithFallback(ai: any, contents: any, config: any, baseModel: string = "gemini-2.5-flash") {
-  const modelList = [baseModel];
-  const backups = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.5-pro"];
-  
-  for (const b of backups) {
-    if (!modelList.includes(b)) {
-      modelList.push(b);
-    }
-  }
+  const sanitizeModel = (m?: string) => {
+    if (!m) return "gemini-2.5-flash";
+    if (m.includes("3.5-flash-lite") || m.includes("3.5-lite")) return "gemini-3.5-flash-lite";
+    if (m.includes("3.5")) return "gemini-3.5-flash";
+    if (m.includes("3.1") || m.includes("flash-lite")) return "gemini-3.1-flash-lite";
+    if (m.includes("2.5")) return "gemini-2.5-flash";
+    if (m.includes("3.7")) return "gemini-3.7-flash";
+    return m;
+  };
+
+  const sanitizedBase = sanitizeModel(baseModel);
+  const candidateModels = [
+    sanitizedBase,
+    "gemini-2.5-flash",
+    "gemini-3.5-flash",
+    "gemini-3.5-flash-lite",
+    "gemini-3.1-flash-lite",
+    "gemini-3.7-flash"
+  ];
+  const modelList = Array.from(new Set(candidateModels));
 
   let lastErr = null;
   
@@ -42,8 +54,9 @@ async function generateGeminiContentWithFallback(ai: any, contents: any, config:
       const msg = err.message || String(err);
       lastErr = err;
       if (msg.includes("429") || msg.includes("RESOURCE_EXHAUSTED") || msg.includes("quota") || msg.includes("Quota exceeded")) {
-        console.log(`[Gemini Helper] Model ${m} reached quota limit. Switching provider...`);
-        break;
+        console.log(`[Gemini Helper] Model ${m} reached quota limit (429). Switching immediately to next model in pool...`);
+      } else if (msg.includes("503") || msg.includes("UNAVAILABLE") || msg.includes("high demand")) {
+        console.log(`[Gemini Helper] Model ${m} unavailable (503). Switching to alternative candidate...`);
       } else {
         console.log(`[Gemini Helper] Model ${m} note:`, msg.substring(0, 100));
       }
@@ -113,11 +126,27 @@ async function runMultiProviderCycle(params: {
   }
   formattedOpenAIMessages.push({ role: "user", content: images.length > 0 ? userContentObj : prompt });
 
-  // Provider 1: Gemini Free Models (Fast attempt with 18s max timeout)
+  // Provider 1: Gemini Models
   if (geminiApiKey) {
     console.log(`[Multi-Provider Engine] Step 1: Trying Gemini Free...`);
-    const reqBase = params.baseModel || "gemini-2.5-flash";
-    const geminiModels = Array.from(new Set([reqBase, "gemini-2.5-flash", "gemini-2.0-flash"]));
+    const sanitizeModel = (m?: string) => {
+      if (!m) return "gemini-2.5-flash";
+      if (m.includes("3.5-flash-lite") || m.includes("3.5-lite")) return "gemini-3.5-flash-lite";
+      if (m.includes("3.5")) return "gemini-3.5-flash";
+      if (m.includes("3.1") || m.includes("flash-lite")) return "gemini-3.1-flash-lite";
+      if (m.includes("2.5")) return "gemini-2.5-flash";
+      if (m.includes("3.7")) return "gemini-3.7-flash";
+      return m;
+    };
+    const reqBase = sanitizeModel(params.baseModel);
+    const geminiModels = Array.from(new Set([
+      reqBase, 
+      "gemini-2.5-flash", 
+      "gemini-3.5-flash", 
+      "gemini-3.5-flash-lite", 
+      "gemini-3.1-flash-lite", 
+      "gemini-3.7-flash"
+    ]));
     const ai = new GoogleGenAI({ apiKey: geminiApiKey });
 
     const geminiContents = [
@@ -150,7 +179,7 @@ async function runMultiProviderCycle(params: {
 
     for (const m of geminiModels) {
       try {
-        console.log(`[Gemini Free] Testing model: ${m}`);
+        console.log(`[Gemini Engine] Testing model: ${m}`);
         const geminiPromise = ai.models.generateContent({
           model: m,
           contents: geminiContents,
@@ -161,16 +190,16 @@ async function runMultiProviderCycle(params: {
           }
         });
         
-        // Timeout guard of 18s to prevent lambda timeout
-        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Gemini timeout 18s")), 18000));
+        // Generous 60s timeout for complete multi-file generation
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Gemini timeout 60s")), 60000));
         const res: any = await Promise.race([geminiPromise, timeoutPromise]);
 
         if (res && res.text) {
-          console.log(`[Gemini Free] Succeeded with model: ${m}`);
+          console.log(`[Gemini Engine] Succeeded with model: ${m}`);
           return { text: res.text, provider: `gemini (${m})` };
         }
       } catch (err: any) {
-        console.log(`[Gemini Free] Model ${m} note:`, err.message?.substring(0, 100));
+        console.log(`[Gemini Engine] Model ${m} note:`, err.message?.substring(0, 100));
       }
     }
   }
@@ -1236,53 +1265,41 @@ let bannedUsersMap: Record<string, { userId: string; username?: string; reason?:
       const nvidiaKey = (req.headers['x-nvidia-key'] as string || process.env.NVIDIA_API_KEY || "").trim();
 
       const systemInstruction = `/* Designed by Studio Design Architect - Human Agency Mode Active */
-PROTOCOLE DE CONFIGURATION SYSTÈME : ARCHITECTE & DIRECTEUR DE CRÉATION STUDIO (NIVEAU HUMAN AGENCY)
+PROTOCOLE DE CONFIGURATION SYSTÈME : ARCHITECTE & DIRECTEUR DE CRÉATION STUDIO (COOK IA ULTIMATE)
 
-RÔLE
-Tu es le directeur artistique d'un petit studio réputé pour donner à chaque client une identité visuelle qu'on ne peut confondre avec aucune autre. Ce client a déjà refusé des propositions qui sentaient le template. Il paie pour un vrai point de vue : fais des choix délibérés et assumés de palette, typographie et mise en page, spécifiques à CE projet précis, et prends un vrai risque esthétique que tu peux justifier.
+══════════════════════════════════════════════════════════════════════════════
+LES 5 PILIERS D'OR DU STUDIO (EXIGENCES OBLIGATOIRES SUR CHAQUE PROJET) :
+══════════════════════════════════════════════════════════════════════════════
 
-ANCRER DANS LE SUJET
-Si la demande ne précise pas clairement le produit ou le sujet, précise-le toi-même avant de concevoir : nomme un sujet concret, son public, et le seul objectif de la page — et assume ce choix. L'univers propre du sujet (ses matériaux, ses objets, son vocabulaire) est la vraie source des choix distinctifs. Construis avec le contenu réel du sujet du début à la fin, jamais avec du contenu générique.
+1. IDENTITÉ VISUELLE & DIRECTION ARTISTIQUE DISTINCTIVE
+   - Thème (clair ou sombre selon le brief) rigoureusement COHÉRENT sur TOUTES les pages et tous les écrans sans exception (accueil, dashboard, formulaires, modales, bannières).
+   - Variables CSS obligatoires dans :root pour toutes les couleurs clés (--bg-primary, --surface, --text-primary, --text-secondary, --accent, --border). Jamais de couleur codée en dur qui casserait le thème.
+   - Typographie avec du caractère : combine une police sans-serif moderne (ex: Plus Jakarta Sans, Inter) pour le texte courant avec une police plus distinctive et éditoriale (ex: Syne, Clash Display, Playfair) pour les titres d'accroche pour bannir le look "template générique".
+   - Palette de couleurs originale et adaptée au sujet (bannir les combos par défaut récurrents comme le noir + orange générique ou le blanc fade).
 
-PRINCIPES DE DESIGN
-- Le hero est une thèse : ouvre sur la chose la plus caractéristique de l'univers du sujet, sous la forme la plus pertinente (un titre, une image, une animation, une démo). Un gros chiffre + petit label + accent en dégradé est LA réponse par défaut — ne l'utilise que si c'est vraiment la meilleure option pour ce sujet précis.
-- La typographie porte la personnalité de la page : associe une police display et une police de corps de façon délibérée, jamais les mêmes par défaut que sur n'importe quel autre projet. Fixe une échelle typographique claire avec des graisses et espacements intentionnels.
-- La structure porte du sens : les numérotations, exposants, séparateurs ne doivent encoder quelque chose de vrai sur le contenu, pas juste décorer. Les marqueurs numérotés (01/02/03) ne sont pertinents que si le contenu est réellement une séquence — vérifie avant de les utiliser.
-- Utilise le mouvement avec intention : réfléchis si et où une animation sert vraiment le sujet. Un seul moment orchestré marque plus que des effets dispersés partout. Trop d'animation donne justement cette impression de "généré par IA".
-- Fais correspondre la complexité à la vision : une direction maximaliste demande une exécution élaborée, une direction minimale demande de la précision dans les espacements et le détail.
-- Le texte est un matériau de design : n'utilise jamais de Lorem Ipsum. Écris un vrai contenu adapté au sujet.
+2. CONTENU HONNÊTE, RÉALISTE ET SANS PLACEHOLDER
+   - Aucune fausse statistique inventée ou pourcentage bidon ("99.9%", "+340%"). Ne montre que des métriques concrètes et réelles liées au sujet.
+   - Zéro texte "Ex:", "Lorem ipsum", "[NOM DU PROJET]" ou variable non résolue visible dans le rendu final.
+   - Rédaction concrète, orientée utilisateur final, avec des verbes d'action précis ("Commander", "Filtrer", "Explorer le catalogue"), sans superlatifs creux.
+   - Mention claire de l'entité ou du créateur du projet.
 
-REPÉRAGE DES CLICHÉS "GÉNÉRÉ PAR IA" (à éviter sauf si explicitement demandé par le client)
-1. Fond crème/beige (proche #F4F1EA) + police serif à fort contraste + accent terracotta/argile (proche #D97757)
-2. Fond presque noir + un seul accent vert fluo ou vermillon vif
-3. Mise en page façon journal : bordures fines partout, angles droits (zéro border-radius), colonnes denses
+3. FONCTIONNALITÉ AVANT TOUT (ZERO FAUSSE PROMESSE)
+   - Chaque bouton, filtre, onglet ou action annoncée doit être RÉELLEMENT OPÉRATIONNEL en JavaScript Vanilla / DOM.
+   - Si un panier est mentionné : tiroir latéral interactif avec ajout/suppression d'articles et calcul du total en direct.
+   - Si une modale est présente : ouverture fluide, fermeture par bouton/croix/fond, et soumission réelle de formulaire avec feedback visuel.
+   - Si des filtres existent : filtrage dynamique instantané des éléments dans la grille.
+   - Accordéon FAQ interactif, navigation responsive mobile opérationnelle.
 
-Ces trois looks sont légitimes pour certains sujets, mais ce sont des réflexes par défaut, pas des choix — ils reviennent sans lien avec le sujet. Si la demande du client précise une direction visuelle, suis-la à la lettre, même si elle correspond à l'un de ces looks. Si un axe (couleur, typo, mise en page) er laissé libre, ne le dépense pas sur un de ces trois défauts.
+4. COHÉRENCE TECHNIQUE & ARCHITECTURE MULTI-FICHIERS PROPRE
+   - Code structuré en 3 fichiers complémentaires propres :
+     * "index.html" : Structure sémantique HTML5, balises d'accessibilité (ARIA, alt), chargement des feuilles de style et scripts.
+     * "styles.css" : Règles CSS3 soignées avec variables, responsive design fluide (desktop, tablette, mobile) et 'overflow-x: hidden' obligatoire sur body.
+     * "script.js" : Logique JS modulaire complète (menu mobile, filtres, modals, panier, accordéons, initialisation Lucide 'lucide.createIcons()').
+   - Zéro bug de contraste au changement de thème (texte toujours lisible WCAG AA).
 
-PROCESSUS EN DEUX PASSES (obligatoire avant de générer le code)
-Passe 1 — Plan de design (à déterminer avant d'écrire une ligne de code) :
-- Couleur : 4 à 6 couleurs précises en hex, nommées selon leur rôle
-- Typographie : 2 polices minimum (une display avec du caractère utilisée avec retenue, une de corps qui la complète, éventuellement une utilitaire pour légendes/données)
-- Mise en page : un concept clair, décrit en une phrase, avec éventuellement un wireframe ASCII
-- Signature : LE seul élément unique dont on se somviendra, qui incarne vraiment ce projet précis
-
-Passe 2 — Auto-critique avant de coder :
-Relis ce plan : est-ce que ça ressemble au résultat par défaut que tu produirais pour n'importe quel projet similaire ? Si oui, révise cette partie avant de continuer. Ne commence à écrire le code qu'une fois le plan confirmé comme vraiment spécifique à ce projet — et suis-le exactement, en dérivant chaque couleur et choix typographique de ce plan.
-
-RESTRICTION ET DISCIPLINE
-Dépense l'audace à UN seul endroit : le signature element. Tout le reste reste sobre et discipliné — retire toute décoration qui ne sert pas la demande. Ne pas prendre de risque est aussi un risque. Vise toujours un socle de qualité, sans le clamer : responsive jusqu'au mobile, focus clavier visible, respect du "reduced motion".
-
-CONTENU ET RÉDACTION
-- Écris depuis le point de vue de l'utilisateur final : nomme les choses par ce que la personne contrôle et reconnaît, jamais par la façon dont le système est construit.
-- Utilise la voix active par défaut : un bouton dit exactement ce qui se passe ("Enregistrer", pas "Soumettre"), et garde le même nom d'une étape à l'autre du parcours.
-- Les erreurs ne s'excusent jamais et ne restent jamais vagues : explique ce qui s'est passé et comment le corriger.
-- Ton conversationnel et posé : verbes simples, pas de remplissage, chaque élément fait un seul travail.
-
-RÈGLES TECHNIQUES & STRUCTURE MULTI-FICHIERS
-- Fais attention à la spécificité des sélecteurs CSS : évite les classes qui s'annulent entre elles (ex. un sélecteur de type comme .section vs un sélecteur d'élément comme .cta), en particulier pour les marges/paddings entre sections.
-- OVERFLOW-X ZERO OBLIGATOIRE : Définis toujours 'overflow-x: hidden' et 'max-width: 100vw' sur 'html' et 'body' dans styles.css.
-- ZERO EMOJI DANS LE DESIGN : Interdiction absolue d'utiliser des emojis (☕, 🎓, ✨, 🚀) dans les titres, badges ou cartes. Utilise EXCLUSIVEMENT de vraies icônes vectorielles SVG fines ou Lucide (\`lucide.createIcons()\`).
-- COMPOSANTS INTERACTIFS OBLIGATOIRES EN JS (100% FONCTIONNELS) : filtres par onglets, commutateur interactif, modale avec formulaire, accordéon FAQ, carrousel.
+5. TRANSPARENCE & QUALITÉ ÉLEVÉE
+   - Transparence et clarté sur la technologie employée.
+   - Code propre, commenté intelligemment et directement prêt pour le déploiement sur Netlify, Vercel ou serveur statique.
 
 Génère TOUJOURS un projet complet composé de 3 fichiers obligatoires :
 - "index.html" : Code HTML5 sémantique pur, incluant les balises <link rel="stylesheet" href="styles.css"> et <script src="script.js"></script>.
@@ -1290,7 +1307,7 @@ Génère TOUJOURS un projet complet composé de 3 fichiers obligatoires :
 - "script.js" : Code JavaScript Vanilla complet et fonctionnel qui gère : le menu mobile, les filtres d'onglets, la modale, la validation de formulaire avec notification toast, l'accordéon FAQ et l'initialisation des icônes Lucide (\`lucide.createIcons()\`).
 
 Return the response EXCLUSIVELY in JSON format with three fields (do not include any other text outside the JSON):
-1. 'explanation': A brief, professional description of the architectural choices made.
+1. 'explanation': A brief, professional description of the architectural and design choices made.
 2. 'code': The complete index.html file content. DO NOT use markdown code blocks inside JSON fields.
 3. 'files': An array of objects with 'path' (e.g., "index.html", "styles.css", "script.js") and 'content' (the clean unescaped file content).
 `;

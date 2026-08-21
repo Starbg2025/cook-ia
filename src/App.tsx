@@ -184,6 +184,10 @@ export default function App() {
   const [selectedModel, setSelectedModel] = useState<string>(() => {
     try {
       const saved = localStorage.getItem('selectedModel');
+      if (saved && (saved.includes('2.0') || saved.includes('1.5') || saved.includes('pro'))) {
+        localStorage.setItem('selectedModel', 'gemini-2.5-flash');
+        return 'gemini-2.5-flash';
+      }
       return saved || 'gemini-2.5-flash';
     } catch (e) {
       console.warn("Storage access denied:", e);
@@ -709,19 +713,6 @@ export default function App() {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
-
-  useEffect(() => {
-    if (generatedCode && iframeRef.current && !skipIframeUpdate.current) {
-      const doc = iframeRef.current.contentDocument;
-      if (doc) {
-        doc.open();
-        doc.write(generatedCode);
-        doc.close();
-      }
-    }
-    // Reset skip ref after the effect runs
-    skipIframeUpdate.current = false;
-  }, [generatedCode, viewMode]);
 
   const handleSectionUpdate = async (sectionPrompt: string) => {
     if (!sectionEdit.sectionHtml || !generatedCode || isLoading) return;
@@ -1423,15 +1414,6 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
     if (lastModelMessage?.code) {
       setGeneratedCode(lastModelMessage.code);
     }
-    
-    if (generatedCode && iframeRef.current) {
-      const doc = iframeRef.current.contentDocument;
-      if (doc) {
-        doc.open();
-        doc.write(lastModelMessage?.code || generatedCode);
-        doc.close();
-      }
-    }
   };
 
   const [isViewOnly, setIsViewOnly] = useState(false);
@@ -1607,7 +1589,7 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
-          className={`flex flex-col h-screen ${isDark ? 'bg-[var(--color-bg-light)] text-[var(--color-ink)]' : 'bg-[var(--color-bg-light)] text-[var(--color-ink)]'} overflow-hidden font-sans transition-colors duration-500`}
+          className={`flex flex-col h-screen ${isDark ? 'bg-[#080B11] text-white' : 'bg-[#FAFAFC] text-slate-900'} overflow-hidden font-sans transition-colors duration-500`}
         >
           {announcement && announcement.active && (
             <div className={`bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 text-black px-4 py-2 flex items-center justify-between text-xs font-bold shrink-0 z-[60] shadow-md`}>
@@ -1668,7 +1650,7 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
         <div className="flex items-center gap-2 sm:gap-3">
           <button 
             onClick={() => setIsHistoryOpen(!isHistoryOpen)}
-            className={`p-1.5 sm:p-2 rounded-xl transition-all ${isDark ? 'text-white/60 hover:bg-white/[0.06] hover:text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-[var(--color-ink)]'}`}
+            className={`p-1.5 sm:p-2 rounded-xl transition-all ${isDark ? 'text-white/60 hover:bg-white/[0.06] hover:text-white' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-950'}`}
             title="Toggle Sidebar"
           >
             <Menu size={18} />
@@ -1677,20 +1659,20 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
             <div className="w-8 h-8 rounded-lg bg-[var(--color-primary)] flex items-center justify-center text-white font-black transition-transform duration-300">
               <Code2 size={16} />
             </div>
-            <span className={`font-extrabold text-sm tracking-tight ${isDark ? 'text-white' : 'text-[var(--color-ink)]'} hidden min-[360px]:inline`}>
+            <span className={`font-extrabold text-sm tracking-tight ${isDark ? 'text-white' : 'text-slate-900'} hidden min-[360px]:inline`}>
               Cook IA
             </span>
           </div>
         </div>
 
         {/* View Mode Switcher (Modern Segmented Pill) */}
-        <div className={`flex items-center p-1 rounded-xl border ${isDark ? 'bg-[#0E1420] border-white/[0.08]' : 'bg-slate-100/80 border-slate-200'}`}>
+        <div className={`flex items-center p-1 rounded-xl border ${isDark ? 'bg-[#0E1420] border-white/[0.08]' : 'bg-slate-100/90 border-slate-200'}`}>
           <button 
             onClick={() => setViewMode('chat')}
             className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all ${
               viewMode === 'chat' 
-                ? (isDark ? 'bg-slate-900 dark:bg-white dark:text-[var(--color-ink)] text-white shadow-md shadow-slate-900/20' : 'bg-white text-[var(--color-ink)] shadow-sm') 
-                : (isDark ? 'text-white/50 hover:text-white' : 'text-slate-500 hover:text-[var(--color-ink)]')
+                ? (isDark ? 'bg-orange-primary text-white shadow-md shadow-orange-primary/20' : 'bg-slate-900 text-white shadow-sm') 
+                : (isDark ? 'text-white/60 hover:text-white' : 'text-slate-600 hover:text-slate-950')
             }`}
           >
             <MessageSquare size={13} />
@@ -1700,8 +1682,8 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
             onClick={() => setViewMode('code')}
             className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all ${
               viewMode === 'code' 
-                ? (isDark ? 'bg-slate-900 dark:bg-white dark:text-[var(--color-ink)] text-white shadow-md shadow-slate-900/20' : 'bg-white text-[var(--color-ink)] shadow-sm') 
-                : (isDark ? 'text-white/50 hover:text-white' : 'text-slate-500 hover:text-[var(--color-ink)]')
+                ? (isDark ? 'bg-orange-primary text-white shadow-md shadow-orange-primary/20' : 'bg-slate-900 text-white shadow-sm') 
+                : (isDark ? 'text-white/60 hover:text-white' : 'text-slate-600 hover:text-slate-950')
             }`}
           >
             <Code size={13} />
@@ -1711,8 +1693,8 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
             onClick={() => setViewMode('preview')}
             className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all ${
               viewMode === 'preview' 
-                ? (isDark ? 'bg-slate-900 dark:bg-white dark:text-[var(--color-ink)] text-white shadow-md shadow-slate-900/20' : 'bg-white text-[var(--color-ink)] shadow-sm') 
-                : (isDark ? 'text-white/50 hover:text-white' : 'text-slate-500 hover:text-[var(--color-ink)]')
+                ? (isDark ? 'bg-orange-primary text-white shadow-md shadow-orange-primary/20' : 'bg-slate-900 text-white shadow-sm') 
+                : (isDark ? 'text-white/60 hover:text-white' : 'text-slate-600 hover:text-slate-950')
             }`}
           >
             <Eye size={13} />
@@ -1737,7 +1719,7 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
           <button
             onClick={() => setLang(lang === 'fr' ? 'en' : 'fr')}
             className={`px-2 py-1 rounded-lg text-xs font-bold font-mono transition-colors ${
-              isDark ? 'text-white/60 hover:bg-white/[0.06] hover:text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-[var(--color-ink)]'
+              isDark ? 'text-white/70 hover:bg-white/[0.06] hover:text-white' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-950'
             }`}
             title="Langue / Language"
           >
@@ -1755,7 +1737,7 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
 
           <button 
             onClick={() => setTheme(isDark ? 'light' : 'dark')}
-            className={`p-1.5 sm:p-2 rounded-xl transition-colors ${isDark ? 'text-white/60 hover:bg-white/[0.06] hover:text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-[var(--color-ink)]'}`}
+            className={`p-1.5 sm:p-2 rounded-xl transition-colors ${isDark ? 'text-white/70 hover:bg-white/[0.06] hover:text-white' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-950'}`}
             title="Thème clair / sombre"
           >
             {isDark ? <Sun size={17} /> : <Moon size={17} />}
@@ -1775,7 +1757,7 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
             className={`flex items-center gap-1.5 p-1 sm:px-2 sm:py-1 rounded-xl transition-all border ${
               isDark 
                 ? 'border-white/10 hover:border-amber-500/50 hover:bg-white/[0.06] text-white' 
-                : 'border-slate-200 hover:border-amber-500/50 hover:bg-slate-100 text-[var(--color-ink)]'
+                : 'border-slate-200 hover:border-amber-500/50 hover:bg-slate-100 text-slate-900'
             }`}
             title={lang === 'fr' ? "Mon Profil & Instructions IA" : "My Profile & AI Instructions"}
             id="header-profile-button"
@@ -1793,7 +1775,7 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
               <span className="text-[11px] font-bold truncate w-full">
                 {user?.email === 'benit800@gmail.com' ? 'Benit' : (userProfile?.username ? `@${userProfile.username}` : (user?.user_metadata?.username || user?.email?.split('@')[0] || (lang === 'fr' ? 'Profil' : 'Profile')))}
               </span>
-              <span className="text-[9px] text-amber-500 font-semibold truncate">
+              <span className="text-[9px] text-amber-600 font-semibold truncate">
                 {userProfile?.role || (user?.email === 'benit800@gmail.com' ? 'Fondateur' : 'Profil & IA')}
               </span>
             </div>

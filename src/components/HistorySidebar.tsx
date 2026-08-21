@@ -132,7 +132,7 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = ({
       {/* Search Bar */}
       <div className="px-3 pb-2">
         <div className="relative">
-          <Search size={14} className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-white/40' : 'text-slate-400'}`} />
+          <Search size={14} className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-white/40' : 'text-slate-500'}`} />
           <input 
             type="text"
             placeholder="Rechercher un projet..."
@@ -141,7 +141,7 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = ({
             className={`w-full pl-8 pr-3 py-1.5 rounded-lg text-xs transition-all focus:outline-none ${
               isDark 
                 ? 'bg-white/[0.04] border border-white/[0.08] text-white placeholder:text-white/30 focus:border-orange-primary/50' 
-                : 'bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-orange-primary/50'
+                : 'bg-white border border-slate-300 text-slate-900 placeholder:text-slate-500 focus:border-orange-primary/50 font-medium'
             }`}
           />
         </div>
@@ -149,7 +149,7 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = ({
 
       {/* Quick Tools Section */}
       <div className="px-3 py-2 space-y-0.5">
-        <div className={`px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-white/30' : 'text-slate-400'}`}>
+        <div className={`px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-white/40' : 'text-slate-700'}`}>
           Outils & Création
         </div>
         {buildItems.map((item) => {
@@ -165,13 +165,13 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = ({
                   onSelectView(item.id as any);
                 }
               }}
-              className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-all text-xs font-medium ${
+              className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-all text-xs font-semibold ${
                 isActive
-                  ? (isDark ? 'bg-orange-primary/15 text-orange-primary font-semibold' : 'bg-orange-50 text-orange-600 font-semibold')
-                  : (isDark ? 'text-white/65 hover:bg-white/[0.05] hover:text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
+                  ? (isDark ? 'bg-orange-primary/15 text-orange-primary font-bold' : 'bg-orange-100/70 text-orange-700 font-bold border border-orange-200')
+                  : (isDark ? 'text-white/70 hover:bg-white/[0.05] hover:text-white' : 'text-slate-700 hover:bg-slate-200/70 hover:text-slate-950')
               }`}
             >
-              <IconComponent size={15} className={isActive ? 'text-orange-primary' : (isDark ? 'text-white/40' : 'text-slate-400')} />
+              <IconComponent size={15} className={isActive ? 'text-orange-primary' : (isDark ? 'text-white/50' : 'text-slate-600')} />
               <span className="truncate">{item.label}</span>
             </button>
           );
@@ -181,17 +181,17 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = ({
       {/* Recent Projects List (ChatGPT / Claude style) */}
       <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1 custom-scrollbar">
         <div className="flex items-center justify-between px-2 py-1">
-          <span className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-white/30' : 'text-slate-400'}`}>
+          <span className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-white/40' : 'text-slate-700'}`}>
             Historique des projets
           </span>
-          <span className={`text-[10px] font-mono ${isDark ? 'text-white/30' : 'text-slate-400'}`}>
+          <span className={`text-[10px] font-mono font-bold ${isDark ? 'text-white/40' : 'text-slate-600'}`}>
             {filteredConversations.length}
           </span>
         </div>
         
         {filteredConversations.length === 0 ? (
-          <div className={`px-3 py-6 text-center text-xs ${isDark ? 'text-white/30' : 'text-slate-400'}`}>
-            <FolderOpen size={24} className="mx-auto mb-1.5 opacity-40" />
+          <div className={`px-3 py-6 text-center text-xs ${isDark ? 'text-white/40' : 'text-slate-600 font-medium'}`}>
+            <FolderOpen size={24} className="mx-auto mb-1.5 opacity-50" />
             Aucun projet trouvé
           </div>
         ) : (
@@ -202,14 +202,14 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = ({
                 key={conv.id}
                 className={`group flex items-center justify-between px-2.5 py-2 rounded-lg cursor-pointer transition-all ${
                   isSelected
-                    ? (isDark ? 'bg-white/[0.09] text-white border-l-2 border-orange-primary' : 'bg-slate-200/80 text-slate-900 border-l-2 border-orange-primary')
-                    : (isDark ? 'text-white/70 hover:bg-white/[0.04] hover:text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
+                    ? (isDark ? 'bg-white/[0.09] text-white border-l-2 border-orange-primary' : 'bg-slate-200 text-slate-950 font-bold border-l-2 border-orange-primary shadow-xs')
+                    : (isDark ? 'text-white/75 hover:bg-white/[0.04] hover:text-white' : 'text-slate-700 hover:bg-slate-200/60 hover:text-slate-950 font-medium')
                 }`}
                 onClick={() => onSelectConversation(conv.id)}
               >
                 <div className="flex items-center gap-2 overflow-hidden min-w-0">
-                  <MessageSquare size={14} className={`shrink-0 ${isSelected ? 'text-orange-primary' : (isDark ? 'text-white/40' : 'text-slate-400')}`} />
-                  <span className="text-xs truncate font-medium">{conv.title}</span>
+                  <MessageSquare size={14} className={`shrink-0 ${isSelected ? 'text-orange-primary' : (isDark ? 'text-white/50' : 'text-slate-600')}`} />
+                  <span className="text-xs truncate">{conv.title}</span>
                 </div>
                 
                 <button 
@@ -218,7 +218,7 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = ({
                     onDeleteConversation(conv.id);
                   }}
                   className={`opacity-0 group-hover:opacity-100 p-1 rounded transition-all shrink-0 ${
-                    isDark ? 'hover:bg-rose-500/20 text-white/30 hover:text-rose-400' : 'hover:bg-rose-50 text-slate-400 hover:text-rose-500'
+                    isDark ? 'hover:bg-rose-500/20 text-white/40 hover:text-rose-400' : 'hover:bg-rose-100 text-slate-500 hover:text-rose-600'
                   }`}
                   title="Supprimer"
                 >

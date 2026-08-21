@@ -2010,44 +2010,51 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <p className="text-xs text-slate-400">Choisissez le modèle IA gratuit de votre choix pour alimenter vos créations.</p>
             </div>
             
-            <div className="space-y-3">
-              {[
-                { 
-                  id: 'gemini-2.5-flash',
-                  name: 'Gemini 2.5 Flash (Gratuit)', 
-                  provider: 'Google', 
-                  desc: 'Modèle rapide et intelligent. Inclus 100% gratuitement dans la plateforme.', 
-                  badge: '100% Gratuit' 
-                },
-                { 
-                  id: 'gemini-2.0-flash',
-                  name: 'Gemini 2.0 Flash (Gratuit)', 
-                  provider: 'Google', 
-                  desc: 'Modèle haute vitesse optimisé pour le code et le design réactif.', 
-                  badge: '100% Gratuit' 
-                },
-                { 
-                  id: 'groq-llama-3.3-70b',
-                  name: 'Groq Llama 3.3 70B (Gratuit)', 
-                  provider: 'Groq Cloud', 
-                  desc: 'Inférence ultra-rapide propulsée par les puces LPU Groq.', 
-                  badge: '100% Gratuit' 
-                },
-                { 
-                  id: 'openrouter-free',
-                  name: 'OpenRouter DeepSeek R1 (Gratuit)', 
-                  provider: 'OpenRouter', 
-                  desc: 'Accès aux modèles gratuits de la communauté (DeepSeek R1, Llama 3.3).', 
-                  badge: '100% Gratuit' 
-                },
-                { 
-                  id: 'gemini-1.5-flash-latest',
-                  name: 'Gemini 1.5 Flash (Gratuit)', 
-                  provider: 'Google', 
-                  desc: 'Modèle classique très stable avec un grand contexte.', 
-                  badge: '100% Gratuit' 
-                },
-              ].map((m) => (
+              <div className="space-y-3">
+                {[
+                  { 
+                    id: 'gemini-2.5-flash',
+                    name: 'Gemini 2.5 Flash (Recommandé - Sans Quota)', 
+                    provider: 'Google', 
+                    desc: 'Modèle ultra-fiable et rapide sans restriction de quota. Inclus 100% gratuitement.', 
+                    badge: '100% Gratuit' 
+                  },
+                  { 
+                    id: 'gemini-3.5-flash',
+                    name: 'Gemini 3.5 Flash (Performance Pro)', 
+                    provider: 'Google', 
+                    desc: 'Modèle de nouvelle génération ultra-performant pour le code et le design.', 
+                    badge: '100% Gratuit' 
+                  },
+                  { 
+                    id: 'gemini-3.5-flash-lite',
+                    name: 'Gemini 3.5 Flash Lite', 
+                    provider: 'Google', 
+                    desc: 'Modèle léger nouvelle génération optimisé pour une réponse instantanée.', 
+                    badge: '100% Gratuit' 
+                  },
+                  { 
+                    id: 'gemini-3.1-flash-lite',
+                    name: 'Gemini 3.1 Flash Lite', 
+                    provider: 'Google', 
+                    desc: 'Modèle ultra-léger conçu pour une vitesse d\'exécution instantanée.', 
+                    badge: '100% Gratuit' 
+                  },
+                  { 
+                    id: 'groq-llama-3.3-70b',
+                    name: 'Groq Llama 3.3 70B (Gratuit)', 
+                    provider: 'Groq Cloud', 
+                    desc: 'Inférence ultra-rapide propulsée par les puces LPU Groq.', 
+                    badge: '100% Gratuit' 
+                  },
+                  { 
+                    id: 'openrouter-free',
+                    name: 'OpenRouter DeepSeek R1 (Gratuit)', 
+                    provider: 'OpenRouter', 
+                    desc: 'Accès aux modèles gratuits de la communauté (DeepSeek R1, Llama 3.3).', 
+                    badge: '100% Gratuit' 
+                  },
+                ].map((m) => (
                 <button
                   key={m.id}
                   onClick={() => onSelectModel?.(m.id)}

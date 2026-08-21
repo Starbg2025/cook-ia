@@ -320,17 +320,17 @@ export const Preview: React.FC<PreviewProps> = ({
           <div className="w-3 h-3 rounded-full bg-[#28C840] shadow-inner" />
         </div>
         
-        <div className={`flex-1 max-w-2xl ${isDark ? 'bg-[#0A0A0A] border-white/5' : 'bg-white border-slate-200'} px-4 py-1.5 rounded-xl border flex items-center justify-between gap-2 mx-4`}>
-          <span className={`text-[11px] font-mono ${isDark ? 'text-white/20' : 'text-slate-400'} select-none hidden sm:inline`}>localhost:3000/preview</span>
+        <div className={`flex-1 max-w-2xl ${isDark ? 'bg-[#0A0A0A] border-white/5' : 'bg-white border-slate-300 shadow-xs'} px-4 py-1.5 rounded-xl border flex items-center justify-between gap-2 mx-4`}>
+          <span className={`text-[11px] font-mono ${isDark ? 'text-white/40' : 'text-slate-600 font-medium'} select-none hidden sm:inline`}>localhost:3000/preview</span>
           
           {/* Responsive Device Viewport Switcher */}
-          <div className={`flex items-center gap-1 p-0.5 rounded-lg border ${isDark ? 'bg-[#141414] border-white/10' : 'bg-slate-100 border-slate-200'}`}>
+          <div className={`flex items-center gap-1 p-0.5 rounded-lg border ${isDark ? 'bg-[#141414] border-white/10' : 'bg-slate-100 border-slate-300'}`}>
             <button
               onClick={() => setDeviceViewport('desktop')}
               className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold uppercase transition-all ${
                 deviceViewport === 'desktop'
                   ? 'bg-[var(--color-primary)] text-white shadow-sm'
-                  : isDark ? 'text-white/40 hover:text-white' : 'text-slate-500 hover:text-slate-900'
+                  : isDark ? 'text-white/40 hover:text-white' : 'text-slate-700 hover:text-slate-950 font-bold'
               }`}
               title="Aperçu PC / Bureau"
             >
@@ -342,7 +342,7 @@ export const Preview: React.FC<PreviewProps> = ({
               className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold uppercase transition-all ${
                 deviceViewport === 'tablet'
                   ? 'bg-[var(--color-primary)] text-white shadow-sm'
-                  : isDark ? 'text-white/40 hover:text-white' : 'text-slate-500 hover:text-slate-900'
+                  : isDark ? 'text-white/40 hover:text-white' : 'text-slate-700 hover:text-slate-950 font-bold'
               }`}
               title="Aperçu Tablette (768px)"
             >
@@ -354,7 +354,7 @@ export const Preview: React.FC<PreviewProps> = ({
               className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold uppercase transition-all ${
                 deviceViewport === 'mobile'
                   ? 'bg-[var(--color-primary)] text-white shadow-sm'
-                  : isDark ? 'text-white/40 hover:text-white' : 'text-slate-500 hover:text-slate-900'
+                  : isDark ? 'text-white/40 hover:text-white' : 'text-slate-700 hover:text-slate-950 font-bold'
               }`}
               title="Aperçu Mobile (375px)"
             >
@@ -369,22 +369,22 @@ export const Preview: React.FC<PreviewProps> = ({
             </span>
           )}
           {isSectionSelectionMode && (
-            <span className="text-[9px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full font-bold uppercase tracking-widest animate-pulse">
+            <span className="text-[9px] bg-blue-500/20 text-blue-500 px-2 py-0.5 rounded-full font-bold uppercase tracking-widest animate-pulse">
               Select Section
             </span>
           )}
         </div>
 
-        <div className={`flex items-center gap-4 ${isDark ? 'text-white/30' : 'text-slate-400'} w-auto justify-end`}>
+        <div className={`flex items-center gap-4 ${isDark ? 'text-white/60' : 'text-slate-700'} w-auto justify-end`}>
           <button 
             onClick={() => setShowActionHistory(!showActionHistory)}
-            className={`transition-all p-1 hover:scale-110 active:scale-95 ${showActionHistory ? 'text-blue-500' : isDark ? 'hover:text-white' : 'hover:text-slate-900'}`}
+            className={`transition-all p-1 hover:scale-110 active:scale-95 ${showActionHistory ? 'text-blue-500' : isDark ? 'hover:text-white' : 'hover:text-slate-950 text-slate-700'}`}
             title="View Action History"
           >
             <History size={15} />
           </button>
           <button 
-            className={`hover:text-blue-500 transition-all p-1 hover:scale-110 active:scale-95 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest`}
+            className={`${isDark ? 'text-white/60 hover:text-blue-400' : 'text-slate-700 hover:text-blue-600'} transition-all p-1 hover:scale-110 active:scale-95 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest`}
             title="Read File"
           >
             <FileSearch size={14} />
@@ -393,7 +393,7 @@ export const Preview: React.FC<PreviewProps> = ({
           {files.length > 0 && (
             <button 
               onClick={onDownloadZip}
-              className={`hover:text-[var(--color-primary)] transition-all p-1 hover:scale-110 active:scale-95 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest`}
+              className={`${isDark ? 'text-white/60 hover:text-orange-400' : 'text-slate-700 hover:text-orange-600'} transition-all p-1 hover:scale-110 active:scale-95 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest`}
               title="Download Project ZIP"
             >
               <Download size={14} />
@@ -402,21 +402,21 @@ export const Preview: React.FC<PreviewProps> = ({
           )}
           <button 
             onClick={() => setIsElementSelectionMode(!isElementSelectionMode)}
-            className={`transition-all p-1 hover:scale-110 active:scale-95 ${isElementSelectionMode ? 'text-blue-500' : isDark ? 'hover:text-white' : 'hover:text-slate-900'}`}
+            className={`transition-all p-1 hover:scale-110 active:scale-95 ${isElementSelectionMode ? 'text-blue-500' : isDark ? 'hover:text-white' : 'hover:text-slate-950 text-slate-700'}`}
             title="Visual Inspector (Element Edit)"
           >
             <MousePointer2 size={15} />
           </button>
           <button 
             onClick={() => setIsSectionSelectionMode(!isSectionSelectionMode)}
-            className={`transition-all p-1 hover:scale-110 active:scale-95 ${isSectionSelectionMode ? 'text-blue-400' : isDark ? 'hover:text-white' : 'hover:text-slate-900'}`}
+            className={`transition-all p-1 hover:scale-110 active:scale-95 ${isSectionSelectionMode ? 'text-blue-500' : isDark ? 'hover:text-white' : 'hover:text-slate-950 text-slate-700'}`}
             title="Targeted Section Edit"
           >
             <MousePointer2 size={15} />
           </button>
           <button 
             onClick={() => setIsVisualEditing(!isVisualEditing)}
-            className={`transition-all p-1 hover:scale-110 active:scale-95 ${isVisualEditing ? 'text-[var(--color-primary)]' : isDark ? 'hover:text-white' : 'hover:text-slate-900'}`}
+            className={`transition-all p-1 hover:scale-110 active:scale-95 ${isVisualEditing ? 'text-orange-500' : isDark ? 'hover:text-white' : 'hover:text-slate-950 text-slate-700'}`}
             title={isVisualEditing ? "Disable Visual Edit" : "Enable Visual Edit"}
           >
             <Pencil size={15} />
@@ -425,8 +425,8 @@ export const Preview: React.FC<PreviewProps> = ({
             onClick={() => setShowForgeStudio(!showForgeStudio)}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all ${
               showForgeStudio 
-                ? 'bg-[var(--color-primary)]/25 border-[var(--color-primary)]/40 text-[var(--color-primary)] font-black shadow-[0_0_15px_rgba(255,107,0,0.25)]' 
-                : 'border-white/5 bg-gradient-to-r from-orange-primary/10 to-amber-500/10 hover:from-orange-primary/20 hover:to-amber-500/20 text-[var(--color-primary)] font-black animate-pulse'
+                ? 'bg-orange-500/25 border-orange-500/40 text-orange-600 font-black shadow-[0_0_15px_rgba(255,107,0,0.25)]' 
+                : 'border-orange-200 bg-gradient-to-r from-orange-500/10 to-amber-500/10 hover:from-orange-500/20 hover:to-amber-500/20 text-orange-600 font-black'
             } text-[10px] uppercase tracking-wider`}
             title="Open Forge Developer Studio"
           >
@@ -435,7 +435,7 @@ export const Preview: React.FC<PreviewProps> = ({
           </button>
           <button 
             onClick={onRefresh}
-            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg border border-white/5 bg-white/5 hover:bg-white/10 transition-all ${isDark ? 'text-white/60 hover:text-white font-bold' : 'text-slate-600 hover:text-slate-900 font-bold'} text-[10px] uppercase tracking-wider`}
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg border transition-all ${isDark ? 'border-white/10 bg-white/5 hover:bg-white/10 text-white font-bold' : 'border-slate-300 bg-white hover:bg-slate-100 text-slate-800 font-bold shadow-xs'} text-[10px] uppercase tracking-wider`}
             title="Reset to Original"
           >
             <RotateCcw size={14} className="group-hover:rotate-[-180deg] transition-transform duration-500" />
@@ -443,7 +443,7 @@ export const Preview: React.FC<PreviewProps> = ({
           </button>
           <button 
             onClick={onExpand}
-            className={`transition-all p-1 hover:scale-110 active:scale-95 ${isDark ? 'hover:text-white' : 'hover:text-slate-900'}`}
+            className={`transition-all p-1 hover:scale-110 active:scale-95 ${isDark ? 'hover:text-white' : 'hover:text-slate-950 text-slate-700'}`}
             title="Open in New Tab"
           >
             <ExternalLink size={15} />
@@ -587,7 +587,7 @@ export const Preview: React.FC<PreviewProps> = ({
             >
               {/* File Tree Sidebar */}
               <div className={`w-64 border-r ${isDark ? 'bg-[#0A0A0A] border-white/5' : 'bg-slate-50 border-slate-200'} flex flex-col`}>
-                <div className={`p-4 border-b ${isDark ? 'border-white/5 text-white/40' : 'border-slate-200 text-slate-400'} text-[10px] font-bold uppercase tracking-widest flex items-center gap-2`}>
+                <div className={`p-4 border-b ${isDark ? 'border-white/5 text-white/40' : 'border-slate-200 text-slate-700'} text-[10px] font-bold uppercase tracking-widest flex items-center gap-2`}>
                   <Folder size={14} />
                   Project Files
                 </div>
@@ -598,8 +598,8 @@ export const Preview: React.FC<PreviewProps> = ({
                       onClick={() => setSelectedFilePath(file.path)}
                       className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs transition-all ${
                         selectedFilePath === file.path 
-                          ? 'bg-[var(--color-primary)]/10 text-[var(--color-primary)] font-bold' 
-                          : isDark ? 'text-white/40 hover:bg-white/5 hover:text-white' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
+                          ? 'bg-[var(--color-primary)]/15 text-[var(--color-primary)] font-bold' 
+                          : isDark ? 'text-white/50 hover:bg-white/5 hover:text-white' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-950 font-medium'
                       }`}
                     >
                       <FileCode size={14} className={selectedFilePath === file.path ? 'text-[var(--color-primary)]' : ''} />
@@ -617,27 +617,27 @@ export const Preview: React.FC<PreviewProps> = ({
                       initial={{ opacity: 0, x: 20 }}
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: 20 }}
-                      className={`absolute right-4 top-14 bottom-4 w-80 ${isDark ? 'bg-[#1A1A1A] border-white/10' : 'bg-white border-slate-200'} border rounded-2xl shadow-2xl z-10 flex flex-col overflow-hidden`}
+                      className={`absolute right-4 top-14 bottom-4 w-80 ${isDark ? 'bg-[#1A1A1A] border-white/10' : 'bg-white border-slate-300'} border rounded-2xl shadow-2xl z-10 flex flex-col overflow-hidden`}
                     >
-                      <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-                        <span className="text-xs font-bold uppercase tracking-widest text-slate-400">Action History</span>
-                        <button onClick={() => setShowActionHistory(false)} className="text-slate-400 hover:text-slate-600">
+                      <div className="p-4 border-b border-slate-200 flex items-center justify-between">
+                        <span className="text-xs font-bold uppercase tracking-widest text-slate-700">Action History</span>
+                        <button onClick={() => setShowActionHistory(false)} className="text-slate-500 hover:text-slate-800">
                           <X size={14} />
                         </button>
                       </div>
                       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                        <div className="flex flex-col items-center justify-center py-12 text-slate-400">
-                          <History size={32} className="mb-4 opacity-20" />
-                          <p className="text-xs">No history recorded yet.</p>
+                        <div className="flex flex-col items-center justify-center py-12 text-slate-500">
+                          <History size={32} className="mb-4 opacity-30" />
+                          <p className="text-xs font-medium">No history recorded yet.</p>
                         </div>
                       </div>
                     </motion.div>
                   )}
                 </AnimatePresence>
 
-                <div className={`h-10 ${isDark ? 'bg-[#141414] border-white/5' : 'bg-slate-50 border-slate-200'} border-b flex items-center px-4 justify-between shrink-0`}>
+                <div className={`h-10 ${isDark ? 'bg-[#141414] border-white/5' : 'bg-slate-100 border-slate-200'} border-b flex items-center px-4 justify-between shrink-0`}>
                   <div className="flex items-center gap-2">
-                    <span className={`text-[10px] font-mono font-bold ${isDark ? 'text-white/60' : 'text-slate-600'}`}>{selectedFilePath || 'index.html'}</span>
+                    <span className={`text-[10px] font-mono font-bold ${isDark ? 'text-white/60' : 'text-slate-800'}`}>{selectedFilePath || 'index.html'}</span>
                     <span className="text-[10px] px-2 py-0.5 rounded bg-[var(--color-primary)]/10 text-[var(--color-primary)] font-bold uppercase">{selectedFilePath?.split('.').pop() || 'html'}</span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -650,8 +650,8 @@ export const Preview: React.FC<PreviewProps> = ({
                       }}
                       className={`px-2.5 py-1 rounded text-[10px] font-bold flex items-center gap-1 transition-all ${
                         isCopied 
-                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
-                          : isDark ? 'bg-white/5 hover:bg-white/10 text-white/70' : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
+                          ? 'bg-emerald-500/20 text-emerald-600 border border-emerald-500/30' 
+                          : isDark ? 'bg-white/5 hover:bg-white/10 text-white/70' : 'bg-slate-200 hover:bg-slate-300 text-slate-800'
                       }`}
                     >
                       {isCopied ? 'Copié !' : 'Copier'}
@@ -661,7 +661,7 @@ export const Preview: React.FC<PreviewProps> = ({
                       className={`px-2.5 py-1 rounded text-[10px] font-bold flex items-center gap-1 transition-all ${
                         isEditingCode 
                           ? 'bg-[var(--color-primary)] text-white shadow' 
-                          : isDark ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-slate-200 hover:bg-slate-300 text-slate-800'
+                          : isDark ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold'
                       }`}
                     >
                       {isEditingCode ? 'Mode Lecture' : 'Éditer Code'}

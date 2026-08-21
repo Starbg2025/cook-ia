@@ -91,16 +91,16 @@ export const TypingIndicator: React.FC<LiveActionResponseProps> = ({
 
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold tracking-tight text-orange-primary flex items-center gap-1.5">
+              <span className="text-xs font-bold tracking-tight text-orange-600 dark:text-orange-primary flex items-center gap-1.5">
                 Moteur d'Exécution COOK IA
               </span>
               <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono font-bold ${
-                isDark ? 'bg-white/[0.06] text-white/70 border border-white/[0.08]' : 'bg-slate-200 text-slate-700'
+                isDark ? 'bg-white/[0.06] text-white/70 border border-white/[0.08]' : 'bg-slate-200 text-slate-800 border border-slate-300'
               }`}>
                 IA Active
               </span>
             </div>
-            <div className="flex items-center gap-1.5 text-[11px] font-mono text-emerald-400">
+            <div className="flex items-center gap-1.5 text-[11px] font-mono text-emerald-600 dark:text-emerald-400 font-medium">
               <Clock size={11} />
               <span>Génération en temps réel ({formatTime(elapsedSeconds)})</span>
             </div>
@@ -153,10 +153,10 @@ export const TypingIndicator: React.FC<LiveActionResponseProps> = ({
                     key={stage.id}
                     className={`p-2.5 rounded-xl border transition-all relative overflow-hidden ${
                       isActive 
-                        ? (isDark ? 'bg-orange-primary/15 border-orange-primary text-white shadow-lg ring-1 ring-orange-primary/30' : 'bg-orange-50 border-orange-400 text-slate-900') 
+                        ? (isDark ? 'bg-orange-primary/15 border-orange-primary text-white shadow-lg ring-1 ring-orange-primary/30' : 'bg-orange-50 border-orange-400 text-slate-900 shadow-sm') 
                         : isPassed 
-                        ? (isDark ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300' : 'bg-emerald-50 border-emerald-200 text-emerald-800') 
-                        : (isDark ? 'bg-white/[0.02] border-white/[0.06] text-white/30' : 'bg-slate-50 border-slate-200 text-slate-400')
+                        ? (isDark ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300' : 'bg-emerald-50 border-emerald-300 text-emerald-900 font-semibold') 
+                        : (isDark ? 'bg-white/[0.02] border-white/[0.06] text-white/30' : 'bg-slate-100 border-slate-200 text-slate-700 font-medium')
                     }`}
                   >
                     {isActive && (
@@ -168,13 +168,13 @@ export const TypingIndicator: React.FC<LiveActionResponseProps> = ({
                     
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-1.5">
-                        <StageIcon size={14} className={isActive ? 'text-orange-primary animate-pulse' : isPassed ? 'text-emerald-400' : 'text-current'} />
+                        <StageIcon size={14} className={isActive ? 'text-orange-primary animate-pulse' : isPassed ? 'text-emerald-500' : 'text-current'} />
                         <span className="text-xs font-bold truncate">{stage.name}</span>
                       </div>
-                      {isPassed && <Check size={12} className="text-emerald-400 shrink-0" strokeWidth={3} />}
+                      {isPassed && <Check size={12} className="text-emerald-500 shrink-0" strokeWidth={3} />}
                       {isActive && <Loader2 size={12} className="animate-spin text-orange-primary shrink-0" />}
                     </div>
-                    <p className="text-[10px] line-clamp-1 opacity-70">{stage.desc}</p>
+                    <p className="text-[10px] line-clamp-1 opacity-80">{stage.desc}</p>
                   </div>
                 );
               })}
@@ -182,7 +182,7 @@ export const TypingIndicator: React.FC<LiveActionResponseProps> = ({
 
             {/* Current Active Step Banner */}
             <div className={`p-3.5 rounded-xl border flex items-center justify-between gap-3 ${
-              isDark ? 'bg-[#080B11] border-white/[0.08]' : 'bg-slate-900 text-white border-slate-800'
+              isDark ? 'bg-[#080B11] border-white/[0.08]' : 'bg-slate-900 text-white border-slate-800 shadow-md'
             }`}>
               <div className="flex items-center gap-2.5 min-w-0">
                 <Loader2 size={15} className="animate-spin text-orange-primary shrink-0" />
@@ -190,28 +190,28 @@ export const TypingIndicator: React.FC<LiveActionResponseProps> = ({
                   <div className="text-xs font-bold text-white truncate font-mono">
                     {status || "Génération du code source réel..."}
                   </div>
-                  <div className="text-[10px] text-white/50 truncate">
+                  <div className="text-[10px] text-white/70 truncate">
                     Production HTML5, styles Tailwind CSS & scripts Vanilla JS interactifs
                   </div>
                 </div>
               </div>
 
-              <div className="hidden sm:flex items-center gap-1 text-[10px] font-mono text-orange-primary bg-orange-primary/10 px-2 py-0.5 rounded border border-orange-primary/20 shrink-0">
-                <Flame size={11} className="fill-orange-primary" />
+              <div className="hidden sm:flex items-center gap-1 text-[10px] font-mono text-orange-400 bg-orange-primary/20 px-2 py-0.5 rounded border border-orange-primary/30 shrink-0 font-bold">
+                <Flame size={11} className="fill-orange-400" />
                 <span>Exécution</span>
               </div>
             </div>
 
             {/* Sub-Tabs: Raisonnement / Logs */}
             <div className="space-y-2">
-              <div className="flex items-center justify-between border-b border-white/[0.06] pb-1.5">
+              <div className={`flex items-center justify-between border-b pb-1.5 ${isDark ? 'border-white/[0.06]' : 'border-slate-200'}`}>
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => setActiveTab('reasoning')}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 ${
                       activeTab === 'reasoning'
-                        ? (isDark ? 'bg-white/10 text-white' : 'bg-slate-200 text-slate-900')
-                        : (isDark ? 'text-white/40 hover:text-white' : 'text-slate-400 hover:text-slate-700')
+                        ? (isDark ? 'bg-white/10 text-white' : 'bg-slate-200 text-slate-950 shadow-xs')
+                        : (isDark ? 'text-white/40 hover:text-white' : 'text-slate-600 hover:text-slate-900')
                     }`}
                   >
                     <Cpu size={12} />
@@ -220,10 +220,10 @@ export const TypingIndicator: React.FC<LiveActionResponseProps> = ({
 
                   <button
                     onClick={() => setActiveTab('terminal')}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 ${
                       activeTab === 'terminal'
-                        ? (isDark ? 'bg-white/10 text-white' : 'bg-slate-200 text-slate-900')
-                        : (isDark ? 'text-white/40 hover:text-white' : 'text-slate-400 hover:text-slate-700')
+                        ? (isDark ? 'bg-white/10 text-white' : 'bg-slate-200 text-slate-950 shadow-xs')
+                        : (isDark ? 'text-white/40 hover:text-white' : 'text-slate-600 hover:text-slate-900')
                     }`}
                   >
                     <Terminal size={12} />
@@ -232,10 +232,10 @@ export const TypingIndicator: React.FC<LiveActionResponseProps> = ({
 
                   <button
                     onClick={() => setActiveTab('files')}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 ${
                       activeTab === 'files'
-                        ? (isDark ? 'bg-white/10 text-white' : 'bg-slate-200 text-slate-900')
-                        : (isDark ? 'text-white/40 hover:text-white' : 'text-slate-400 hover:text-slate-700')
+                        ? (isDark ? 'bg-white/10 text-white' : 'bg-slate-200 text-slate-950 shadow-xs')
+                        : (isDark ? 'text-white/40 hover:text-white' : 'text-slate-600 hover:text-slate-900')
                     }`}
                   >
                     <FileCode size={12} />
@@ -243,7 +243,7 @@ export const TypingIndicator: React.FC<LiveActionResponseProps> = ({
                   </button>
                 </div>
 
-                <span className="text-[10px] font-mono text-white/30">
+                <span className={`text-[10px] font-mono font-bold ${isDark ? 'text-white/40' : 'text-slate-600'}`}>
                   {actions.length} étape(s)
                 </span>
               </div>

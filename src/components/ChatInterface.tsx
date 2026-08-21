@@ -194,7 +194,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
           body: JSON.stringify({
             prompt: `Suggère une courte complétion en français (2 à 5 mots) pour continuer : "${prompt}". Renvoie uniquement la suite directe, sans guillemets.`,
             systemInstruction: "Tu es un assistant d'autocomplétion ultra-rapide. Renvoie uniquement la suite directe.",
-            model: "gemini-2.5-flash"
+            model: "gemini-3.7-flash"
           })
         });
 
@@ -311,12 +311,14 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       {/* Top Header Bar (Claude / ChatGPT style) */}
       <div className={`h-12 border-b flex items-center justify-between px-4 sm:px-6 shrink-0 z-10 ${isDark ? 'border-white/[0.06] bg-[#080B11]/90 backdrop-blur-md' : 'border-slate-200/80 bg-white/90 backdrop-blur-md'}`}>
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-orange-primary/10 border border-orange-primary/20 text-[var(--color-ink)] dark:text-white text-xs font-semibold">
-            <Sparkles size={13} className="text-[var(--color-ink)] dark:text-white" />
+          <div className={`flex items-center gap-2 px-2.5 py-1 rounded-lg text-xs font-semibold ${
+            isDark ? 'bg-orange-primary/10 border border-orange-primary/20 text-white' : 'bg-orange-50 border border-orange-200 text-orange-950 shadow-xs'
+          }`}>
+            <Sparkles size={13} className={isDark ? "text-orange-400" : "text-orange-600"} />
             <span>Cook IA 3.5 Ultimate</span>
           </div>
           <span className={`text-xs hidden sm:inline ${isDark ? 'text-white/40' : 'text-slate-400'}`}>•</span>
-          <span className={`text-xs hidden sm:inline font-mono ${isDark ? 'text-white/50' : 'text-slate-500'}`}>
+          <span className={`text-xs hidden sm:inline font-mono ${isDark ? 'text-white/60' : 'text-slate-700 font-medium'}`}>
             Gemini 2.5 Flash + Multi-Agent Squad
           </span>
         </div>
@@ -328,7 +330,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
               className={`hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
                 isDark 
                   ? 'text-white/70 hover:text-white hover:bg-white/[0.06]' 
-                  : 'text-slate-600 hover:text-[var(--color-ink)] hover:bg-slate-100'
+                  : 'text-slate-700 hover:text-slate-950 hover:bg-slate-100'
               }`}
             >
               <Eye size={13} />
@@ -338,7 +340,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
           <button 
             onClick={() => onOpenSettings?.('publish')}
-            className={`p-1.5 rounded-lg transition-colors ${isDark ? 'text-white/60 hover:bg-white/[0.06] hover:text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-[var(--color-ink)]'}`}
+            className={`p-1.5 rounded-lg transition-colors ${isDark ? 'text-white/60 hover:bg-white/[0.06] hover:text-white' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-950'}`}
             title={lang === 'fr' ? "Paramètres" : "Settings"}
           >
             <Settings size={16} />
@@ -360,10 +362,10 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
               <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-orange-primary to-amber-500 text-white shadow-xl shadow-orange-500/20 mb-5 border border-white/20">
                 <Code2 size={28} className="text-white" />
               </div>
-              <h1 className={`text-2xl sm:text-4xl font-extrabold tracking-tight mb-3 ${isDark ? 'text-white' : 'text-[var(--color-ink)]'}`}>
+              <h1 className={`text-2xl sm:text-4xl font-extrabold tracking-tight mb-3 ${isDark ? 'text-white' : 'text-slate-900'}`}>
                 {lang === 'fr' ? "Que souhaitez-vous concevoir ?" : "What would you like to build?"}
               </h1>
-              <p className={`text-sm sm:text-base max-w-lg mx-auto ${isDark ? 'text-white/60' : 'text-slate-600'} leading-relaxed`}>
+              <p className={`text-sm sm:text-base max-w-lg mx-auto ${isDark ? 'text-white/60' : 'text-slate-700'} font-medium leading-relaxed`}>
                 {lang === 'fr' 
                   ? "Cook IA orchestre des modèles d'élite pour concevoir, coder et déployer vos applications web en quelques secondes."
                   : "Cook IA orchestrates elite AI models to architect, code, and deploy stunning full-stack web applications in seconds."}
@@ -386,25 +388,25 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                     className={`text-left p-4 rounded-2xl border transition-all duration-200 group relative overflow-hidden ${
                       isDark 
                         ? 'bg-[#0E1420]/80 hover:bg-[#141C2C] border-white/[0.07] hover:border-orange-primary/40 shadow-sm' 
-                        : 'bg-white hover:bg-slate-50 border-slate-200/90 hover:border-orange-primary/40 shadow-sm hover:shadow-md'
+                        : 'bg-white hover:bg-slate-50 border-slate-300 hover:border-orange-primary/50 shadow-sm hover:shadow-md'
                     }`}
                   >
                     <div className="flex items-start gap-3.5">
                       <div className={`p-2.5 rounded-xl shrink-0 transition-colors ${
                         isDark 
-                          ? 'bg-white/[0.04] text-[var(--color-ink)] dark:text-white group-hover:bg-orange-primary/10' 
-                          : 'bg-slate-100 text-slate-600 group-hover:bg-slate-200'
+                          ? 'bg-white/[0.04] text-white group-hover:bg-orange-primary/10' 
+                          : 'bg-slate-100 text-slate-800 group-hover:bg-slate-200'
                       }`}>
                         <IconComponent size={18} />
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-1 mb-1">
-                          <h3 className={`text-sm font-bold truncate ${isDark ? 'text-white group-hover:text-[var(--color-ink)] dark:text-white' : 'text-[var(--color-ink)] group-hover:text-slate-600'} transition-colors`}>
+                          <h3 className={`text-sm font-bold truncate ${isDark ? 'text-white' : 'text-slate-900 group-hover:text-orange-600'} transition-colors`}>
                             {card.title}
                           </h3>
-                          <ArrowUp size={14} className="rotate-45 opacity-0 group-hover:opacity-100 text-[var(--color-ink)] dark:text-white transition-opacity shrink-0" />
+                          <ArrowUp size={14} className={`rotate-45 opacity-0 group-hover:opacity-100 ${isDark ? 'text-white' : 'text-orange-600'} transition-opacity shrink-0`} />
                         </div>
-                        <p className={`text-xs ${isDark ? 'text-white/50' : 'text-slate-500'} line-clamp-2 leading-relaxed`}>
+                        <p className={`text-xs ${isDark ? 'text-white/60' : 'text-slate-600'} line-clamp-2 leading-relaxed font-normal`}>
                           {card.desc}
                         </p>
                       </div>
@@ -416,10 +418,18 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
             {/* Quick Suggestion Pills */}
             <div className="flex flex-wrap items-center justify-center gap-2">
-              <span className={`text-xs font-semibold ${isDark ? 'text-white/40' : 'text-slate-400'}`}>
+              <span className={`text-xs font-bold ${isDark ? 'text-white/50' : 'text-slate-600'}`}>
                 {lang === 'fr' ? "Suggestions :" : "Quick start:"}
               </span>
               {[
+                { 
+                  label: lang === 'fr' ? "💎 Charte Studio (5 Piliers)" : "💎 Studio Charter (5 Pillars)", 
+                  action: () => setPrompt(
+                    lang === 'fr'
+                      ? "Crée un site web complet pour mon projet en respectant la Charte Studio :\n1. IDENTITÉ VISUELLE : Thème cohérent, variables CSS complètes, typographie avec du caractère (sans-serif + police éditoriale pour les titres), palette originale.\n2. CONTENU HONNÊTE : Aucune fausse statistique, zéro texte placeholder ou non résolu, rédaction concrète.\n3. FONCTIONNALITÉ AVANT TOUT : Tous les boutons, filtres, modales, paniers et formulaires doivent être 100% opérationnels en JS.\n4. COHÉRENCE TECHNIQUE : Architecture multi-fichiers (HTML5/CSS3/JS Vanilla), responsive mobile parfait, contraste WCAG AA.\n5. TRANSPARENCE : Code propre et directement prêt au déploiement."
+                      : "Create a complete website following the 5-Pillar Studio Charter:\n1. VISUAL IDENTITY: Cohesive theme, CSS variables, distinctive typography, bespoke palette.\n2. HONEST CONTENT: No fake stats or placeholders, user-focused copy.\n3. FUNCTIONALITY FIRST: 100% working JS interactions, modals, filters & forms.\n4. TECHNICAL COHESION: Clean multi-file structure (HTML5/CSS3/JS), mobile responsive, WCAG AA contrast.\n5. TRANSPARENCY: Deployment ready."
+                  ) 
+                },
                 { label: lang === 'fr' ? "🚀 Clone un site" : "🚀 Clone a website", action: onCloneSite },
                 { label: lang === 'fr' ? "🛍️ Produit E-commerce" : "🛍️ E-commerce Product", action: onEcommerceProduct },
                 { label: lang === 'fr' ? "📊 Audit SEO & Performance" : "📊 SEO & Performance Audit", action: () => setPrompt("Fais un audit SEO complet et optimise la vitesse du site web.") }
@@ -427,10 +437,10 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 <button
                   key={i}
                   onClick={pill.action}
-                  className={`px-3 py-1 rounded-full text-xs font-medium border transition-all ${
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
                     isDark 
-                      ? 'bg-white/[0.03] border-white/[0.08] text-white/70 hover:text-white hover:border-white/20 hover:bg-white/[0.06]' 
-                      : 'bg-white border-slate-200 text-slate-700 hover:text-[var(--color-ink)] hover:border-slate-300'
+                      ? 'bg-white/[0.03] border-white/[0.08] text-white/80 hover:text-white hover:border-white/20 hover:bg-white/[0.06]' 
+                      : 'bg-white border-slate-300 text-slate-800 hover:text-slate-950 hover:border-slate-400 hover:bg-slate-50 shadow-xs'
                   }`}
                 >
                   {pill.label}
@@ -454,17 +464,17 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                   <div className={`flex items-center gap-2 px-1 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
                     <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs shrink-0 ${
                       isUser 
-                        ? (isDark ? 'bg-white/20 text-white' : 'bg-slate-900 text-white')
+                        ? (isDark ? 'bg-orange-primary text-white shadow-sm' : 'bg-slate-900 text-white shadow-sm')
                         : 'bg-gradient-to-tr from-orange-primary to-amber-500 text-white shadow-sm'
                     }`}>
                       {isUser ? <User size={13} /> : <Zap size={13} className="fill-white text-white" />}
                     </div>
-                    <span className={`text-xs font-semibold ${isDark ? 'text-white/50' : 'text-slate-500'}`}>
+                    <span className={`text-xs font-bold ${isDark ? 'text-white/70' : 'text-slate-800'}`}>
                       {isUser ? (lang === 'fr' ? 'Vous' : 'You') : 'Cook IA'}
                     </span>
                     {!isUser && msg.modelName && (
                       <span className={`text-[10px] px-1.5 py-0.5 rounded border font-mono ${
-                        isDark ? 'bg-white/[0.04] border-white/[0.08] text-white/40' : 'bg-slate-100 border-slate-200 text-slate-500'
+                        isDark ? 'bg-white/[0.04] border-white/[0.08] text-white/60' : 'bg-slate-100 border-slate-300 text-slate-700 font-semibold'
                       }`}>
                         {msg.modelName}
                       </span>
@@ -475,11 +485,11 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                   <div className={`relative max-w-[90%] sm:max-w-[85%] rounded-2xl p-4 sm:p-5 text-sm leading-relaxed ${
                     isUser
                       ? (isDark 
-                          ? 'bg-orange-primary/15 text-white border border-orange-primary/30 rounded-tr-none' 
-                          : 'bg-slate-900 text-white rounded-tr-none shadow-sm')
+                          ? 'bg-orange-primary/25 text-white border border-orange-primary/40 rounded-tr-none shadow-md' 
+                          : 'bg-slate-900 text-white rounded-tr-none shadow-md border border-slate-800')
                       : (isDark 
-                          ? 'bg-[#0E1420] text-white/90 border border-white/[0.08] rounded-tl-none shadow-sm' 
-                          : 'bg-white text-slate-800 border border-slate-200/90 rounded-tl-none shadow-sm')
+                          ? 'bg-[#0E1420] text-slate-100 border border-white/[0.08] rounded-tl-none shadow-sm' 
+                          : 'bg-white text-slate-900 border border-slate-200/90 rounded-tl-none shadow-sm')
                   }`}>
                     {/* User Images attached */}
                     {msg.images && msg.images.length > 0 && (
@@ -494,12 +504,18 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
                     {/* Content text */}
                     {((msg.content || '').startsWith('[Planificateur]') || (msg.content || '').startsWith('[Testeur]') || (msg.content || '').startsWith('[Analyste]')) ? (
-                      <div className={`p-3.5 rounded-xl border ${isDark ? 'bg-white/[0.03] border-white/10 text-white/80' : 'bg-slate-50 border-slate-200 text-slate-700'} font-mono text-xs leading-relaxed`}>
+                      <div className={`p-3.5 rounded-xl border ${isDark ? 'bg-white/[0.03] border-white/10 text-white/90' : 'bg-slate-50 border-slate-200 text-slate-800'} font-mono text-xs leading-relaxed`}>
                         {msg.content}
                       </div>
                     ) : (
                       <div 
-                        className="prose prose-sm dark:prose-invert max-w-none break-words"
+                        className={`prose prose-sm max-w-none break-words ${
+                          isUser
+                            ? 'text-white prose-invert prose-p:text-white prose-headings:text-white prose-strong:text-white prose-code:text-amber-300 font-medium'
+                            : (isDark 
+                                ? 'prose-invert text-slate-100 prose-p:text-slate-100 prose-strong:text-white font-normal' 
+                                : 'text-slate-900 prose-p:text-slate-800 prose-headings:text-slate-950 prose-strong:text-slate-950 font-normal')
+                        }`}
                         dangerouslySetInnerHTML={{ __html: (msg.content || '').replace(/\n/g, '<br />') }} 
                       />
                     )}
@@ -515,24 +531,24 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
                     {/* Assistant message action bar */}
                     {!isUser && (
-                      <div className="flex items-center justify-between gap-3 pt-3 mt-3 border-t border-white/[0.06]">
+                      <div className={`flex items-center justify-between gap-3 pt-3 mt-3 border-t ${isDark ? 'border-white/[0.06]' : 'border-slate-100'}`}>
                         <div className="flex items-center gap-1">
                           <button 
                             onClick={() => handleCopyMessage(msg.content || '', idx)}
                             className={`p-1.5 rounded-md transition-colors ${
-                              isDark ? 'text-white/40 hover:text-white hover:bg-white/[0.06]' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-100'
+                              isDark ? 'text-white/40 hover:text-white hover:bg-white/[0.06]' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
                             }`}
                             title={lang === 'fr' ? "Copier le texte" : "Copy text"}
                           >
-                            {copiedIndex === idx ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+                            {copiedIndex === idx ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
                           </button>
                           
                           <button 
                             onClick={() => onFeedback?.(idx, 'like')}
                             className={`p-1.5 rounded-md transition-colors ${
                               msg.feedback === 'like' 
-                                ? 'text-emerald-400 bg-emerald-500/10' 
-                                : (isDark ? 'text-white/40 hover:text-white hover:bg-white/[0.06]' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-100')
+                                ? 'text-emerald-500 bg-emerald-500/10' 
+                                : (isDark ? 'text-white/40 hover:text-white hover:bg-white/[0.06]' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100')
                             }`}
                             title="Utile"
                           >
@@ -543,8 +559,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                             onClick={() => onFeedback?.(idx, 'dislike')}
                             className={`p-1.5 rounded-md transition-colors ${
                               msg.feedback === 'dislike' 
-                                ? 'text-rose-400 bg-rose-500/10' 
-                                : (isDark ? 'text-white/40 hover:text-white hover:bg-white/[0.06]' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-100')
+                                ? 'text-rose-500 bg-rose-500/10' 
+                                : (isDark ? 'text-white/40 hover:text-white hover:bg-white/[0.06]' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100')
                             }`}
                             title="Pas utile"
                           >
@@ -555,7 +571,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                         {onSelectView && (
                           <button
                             onClick={() => onSelectView('preview')}
-                            className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--color-ink)] dark:text-white hover:text-orange-hover transition-colors"
+                            className={`inline-flex items-center gap-1 text-xs font-semibold ${isDark ? 'text-orange-primary hover:text-orange-400' : 'text-orange-600 hover:text-orange-700'} transition-colors`}
                           >
                             <Eye size={13} />
                             <span>{lang === 'fr' ? "Voir dans l'éditeur" : "Open Preview"}</span>
@@ -574,10 +590,10 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         {isLoading && (
           <div className="max-w-3xl mx-auto w-full flex flex-col gap-3">
             <div className="flex items-center gap-2 px-1">
-              <div className="w-6 h-6 rounded-full bg-slate-900 dark:bg-white text-white dark:text-[var(--color-ink)] flex items-center justify-center text-white text-xs">
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${isDark ? 'bg-orange-primary text-white' : 'bg-slate-900 text-white'}`}>
                 <Loader2 size={13} className="animate-spin" />
               </div>
-              <span className="text-xs font-bold text-[var(--color-ink)] dark:text-white">
+              <span className={`text-xs font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
                 Cook IA Agent Engine
               </span>
             </div>
@@ -604,15 +620,17 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
           
           {/* Top banner if actively compiling */}
           {isLoading && (
-            <div className="mb-3 px-4 py-2.5 rounded-xl bg-orange-primary/10 border border-orange-primary/25 flex items-center justify-between gap-3 text-[var(--color-ink)] dark:text-white text-xs font-semibold backdrop-blur-md">
+            <div className={`mb-3 px-4 py-2.5 rounded-xl flex items-center justify-between gap-3 text-xs font-semibold backdrop-blur-md ${
+              isDark ? 'bg-orange-primary/10 border border-orange-primary/25 text-white' : 'bg-orange-50 border border-orange-200/90 text-orange-950 shadow-xs'
+            }`}>
               <div className="flex items-center gap-2.5 min-w-0">
-                <Loader2 size={15} className="animate-spin shrink-0 text-[var(--color-ink)] dark:text-white" />
+                <Loader2 size={15} className={`animate-spin shrink-0 ${isDark ? 'text-orange-400' : 'text-orange-600'}`} />
                 <span className="truncate">{loadingStatus || (lang === 'fr' ? "Génération du projet en cours..." : "Generating project...")}</span>
               </div>
               {onSelectView && (
                 <button 
                   onClick={() => onSelectView('preview')}
-                  className="px-3 py-1 bg-orange-primary text-white rounded-lg text-xs font-bold hover:bg-orange-hover transition-colors shrink-0 flex items-center gap-1"
+                  className="px-3 py-1 bg-orange-primary text-white rounded-lg text-xs font-bold hover:bg-orange-hover transition-colors shrink-0 flex items-center gap-1 shadow-sm"
                 >
                   <Eye size={13} />
                   <span>{lang === 'fr' ? "Voir l'aperçu" : "Live View"}</span>
@@ -711,7 +729,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 }}
                 placeholder={lang === 'fr' ? "Demandez à Cook IA de concevoir une application, modifier du code..." : "Ask Cook IA to build an app, edit code, or redesign..."}
                 className={`w-full bg-transparent pt-3.5 px-4 pb-2 text-sm focus:outline-none resize-none min-h-[56px] max-h-[180px] custom-scrollbar ${
-                  isDark ? 'text-white placeholder:text-white/30' : 'text-[var(--color-ink)] placeholder:text-slate-400'
+                  isDark ? 'text-white placeholder:text-white/40' : 'text-slate-900 placeholder:text-slate-500 font-medium'
                 }`}
                 style={{
                   lineHeight: '1.45rem',
@@ -737,7 +755,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                   whileTap={{ scale: 0.95 }}
                   onClick={() => fileInputRef.current?.click()}
                   className={`p-2 rounded-xl transition-colors ${
-                    isDark ? 'text-white/50 hover:text-white hover:bg-white/[0.06]' : 'text-slate-500 hover:text-[var(--color-ink)] hover:bg-slate-100'
+                    isDark ? 'text-white/60 hover:text-white hover:bg-white/[0.06]' : 'text-slate-600 hover:text-slate-950 hover:bg-slate-100'
                   }`}
                   title={lang === 'fr' ? "Joindre une image ou capture" : "Attach image"}
                 >
@@ -750,7 +768,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                   whileTap={{ scale: 0.95 }}
                   onClick={onCloneSite}
                   className={`p-2 rounded-xl transition-colors ${
-                    isDark ? 'text-white/50 hover:text-[var(--color-ink)] dark:text-white hover:bg-white/[0.06]' : 'text-slate-500 hover:text-slate-600 hover:bg-slate-100'
+                    isDark ? 'text-white/60 hover:text-white hover:bg-white/[0.06]' : 'text-slate-600 hover:text-slate-950 hover:bg-slate-100'
                   }`}
                   title={lang === 'fr' ? "Cloner un site web via URL" : "Clone site via URL"}
                 >
@@ -763,7 +781,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                   whileTap={{ scale: 0.95 }}
                   onClick={onEcommerceProduct}
                   className={`p-2 rounded-xl transition-colors ${
-                    isDark ? 'text-white/50 hover:text-[var(--color-ink)] dark:text-white hover:bg-white/[0.06]' : 'text-slate-500 hover:text-slate-600 hover:bg-slate-100'
+                    isDark ? 'text-white/60 hover:text-white hover:bg-white/[0.06]' : 'text-slate-600 hover:text-slate-950 hover:bg-slate-100'
                   }`}
                   title={lang === 'fr' ? "Importer un produit e-commerce" : "Import e-commerce product"}
                 >
@@ -778,7 +796,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                   className={`p-2 rounded-xl transition-all ${
                     isListening 
                       ? 'text-red-400 bg-red-500/20 ring-2 ring-red-500/40 animate-pulse' 
-                      : (isDark ? 'text-white/50 hover:text-white hover:bg-white/[0.06]' : 'text-slate-500 hover:text-[var(--color-ink)] hover:bg-slate-100')
+                      : (isDark ? 'text-white/60 hover:text-white hover:bg-white/[0.06]' : 'text-slate-600 hover:text-slate-950 hover:bg-slate-100')
                   }`}
                   title={isListening ? (lang === 'fr' ? "En écoute..." : "Listening...") : (lang === 'fr' ? "Dicter vocalement" : "Voice dictation")}
                 >
@@ -794,7 +812,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                   className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold transition-all ${
                     aiMode === 'chat'
                       ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30 ring-1 ring-blue-400/40'
-                      : (isDark ? 'text-white/60 hover:text-white hover:bg-white/[0.06] border border-white/5' : 'text-slate-600 hover:text-[var(--color-ink)] hover:bg-slate-100 border border-slate-200/60')
+                      : (isDark ? 'text-white/70 hover:text-white hover:bg-white/[0.06] border border-white/10' : 'text-slate-700 hover:text-slate-950 hover:bg-slate-100 border border-slate-300')
                   }`}
                   title={aiMode === 'chat' ? (lang === 'fr' ? "Mode Conversation actif (Ne pas générer de code)" : "Chat Mode active (No code generation)") : (lang === 'fr' ? "Mode Développement Web actif (Générer du code)" : "Code generation mode")}
                 >
@@ -805,7 +823,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                     </>
                   ) : (
                     <>
-                      <Code2 size={13} className="text-[var(--color-ink)] dark:text-white" />
+                      <Code2 size={13} className={isDark ? 'text-orange-primary' : 'text-orange-600'} />
                       <span className="truncate max-w-[110px] sm:max-w-none">{lang === 'fr' ? "Mode Code" : "Code"}</span>
                     </>
                   )}
@@ -820,7 +838,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                   className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold transition-all ${
                     isFocusMode 
                       ? 'bg-orange-primary text-white shadow-md shadow-slate-900/20' 
-                      : (isDark ? 'text-white/40 hover:text-white hover:bg-white/[0.06]' : 'text-slate-400 hover:text-[var(--color-ink)] hover:bg-slate-100')
+                      : (isDark ? 'text-white/60 hover:text-white hover:bg-white/[0.06]' : 'text-slate-600 hover:text-slate-950 hover:bg-slate-100')
                   }`}
                   title="Focus Mode"
                 >
@@ -846,8 +864,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                       }}
                       className={`hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
                         isDark 
-                          ? 'bg-orange-primary/10 text-[var(--color-ink)] dark:text-white border border-orange-primary/20 hover:bg-orange-primary/20' 
-                          : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'
+                          ? 'bg-orange-primary/10 text-orange-primary border border-orange-primary/20 hover:bg-orange-primary/20' 
+                          : 'bg-slate-100 text-slate-800 border border-slate-300 hover:bg-slate-200'
                       }`}
                     >
                       <span>Tab ⇥</span>
@@ -863,8 +881,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                   disabled={isLoading || !prompt.trim()}
                   className={`relative w-9 h-9 rounded-full flex items-center justify-center transition-all duration-300 ${
                     prompt.trim() && !isLoading
-                      ? 'bg-[var(--color-primary)] text-white shadow-lg shadow-slate-900/10 cursor-pointer overflow-hidden' 
-                      : (isDark ? 'bg-white/[0.08] text-white/20 cursor-not-allowed' : 'bg-slate-100 text-slate-300 cursor-not-allowed')
+                      ? 'bg-slate-900 dark:bg-orange-primary text-white shadow-lg cursor-pointer overflow-hidden' 
+                      : (isDark ? 'bg-white/[0.08] text-white/20 cursor-not-allowed' : 'bg-slate-200 text-slate-400 cursor-not-allowed')
                   }`}
                   title={lang === 'fr' ? "Envoyer (Entrée)" : "Send (Enter)"}
                 >
@@ -890,12 +908,12 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
           {/* Micro Footer Hint */}
           <div className="flex items-center justify-between px-2 pt-2 text-[11px] text-center">
-            <span className={`${isDark ? 'text-white/30' : 'text-slate-400'}`}>
+            <span className={`${isDark ? 'text-white/40' : 'text-slate-600 font-medium'}`}>
               {lang === 'fr' 
-                ? "Cook IA peut générer du code complet React 18, Express et Tailwind CSS." 
-                : "Cook IA generates production-ready React 18, Express and Tailwind CSS."}
+                ? "Cook IA génère du code web complet HTML5, CSS3 et JavaScript interactif." 
+                : "Cook IA generates production-ready HTML5, CSS3 and interactive JavaScript."}
             </span>
-            <span className={`hidden sm:inline ${isDark ? 'text-white/20' : 'text-slate-300'}`}>
+            <span className={`hidden sm:inline ${isDark ? 'text-white/30' : 'text-slate-500 font-semibold'}`}>
               ↵ Envoyer • Shift+↵ Saut de ligne
             </span>
           </div>
