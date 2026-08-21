@@ -1398,15 +1398,17 @@ Return the response EXCLUSIVELY in JSON format with three fields (do not include
 
 // Vite middleware for development
 async function startViteServer() {
-  const isServerless = process.env.NETLIFY || process.env.LAMBDA_TASK_ROOT;
+  const isServerless = process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.LAMBDA_TASK_ROOT;
   if (isServerless) {
-    console.log("[Server] Running in serverless context (Netlify/Lambda). Custom server initialization skipped.");
     return;
   }
 
   if (process.env.NODE_ENV !== "production") {
     try {
-      const { createServer: createViteServer } = await import("vite");
+      // Dynamic import isolated from static bundler analysis
+      const dynamicImport = new Function('modulePath', 'return import(modulePath)');
+      const viteModule = await dynamicImport("vite");
+      const createViteServer = viteModule.createServer;
       const vite = await createViteServer({
         server: { middlewareMode: true },
         appType: "spa",
