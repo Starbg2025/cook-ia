@@ -864,13 +864,13 @@ app.use(express.urlencoded({ limit: '15mb', extended: true }));
     let openRouterKey = req.headers['x-openrouter-key'] as string || process.env.OPENROUTER_API_KEY || "";
     let nvidiaKey = req.headers['x-nvidia-key'] as string || process.env.NVIDIA_API_KEY || "";
 
-    const defaultSystemInstruction = `Tu es un moteur de génération Web autonome. Ta SEULE fonction est de renvoyer du code web prêt à l'emploi, visuellement irréprochable et parfaitement compatible avec un déploiement Netlify.
+    const defaultSystemInstruction = `Tu es un moteur de génération Web autonome de niveau Architecte Studio. Ta SEULE fonction est de renvoyer une architecture multi-fichiers complète, visuellement irréprochable et parfaitement compatible avec un déploiement Netlify.
 
 RÈGLES D'EXÉCUTION STRICTES (VITALES) :
-1. Renvoie UNIQUEMENT le document HTML complet (de <!DOCTYPE html> à </html>).
-2. N'UTILISE AUCUN bloc de code Markdown. Ne mets JAMAIS '\`\`\`html' au début ni '\`\`\`' à la fin.
-3. Ne mets AUCUN texte avant ou après le code (pas de "Voici votre site", pas de politesses).
-4. Ne mets AUCUN saut de ligne échappé '\\n' dans le texte.
+1. Renvoie EXCLUSIVEMENT un objet JSON valide (pas de HTML pur en dehors du JSON).
+2. N'UTILISE AUCUN bloc de code Markdown. Ne mets JAMAIS '\`\`\`json' au début ni '\`\`\`' à la fin.
+3. Ne mets AUCUN texte avant ou après le JSON (pas de "Voici votre site", pas de politesses).
+4. Ne mets AUCUN saut de ligne échappé '\\n' de façon erronée qui invaliderait le JSON.
 
 DIRECTIVES D'ARCHITECTURE, DE DESIGN & RÈGLES DE PRODUCTION :
 
@@ -962,8 +962,8 @@ RÈGLE 7 — MODIFICATION ET AMÉLIORATION ITÉRATIVE :
   });
 
 let systemAnnouncement = {
-  message: "La majorité des bugs sont corrigés par l'équipe !",
-  active: true,
+  message: "Cook IA version 1.0.0 est en ligne. Découvrez le nouveau studio d'architecture.",
+  active: false,
   updatedAt: new Date().toISOString(),
   updatedBy: "Admin"
 };
@@ -1311,9 +1311,25 @@ Return the response EXCLUSIVELY in JSON format with three fields (do not include
           isJsonMode: true
         });
 
+        let jsonStr = result.text;
         const jsonMatch = result.text.match(/\{[\s\S]*\}/);
-        const jsonStr = jsonMatch ? jsonMatch[0] : result.text;
-        const parsed = JSON.parse(jsonStr);
+        if (jsonMatch) {
+          jsonStr = jsonMatch[0];
+        }
+        
+        let parsed;
+        try {
+          parsed = JSON.parse(jsonStr);
+        } catch (parseError) {
+          console.warn("[Fallback] JSON Parse failed on direct output, attempting repair...", parseError);
+          // Simple repair for trailing commas or extra backticks
+          jsonStr = jsonStr.replace(/```json/g, '').replace(/```/g, '').trim();
+          if (!jsonStr.endsWith('}')) {
+             jsonStr = jsonStr.substring(0, jsonStr.lastIndexOf('}') + 1);
+          }
+          parsed = JSON.parse(jsonStr);
+        }
+        
         return res.json({ ...parsed, _provider: result.provider });
       } catch (cycleErr: any) {
         console.warn("[Fallback] Multi-provider cycle exhausted. Sending emergency recovery payload:", cycleErr.message);

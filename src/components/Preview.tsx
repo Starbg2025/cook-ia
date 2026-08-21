@@ -60,23 +60,42 @@ export const Preview: React.FC<PreviewProps> = ({
 
   const [isEditingCode, setIsEditingCode] = React.useState(false);
   const [editableCode, setEditableCode] = React.useState('');
+  const [isCopied, setIsCopied] = React.useState(false);
 
   const effectiveFiles = React.useMemo(() => {
+    let result: ProjectFile[] = [];
+
     if (files && files.length > 0) {
-      return files.map(f => ({
-        path: f.path || 'index.html',
-        content: cleanAndUnescapeCode(f.content || '')
-      }));
+      result = files
+        .filter(f => f && (f.path || f.content || (f as any).code || (f as any).html))
+        .map(f => ({
+          path: f.path || 'index.html',
+          content: cleanAndUnescapeCode(f.content || (f as any).code || (f as any).html || '')
+        }));
     }
-    if (generatedCode) {
+
+    // Ensure index.html exists with content
+    const htmlFileIndex = result.findIndex(f => f.path === 'index.html' || f.path.endsWith('.html'));
+    if (htmlFileIndex !== -1) {
+      if (!result[htmlFileIndex].content.trim() && generatedCode) {
+        result[htmlFileIndex].content = cleanAndUnescapeCode(generatedCode);
+      }
+    } else if (generatedCode) {
       const cleanGen = cleanAndUnescapeCode(generatedCode);
-      return [
+      result.unshift({ path: 'index.html', content: cleanGen });
+    }
+
+    // If still empty but generatedCode exists
+    if (result.length === 0 && generatedCode) {
+      const cleanGen = cleanAndUnescapeCode(generatedCode);
+      result = [
         { path: 'index.html', content: cleanGen },
         { path: 'styles.css', content: '/* Styles CSS personnalisés */\n' },
         { path: 'script.js', content: '// Script JavaScript interactif\n' }
       ];
     }
-    return [];
+
+    return result;
   }, [files, generatedCode]);
 
   const bundledSrcDoc = React.useMemo(() => {
@@ -123,9 +142,9 @@ export const Preview: React.FC<PreviewProps> = ({
         border-radius: ${styleConfig.borderRadius} !important;
       }
       /* Override common tailwind primary colors if they are hardcoded */
-      .bg-orange-primary, .bg-primary { background-color: ${styleConfig.primaryColor} !important; }
-      .text-orange-primary, .text-primary { color: ${styleConfig.primaryColor} !important; }
-      .border-orange-primary, .border-primary { border-color: ${styleConfig.primaryColor} !important; }
+      .bg-[var(--color-primary)], .bg-primary { background-color: ${styleConfig.primaryColor} !important; }
+      .text-[var(--color-primary)], .text-primary { color: ${styleConfig.primaryColor} !important; }
+      .border-[var(--color-primary)], .border-primary { border-color: ${styleConfig.primaryColor} !important; }
     `;
 
     // Inject Google Fonts if needed
@@ -310,7 +329,7 @@ export const Preview: React.FC<PreviewProps> = ({
               onClick={() => setDeviceViewport('desktop')}
               className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold uppercase transition-all ${
                 deviceViewport === 'desktop'
-                  ? 'bg-orange-primary text-white shadow-sm'
+                  ? 'bg-[var(--color-primary)] text-white shadow-sm'
                   : isDark ? 'text-white/40 hover:text-white' : 'text-slate-500 hover:text-slate-900'
               }`}
               title="Aperçu PC / Bureau"
@@ -322,7 +341,7 @@ export const Preview: React.FC<PreviewProps> = ({
               onClick={() => setDeviceViewport('tablet')}
               className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold uppercase transition-all ${
                 deviceViewport === 'tablet'
-                  ? 'bg-orange-primary text-white shadow-sm'
+                  ? 'bg-[var(--color-primary)] text-white shadow-sm'
                   : isDark ? 'text-white/40 hover:text-white' : 'text-slate-500 hover:text-slate-900'
               }`}
               title="Aperçu Tablette (768px)"
@@ -334,7 +353,7 @@ export const Preview: React.FC<PreviewProps> = ({
               onClick={() => setDeviceViewport('mobile')}
               className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold uppercase transition-all ${
                 deviceViewport === 'mobile'
-                  ? 'bg-orange-primary text-white shadow-sm'
+                  ? 'bg-[var(--color-primary)] text-white shadow-sm'
                   : isDark ? 'text-white/40 hover:text-white' : 'text-slate-500 hover:text-slate-900'
               }`}
               title="Aperçu Mobile (375px)"
@@ -345,7 +364,7 @@ export const Preview: React.FC<PreviewProps> = ({
           </div>
 
           {isVisualEditing && (
-            <span className="text-[9px] bg-orange-primary/20 text-orange-primary px-2 py-0.5 rounded-full font-bold uppercase tracking-widest animate-pulse">
+            <span className="text-[9px] bg-[var(--color-primary)]/20 text-[var(--color-primary)] px-2 py-0.5 rounded-full font-bold uppercase tracking-widest animate-pulse">
               Visual Edit Mode
             </span>
           )}
@@ -374,7 +393,7 @@ export const Preview: React.FC<PreviewProps> = ({
           {files.length > 0 && (
             <button 
               onClick={onDownloadZip}
-              className={`hover:text-orange-primary transition-all p-1 hover:scale-110 active:scale-95 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest`}
+              className={`hover:text-[var(--color-primary)] transition-all p-1 hover:scale-110 active:scale-95 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest`}
               title="Download Project ZIP"
             >
               <Download size={14} />
@@ -397,7 +416,7 @@ export const Preview: React.FC<PreviewProps> = ({
           </button>
           <button 
             onClick={() => setIsVisualEditing(!isVisualEditing)}
-            className={`transition-all p-1 hover:scale-110 active:scale-95 ${isVisualEditing ? 'text-orange-primary' : isDark ? 'hover:text-white' : 'hover:text-slate-900'}`}
+            className={`transition-all p-1 hover:scale-110 active:scale-95 ${isVisualEditing ? 'text-[var(--color-primary)]' : isDark ? 'hover:text-white' : 'hover:text-slate-900'}`}
             title={isVisualEditing ? "Disable Visual Edit" : "Enable Visual Edit"}
           >
             <Pencil size={15} />
@@ -406,8 +425,8 @@ export const Preview: React.FC<PreviewProps> = ({
             onClick={() => setShowForgeStudio(!showForgeStudio)}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all ${
               showForgeStudio 
-                ? 'bg-orange-primary/25 border-orange-primary/40 text-orange-primary font-black shadow-[0_0_15px_rgba(255,107,0,0.25)]' 
-                : 'border-white/5 bg-gradient-to-r from-orange-primary/10 to-amber-500/10 hover:from-orange-primary/20 hover:to-amber-500/20 text-orange-primary font-black animate-pulse'
+                ? 'bg-[var(--color-primary)]/25 border-[var(--color-primary)]/40 text-[var(--color-primary)] font-black shadow-[0_0_15px_rgba(255,107,0,0.25)]' 
+                : 'border-white/5 bg-gradient-to-r from-orange-primary/10 to-amber-500/10 hover:from-orange-primary/20 hover:to-amber-500/20 text-[var(--color-primary)] font-black animate-pulse'
             } text-[10px] uppercase tracking-wider`}
             title="Open Forge Developer Studio"
           >
@@ -448,10 +467,10 @@ export const Preview: React.FC<PreviewProps> = ({
               {isLoading && (
                 <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 w-full max-w-lg px-4 pointer-events-none">
                   {isOverlayMinimized ? (
-                    <div className="pointer-events-auto bg-[#141414]/90 backdrop-blur-md border border-orange-primary/30 rounded-full px-4 py-2 flex items-center justify-between gap-3 shadow-2xl text-white">
+                    <div className="pointer-events-auto bg-[#141414]/90 backdrop-blur-md border border-[var(--color-primary)]/30 rounded-full px-4 py-2 flex items-center justify-between gap-3 shadow-2xl text-white">
                       <div className="flex items-center gap-2 min-w-0">
-                        <Loader2 size={14} className="animate-spin text-orange-primary shrink-0" />
-                        <span className="text-xs font-bold text-orange-primary uppercase text-[10px] tracking-wider shrink-0">{currentAgentStage || 'Architect'}</span>
+                        <Loader2 size={14} className="animate-spin text-[var(--color-primary)] shrink-0" />
+                        <span className="text-xs font-bold text-[var(--color-primary)] uppercase text-[10px] tracking-wider shrink-0">{currentAgentStage || 'Architect'}</span>
                         <span className="text-xs text-white/80 truncate">{loadingStatus || 'Cook IA construit...'}</span>
                       </div>
                       <button 
@@ -465,11 +484,11 @@ export const Preview: React.FC<PreviewProps> = ({
                     </div>
                   ) : (
                     <div className="pointer-events-auto bg-[#141414]/95 backdrop-blur-xl border border-white/10 rounded-2xl p-4 shadow-2xl relative overflow-hidden text-white">
-                      <div className="absolute -top-12 -right-12 w-32 h-32 bg-orange-primary/20 blur-[50px] rounded-full pointer-events-none" />
+                      <div className="absolute -top-12 -right-12 w-32 h-32 bg-[var(--color-primary)]/20 blur-[50px] rounded-full pointer-events-none" />
                       <div className="flex items-center justify-between gap-3 mb-3">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-orange-primary/20 border border-orange-primary/40 flex items-center justify-center shrink-0">
-                            <Loader2 size={16} className="animate-spin text-orange-primary" />
+                          <div className="w-8 h-8 rounded-full bg-[var(--color-primary)]/20 border border-[var(--color-primary)]/40 flex items-center justify-center shrink-0">
+                            <Loader2 size={16} className="animate-spin text-[var(--color-primary)]" />
                           </div>
                           <div>
                             <h4 className="font-display font-bold text-xs tracking-tight text-white flex items-center gap-2">
@@ -491,7 +510,7 @@ export const Preview: React.FC<PreviewProps> = ({
 
                       <div className="space-y-2 mb-3">
                         <div className="p-2.5 rounded-xl border bg-white/5 border-white/10 text-xs flex items-center justify-between">
-                          <span className="font-mono text-orange-primary uppercase text-[10px] font-bold tracking-wider">{currentAgentStage || 'Architect'}</span>
+                          <span className="font-mono text-[var(--color-primary)] uppercase text-[10px] font-bold tracking-wider">{currentAgentStage || 'Architect'}</span>
                           <span className="text-white/80 text-xs truncate max-w-[280px]">{loadingStatus || 'Création du site...'}</span>
                         </div>
                       </div>
@@ -511,7 +530,7 @@ export const Preview: React.FC<PreviewProps> = ({
                 </div>
               )}
 
-              {generatedCode ? (
+              {(generatedCode || (effectiveFiles && effectiveFiles.length > 0)) ? (
                 <div className={`transition-all duration-300 relative flex flex-col ${
                   deviceViewport === 'desktop'
                     ? 'w-full h-full'
@@ -542,14 +561,14 @@ export const Preview: React.FC<PreviewProps> = ({
                     className="relative z-10 flex flex-col items-center"
                   >
                     <div className="relative mb-8">
-                      <Zap size={80} className="text-orange-primary opacity-20 animate-pulse" />
+                      <Zap size={80} className="text-[var(--color-primary)] opacity-20 animate-pulse" />
                       <motion.div 
                         animate={{ 
                           scale: [1, 1.2, 1],
                           opacity: [0.1, 0.3, 0.1]
                         }}
                         transition={{ duration: 4, repeat: Infinity }}
-                        className="absolute inset-0 bg-orange-primary rounded-full blur-2xl"
+                        className="absolute inset-0 bg-[var(--color-primary)] rounded-full blur-2xl"
                       />
                     </div>
                     <h3 className={`text-xl font-black uppercase tracking-[0.3em] ${isDark ? 'text-white/40' : 'text-slate-300'} mb-2`}>COOK IA</h3>
@@ -579,11 +598,11 @@ export const Preview: React.FC<PreviewProps> = ({
                       onClick={() => setSelectedFilePath(file.path)}
                       className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs transition-all ${
                         selectedFilePath === file.path 
-                          ? 'bg-orange-primary/10 text-orange-primary font-bold' 
+                          ? 'bg-[var(--color-primary)]/10 text-[var(--color-primary)] font-bold' 
                           : isDark ? 'text-white/40 hover:bg-white/5 hover:text-white' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
                       }`}
                     >
-                      <FileCode size={14} className={selectedFilePath === file.path ? 'text-orange-primary' : ''} />
+                      <FileCode size={14} className={selectedFilePath === file.path ? 'text-[var(--color-primary)]' : ''} />
                       <span className="truncate">{file.path}</span>
                     </button>
                   ))}
@@ -619,24 +638,29 @@ export const Preview: React.FC<PreviewProps> = ({
                 <div className={`h-10 ${isDark ? 'bg-[#141414] border-white/5' : 'bg-slate-50 border-slate-200'} border-b flex items-center px-4 justify-between shrink-0`}>
                   <div className="flex items-center gap-2">
                     <span className={`text-[10px] font-mono font-bold ${isDark ? 'text-white/60' : 'text-slate-600'}`}>{selectedFilePath || 'index.html'}</span>
-                    <span className="text-[10px] px-2 py-0.5 rounded bg-orange-primary/10 text-orange-primary font-bold uppercase">{selectedFilePath?.split('.').pop() || 'html'}</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded bg-[var(--color-primary)]/10 text-[var(--color-primary)] font-bold uppercase">{selectedFilePath?.split('.').pop() || 'html'}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => {
-                        const codeToCopy = selectedFile?.content || generatedCode || '';
+                        const codeToCopy = selectedFile?.content || (selectedFilePath === 'index.html' ? generatedCode : '') || generatedCode || '';
                         navigator.clipboard.writeText(codeToCopy);
-                        alert("Code copié dans le presse-papier !");
+                        setIsCopied(true);
+                        setTimeout(() => setIsCopied(false), 2000);
                       }}
-                      className={`px-2 py-1 rounded text-[10px] font-bold flex items-center gap-1 transition-all ${isDark ? 'bg-white/5 hover:bg-white/10 text-white/70' : 'bg-slate-200 hover:bg-slate-300 text-slate-700'}`}
+                      className={`px-2.5 py-1 rounded text-[10px] font-bold flex items-center gap-1 transition-all ${
+                        isCopied 
+                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
+                          : isDark ? 'bg-white/5 hover:bg-white/10 text-white/70' : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
+                      }`}
                     >
-                      Copier
+                      {isCopied ? 'Copié !' : 'Copier'}
                     </button>
                     <button
                       onClick={() => setIsEditingCode(!isEditingCode)}
                       className={`px-2.5 py-1 rounded text-[10px] font-bold flex items-center gap-1 transition-all ${
                         isEditingCode 
-                          ? 'bg-orange-primary text-white shadow' 
+                          ? 'bg-[var(--color-primary)] text-white shadow' 
                           : isDark ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-slate-200 hover:bg-slate-300 text-slate-800'
                       }`}
                     >
@@ -660,7 +684,7 @@ export const Preview: React.FC<PreviewProps> = ({
                         }
                       }}
                       className={`w-full h-full flex-1 p-6 font-mono text-xs leading-relaxed resize-none focus:outline-none ${
-                        isDark ? 'bg-[#0D0D0D] text-emerald-400 selection:bg-orange-primary/30' : 'bg-slate-900 text-emerald-300 selection:bg-orange-primary/30'
+                        isDark ? 'bg-[#0D0D0D] text-emerald-400 selection:bg-[var(--color-primary)]/30' : 'bg-slate-900 text-emerald-300 selection:bg-[var(--color-primary)]/30'
                       }`}
                       placeholder="Saisissez ou collez votre code ici..."
                       spellCheck={false}

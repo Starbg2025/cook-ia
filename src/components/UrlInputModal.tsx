@@ -7,9 +7,10 @@ interface UrlInputModalProps {
   onClose: () => void;
   onSubmit: (url: string) => void;
   type: 'clone' | 'ecommerce';
+  isDark?: boolean;
 }
 
-export const UrlInputModal: React.FC<UrlInputModalProps> = ({ isOpen, onClose, onSubmit, type }) => {
+export const UrlInputModal: React.FC<UrlInputModalProps> = ({ isOpen, onClose, onSubmit, type, isDark = false }) => {
   const [url, setUrl] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -54,17 +55,21 @@ export const UrlInputModal: React.FC<UrlInputModalProps> = ({ isOpen, onClose, o
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="absolute inset-0 bg-black/80 backdrop-blur-md"
+            className="absolute inset-0 bg-black/60 backdrop-blur-md"
           />
           <motion.div 
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="relative w-full max-w-lg bg-[#141414] border border-white/10 rounded-[32px] p-8 lg:p-10 shadow-2xl text-white"
+            className={`relative w-full max-w-lg ${
+              isDark ? 'bg-[#141414] border border-white/10 text-white' : 'bg-white border border-slate-200 text-slate-900 shadow-2xl'
+            } rounded-[32px] p-8 lg:p-10 shadow-2xl`}
           >
             <button 
               onClick={onClose}
-              className="absolute top-6 right-6 p-2 hover:bg-white/5 rounded-full transition-colors text-white/40"
+              className={`absolute top-6 right-6 p-2 rounded-full transition-colors ${
+                isDark ? 'hover:bg-white/5 text-white/40' : 'hover:bg-slate-100 text-slate-400 hover:text-slate-700'
+              }`}
             >
               <X size={20} />
             </button>
@@ -73,23 +78,25 @@ export const UrlInputModal: React.FC<UrlInputModalProps> = ({ isOpen, onClose, o
               <div className="w-16 h-16 bg-orange-primary/10 rounded-2xl flex items-center justify-center mb-6">
                 <Icon className="text-orange-primary" size={32} />
               </div>
-              <h2 className="text-2xl font-bold mb-2">{current.title}</h2>
-              <p className="text-white/40 text-sm leading-relaxed">
+              <h2 className={`text-2xl font-bold mb-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>{current.title}</h2>
+              <p className={`${isDark ? 'text-white/50' : 'text-slate-600'} text-sm leading-relaxed`}>
                 {current.description}
               </p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-white/40 ml-1">URL de destination</label>
+                <label className={`text-[10px] font-bold uppercase tracking-widest ${isDark ? 'text-white/40' : 'text-slate-500'} ml-1`}>URL de destination</label>
                 <div className="relative group">
-                  <LinkIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-orange-primary transition-colors" size={18} />
+                  <LinkIcon className={`absolute left-4 top-1/2 -translate-y-1/2 ${isDark ? 'text-white/20' : 'text-slate-400'} group-focus-within:text-orange-primary transition-colors`} size={18} />
                   <input 
                     type="text"
                     value={url}
                     onChange={(e) => setUrl(e.target.value)}
                     placeholder={current.placeholder}
-                    className="w-full bg-[#0A0A0A] border border-white/5 rounded-2xl p-4 pl-12 text-sm focus:outline-none focus:border-orange-primary/50 transition-all placeholder:text-white/10"
+                    className={`w-full ${
+                      isDark ? 'bg-[#0A0A0A] border-white/10 text-white placeholder:text-white/20' : 'bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400'
+                    } border rounded-2xl p-4 pl-12 text-sm focus:outline-none focus:border-orange-primary transition-all`}
                     required
                     autoFocus
                   />
@@ -99,7 +106,9 @@ export const UrlInputModal: React.FC<UrlInputModalProps> = ({ isOpen, onClose, o
               <button 
                 type="submit"
                 disabled={!url.trim()}
-                className="w-full bg-white text-black py-4 rounded-2xl font-bold text-sm hover:bg-white/90 transition-all disabled:opacity-20 flex items-center justify-center gap-2 group"
+                className={`w-full ${
+                  isDark ? 'bg-white text-black hover:bg-white/90' : 'bg-slate-900 text-white hover:bg-slate-800'
+                } py-4 rounded-2xl font-bold text-sm transition-all disabled:opacity-20 flex items-center justify-center gap-2 group shadow-sm`}
               >
                 {current.buttonText}
                 <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />

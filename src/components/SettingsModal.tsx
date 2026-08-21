@@ -300,7 +300,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [expandedUserIds, setExpandedUserIds] = useState<string[]>([]);
 
   // Admin section announcement & moderation states
-  const [announcementMessage, setAnnouncementMessage] = useState("La majorité des bugs sont corrigés par notre équipe !");
+  const [announcementMessage, setAnnouncementMessage] = useState("Cook IA version 1.0.0 est en ligne. Découvrez le nouveau studio d'architecture.");
   const [isAnnouncementActive, setIsAnnouncementActive] = useState(true);
   const [savingAnnouncement, setSavingAnnouncement] = useState(false);
   const [announcementStatusMsg, setAnnouncementStatusMsg] = useState('');
@@ -1568,7 +1568,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <div className="flex flex-wrap gap-2 mb-3">
                 <button
                   type="button"
-                  onClick={() => setAnnouncementMessage("La majorité des bugs sont corrigés par notre équipe ! Bonne création.")}
+                  onClick={() => setAnnouncementMessage("Cook IA version 1.0.0 est en ligne. Découvrez le nouveau studio d'architecture. Bonne création.")}
                   className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20 hover:bg-amber-500/20 transition-all"
                 >
                   🛠️ Bugs corrigés

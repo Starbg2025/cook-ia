@@ -30,8 +30,8 @@ export const UnderwaterWelcome: React.FC<UnderwaterWelcomeProps> = ({ isDark, on
         particles.push({
           x: Math.random() * canvas.width,
           y: Math.random() * canvas.height + canvas.height,
-          size: Math.random() * 2.5 + 1,
-          speed: Math.random() * 0.4 + 0.15,
+          size: Math.random() * 2 + 1,
+          speed: Math.random() * 0.3 + 0.1,
           opacity: Math.random() * 0.4 + 0.1
         });
       }
@@ -40,11 +40,11 @@ export const UnderwaterWelcome: React.FC<UnderwaterWelcomeProps> = ({ isDark, on
     const draw = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
-      // Draw subtle particles
+      // Draw subtle warm amber particles
       particles.forEach(p => {
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(255, 107, 0, ${p.opacity * 0.8})`;
+        ctx.fillStyle = `rgba(245, 158, 11, ${p.opacity * 0.7})`;
         ctx.fill();
         
         p.y -= p.speed;
@@ -71,14 +71,14 @@ export const UnderwaterWelcome: React.FC<UnderwaterWelcomeProps> = ({ isDark, on
   }, []);
 
   return (
-    <div className="relative w-full h-full flex flex-col items-center justify-center overflow-hidden bg-[#080B11]">
+    <div className="relative w-full h-full flex flex-col items-center justify-center overflow-hidden bg-[#070A0F]">
       <canvas 
         ref={canvasRef} 
         className="absolute inset-0 pointer-events-none opacity-30"
       />
       
       {/* Background Radial Glow */}
-      <div className="absolute inset-0 bg-radial-[at_50%_20%] from-orange-primary/10 via-[#080B11]/80 to-[#080B11] opacity-90" />
+      <div className="absolute inset-0 bg-radial-[at_50%_20%] from-amber-500/10 via-[#070A0F]/80 to-[#070A0F] opacity-90" />
 
       <motion.div 
         initial={{ opacity: 0, y: 24 }}
@@ -87,22 +87,22 @@ export const UnderwaterWelcome: React.FC<UnderwaterWelcomeProps> = ({ isDark, on
         className="relative z-10 flex flex-col items-center text-center px-4 max-w-2xl"
       >
         <div className="w-16 h-16 sm:w-20 sm:h-20 mb-6 relative">
-          <div className="absolute inset-0 bg-orange-primary rounded-2xl blur-xl opacity-30 animate-pulse" />
-          <div className="relative w-full h-full bg-gradient-to-tr from-orange-primary to-amber-500 rounded-2xl flex items-center justify-center shadow-2xl border border-white/20">
-            <Zap size={36} className="text-white fill-white" />
+          <div className="absolute inset-0 bg-amber-500 rounded-2xl blur-xl opacity-25 animate-pulse" />
+          <div className="relative w-full h-full bg-gradient-to-br from-amber-400 via-amber-500 to-orange-600 rounded-2xl flex items-center justify-center shadow-2xl border border-amber-300/30">
+            <Zap size={36} className="text-black fill-black" />
           </div>
         </div>
 
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.05] border border-white/[0.08] text-white/70 text-xs font-semibold mb-4 backdrop-blur-md">
-          <Sparkles size={13} className="text-orange-primary" />
+        <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/[0.05] border border-white/[0.08] text-slate-300 text-xs font-semibold mb-4 backdrop-blur-md">
+          <Sparkles size={13} className="text-amber-400" />
           <span>Cook IA 3.5 Ultimate Edition</span>
         </div>
 
-        <h1 className="text-3xl sm:text-5xl font-black mb-4 text-white tracking-tight leading-tight">
-          L'ingénierie Web par <span className="bg-gradient-to-r from-orange-primary to-amber-400 bg-clip-text text-transparent">Intelligence Artificielle</span>
+        <h1 className="text-3xl sm:text-5xl font-black mb-4 text-white tracking-tight leading-tight font-display">
+          L'ingénierie Web par <span className="bg-gradient-to-r from-amber-300 via-amber-400 to-orange-400 bg-clip-text text-transparent">Intelligence Artificielle</span>
         </h1>
 
-        <p className="text-white/60 text-sm sm:text-base font-normal mb-8 max-w-lg leading-relaxed">
+        <p className="text-slate-300/80 text-sm sm:text-base font-normal mb-8 max-w-lg leading-relaxed">
           Générez des plateformes web réactives, complètes avec backend, base de données Supabase et déploiement instantané.
         </p>
 
@@ -116,8 +116,8 @@ export const UnderwaterWelcome: React.FC<UnderwaterWelcomeProps> = ({ isDark, on
             ].map((tech) => {
               const Icon = tech.icon;
               return (
-                <div key={tech.label} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/[0.08] bg-white/[0.03] text-white/60 text-[11px] font-medium backdrop-blur-sm">
-                  <Icon size={12} className="text-orange-primary" />
+                <div key={tech.label} className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-white/[0.08] bg-white/[0.03] text-slate-300 text-[11px] font-medium backdrop-blur-sm shadow-sm">
+                  <Icon size={12} className="text-amber-400" />
                   <span>{tech.label}</span>
                 </div>
               );
@@ -127,9 +127,9 @@ export const UnderwaterWelcome: React.FC<UnderwaterWelcomeProps> = ({ isDark, on
           <motion.div 
             animate={{ y: [0, 5, 0] }}
             transition={{ duration: 2, repeat: Infinity }}
-            className="flex flex-col items-center gap-1.5 text-orange-primary/80 mt-4"
+            className="flex flex-col items-center gap-1.5 text-amber-400/90 mt-4"
           >
-            <span className="text-[11px] font-bold tracking-wider uppercase">Décrivez votre projet ci-dessous</span>
+            <span className="text-[11px] font-bold tracking-wider uppercase font-mono">Décrivez votre projet ci-dessous</span>
             <ChevronDown size={18} />
           </motion.div>
         </div>

@@ -193,7 +193,7 @@ export const CookieBanner: React.FC = () => {
                     </div>
                     
                     <p className="text-zinc-400 text-xs leading-relaxed mb-5">
-                      Nous utilisons des sessions cryptées pour sécuriser vos prompts et adapter l'interface à votre navigateur (<span className="text-cyan-bio font-mono">{browserSpecs.browserName}</span>).
+                      Nous utilisons des sessions sécurisées pour enregistrer vos créations et adapter l'interface à votre navigateur.
                     </p>
                     
                     <div className="flex flex-col gap-2.5">

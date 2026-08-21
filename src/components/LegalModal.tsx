@@ -6,9 +6,10 @@ interface LegalModalProps {
   isOpen: boolean;
   onClose: () => void;
   type: 'tos' | 'privacy';
+  isDark?: boolean;
 }
 
-export const LegalModal: React.FC<LegalModalProps> = ({ isOpen, onClose, type }) => {
+export const LegalModal: React.FC<LegalModalProps> = ({ isOpen, onClose, type, isDark = false }) => {
   const content = {
     tos: {
       title: "Conditions d'Utilisation",
@@ -73,41 +74,47 @@ export const LegalModal: React.FC<LegalModalProps> = ({ isOpen, onClose, type })
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="absolute inset-0 bg-black/80 backdrop-blur-md"
+            className="absolute inset-0 bg-black/60 backdrop-blur-md"
           />
           <motion.div 
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="relative w-full max-w-2xl bg-[#141414] border border-white/10 rounded-[32px] p-8 lg:p-12 shadow-2xl text-white overflow-y-auto max-h-[80vh] scrollbar-hide"
+            className={`relative w-full max-w-2xl ${
+              isDark ? 'bg-[#141414] border border-white/10 text-white' : 'bg-white border border-slate-200 text-slate-900 shadow-2xl'
+            } rounded-[32px] p-8 lg:p-12 shadow-2xl overflow-y-auto max-h-[80vh] scrollbar-hide`}
           >
             <button 
               onClick={onClose}
-              className="absolute top-6 right-6 p-2 hover:bg-white/5 rounded-full transition-colors text-white/40"
+              className={`absolute top-6 right-6 p-2 rounded-full transition-colors ${
+                isDark ? 'hover:bg-white/5 text-white/40' : 'hover:bg-slate-100 text-slate-400 hover:text-slate-700'
+              }`}
             >
               <X size={24} />
             </button>
 
             <div className="mb-8">
-              <h2 className="text-3xl font-bold tracking-tight mb-2">{currentContent.title}</h2>
+              <h2 className={`text-3xl font-bold tracking-tight mb-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>{currentContent.title}</h2>
               <div className="h-1 w-12 bg-orange-primary rounded-full" />
             </div>
 
             <div className="space-y-8">
               {currentContent.sections.map((section, index) => (
                 <div key={index} className="space-y-3">
-                  <h3 className="text-lg font-semibold text-white/90">{section.title}</h3>
-                  <p className="text-white/50 leading-relaxed text-[15px]">
+                  <h3 className={`text-lg font-semibold ${isDark ? 'text-white/90' : 'text-slate-800'}`}>{section.title}</h3>
+                  <p className={`${isDark ? 'text-white/50' : 'text-slate-600'} leading-relaxed text-[15px]`}>
                     {section.text}
                   </p>
                 </div>
               ))}
             </div>
 
-            <div className="mt-12 pt-8 border-t border-white/5 text-center">
+            <div className={`mt-12 pt-8 border-t ${isDark ? 'border-white/5' : 'border-slate-100'} text-center`}>
               <button 
                 onClick={onClose}
-                className="bg-white text-black px-8 py-3 rounded-full font-bold text-sm hover:bg-white/90 transition-all"
+                className={`${
+                  isDark ? 'bg-white text-black hover:bg-white/90' : 'bg-slate-900 text-white hover:bg-slate-800'
+                } px-8 py-3 rounded-full font-bold text-sm transition-all shadow-sm`}
               >
                 J'ai compris
               </button>

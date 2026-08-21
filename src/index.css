@@ -1,33 +1,33 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300..800;1,300..800&family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=JetBrains+Mono:ital,wght@0,400..700;1,400..700&family=Fraunces:ital,opsz,wght@0,9..144,400..800;1,9..144,400..800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&family=Syne:wght@400..800&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-display: "Instrument Sans", "Plus Jakarta Sans", sans-serif;
-  --font-editorial: "Fraunces", Georgia, serif;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-sans: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Syne", "DM Sans", sans-serif;
+  --font-editorial: "Newsreader", Georgia, serif;
+  --font-mono: "Space Mono", ui-monospace, SFMono-Regular, monospace;
   
-  --color-abyssal-deep: #080B11;
-  --color-abyssal-blue: #0E1420;
-  --color-surface-dark: #121824;
-  --color-surface-hover: #1A2232;
-  --color-cyan-bio: #00F5D4;
-  --color-purple-neon: #7B2FFF;
+  --color-ink: #131412;
+  --color-paper: #F2F1EC;
+  --color-surface-light: #FAFAF8;
+  --color-surface-hover: #E9E8E4;
   
-  --color-orange-primary: #FF6B00;
-  --color-orange-hover: #E55C00;
-  --color-orange-glow: rgba(255, 107, 0, 0.25);
+  --color-primary: #38423B;
+  --color-primary-hover: #29302B;
   
-  --color-bg-dark: #080B11;
-  --color-card-dark: #0F1622;
-  --color-border-dark: rgba(255, 255, 255, 0.08);
+  --color-accent-blue: #3A5F8F;
+  --color-accent-earth: #8C6A5D;
+  
+  --color-bg-light: #F2F1EC;
+  --color-card-light: #FFFFFF;
+  --color-border-light: rgba(19, 20, 18, 0.1);
 }
 
 body {
-  background-color: var(--color-bg-dark);
-  color: #FFFFFF;
+  background-color: var(--color-bg-light);
+  color: var(--color-ink);
   font-family: var(--font-sans);
-  overflow: hidden;
+  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -36,22 +36,49 @@ body {
   font-family: var(--font-editorial);
 }
 
-.glass {
-  background: rgba(15, 22, 34, 0.7);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+.font-display {
+  font-family: var(--font-display);
 }
 
-.glass-light {
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+/* Background Subtle Grid & Depth Patterns */
+.bg-grid-subtle {
+  background-image: linear-gradient(to right, rgba(19, 20, 18, 0.04) 1px, transparent 1px),
+                    linear-gradient(to bottom, rgba(19, 20, 18, 0.04) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+.bg-dot-matrix {
+  background-image: radial-gradient(rgba(19, 20, 18, 0.1) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+
+/* Refined Premium Cards */
+.glass {
   background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--color-border-light);
+  box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.05);
+}
+
+.glass-card {
+  background: var(--color-card-light);
+  border: 1px solid var(--color-border-light);
+  box-shadow: 4px 4px 0px rgba(19, 20, 18, 0.05);
+  transition: all 0.2s ease-out;
+}
+
+.glass-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0px rgba(19, 20, 18, 0.08);
 }
 
 .chat-input-shadow {
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.24), 0 1px 2px rgba(255, 255, 255, 0.05);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(19, 20, 18, 0.08);
 }
 
 .scrollbar-hide::-webkit-scrollbar {
@@ -62,24 +89,49 @@ body {
   scrollbar-width: none;
 }
 
-/* Claude / ChatGPT custom refined scrollbar */
+/* Custom refined scrollbar */
 .custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
+  background: rgba(0, 0, 0, 0.05);
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.15);
   border-radius: 9999px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(0, 0, 0, 0.25);
+}
+
+/* Shimmer & Glow Effects */
+@keyframes pulseGlow {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.05); }
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 4s ease-in-out infinite;
 }
 
 @layer base {
   button {
     @apply cursor-pointer;
   }
+}
+
+@theme {
+  --color-abyssal-deep: #070A0F;
+  --color-abyssal-blue: #0B101A;
+  --color-surface-dark: #101624;
+  --color-surface-hover: #161F33;
+  --color-cyan-bio: #00F5D4;
+  --color-purple-neon: #8B5CF6;
+  --color-orange-primary: #F59E0B;
+  --color-orange-hover: #D97706;
+  --color-orange-glow: rgba(245, 158, 11, 0.25);
+  --color-bg-dark: #070A0F;
+  --color-card-dark: #0C101A;
+  --color-border-dark: rgba(255, 255, 255, 0.08);
 }

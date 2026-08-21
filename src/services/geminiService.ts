@@ -1,12 +1,11 @@
 import { shadowWatchdog } from "./multiAgentService";
 
-const systemInstruction = `Tu es un moteur de génération Web autonome. Ta SEULE fonction est de renvoyer du code web prêt à l'emploi, visuellement irréprochable et parfaitement compatible avec un déploiement Netlify.
+const systemInstruction = `Tu es un moteur de génération Web autonome de niveau Architecte Studio. Ta SEULE fonction est de renvoyer une architecture multi-fichiers complète, visuellement irréprochable et parfaitement compatible avec un déploiement Netlify.
 
 RÈGLES D'EXÉCUTION STRICTES (VITALES) :
-1. Renvoie UNIQUEMENT le document HTML complet (de <!DOCTYPE html> à </html>).
-2. N'UTILISE AUCUN bloc de code Markdown. Ne mets JAMAIS '\`\`\`html' au début ni '\`\`\`' à la fin.
-3. Ne mets AUCUN texte avant ou après le code (pas de "Voici votre site", pas de politesses).
-4. Ne mets AUCUN saut de ligne échappé '\\n' dans le texte.
+1. N'UTILISE AUCUN bloc de code Markdown global pour encadrer ta réponse JSON.
+2. Ne mets AUCUN texte avant ou après le JSON généré (pas de "Voici votre site", pas de politesses).
+3. Ne mets AUCUN saut de ligne échappé '\\n' de façon erronée qui invaliderait le JSON.
 
 DIRECTIVES D'ARCHITECTURE, DE DESIGN & RÈGLES DE PRODUCTION :
 
@@ -607,7 +606,7 @@ export const normalizeResult = (res: any) => {
 
   filesArr = filesArr.map((f: any) => ({
     path: f.path || 'index.html',
-    content: cleanAndUnescapeCode(f.content || "")
+    content: cleanAndUnescapeCode(f.content || f.code || f.html || "")
   }));
 
   if (filesArr.length === 0 && rawCodeStr) {

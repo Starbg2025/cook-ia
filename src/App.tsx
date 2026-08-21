@@ -153,7 +153,7 @@ export default function App() {
     }
   }, [lang]);
 
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [theme, setTheme] = useState<'dark' | 'light'>('light');
   const [isProjectSettings, setIsProjectSettings] = useState(true);
   const [prompts, setPrompts] = useState<string[]>([]);
   const [pendingSend, setPendingSend] = useState<boolean>(false);
@@ -530,12 +530,17 @@ export default function App() {
     if (conv) {
       setCurrentConversationId(id);
       setMessages(conv.messages);
-      const lastModelMsg = [...conv.messages].reverse().find(m => m.role === 'model' && m.code);
-      if (lastModelMsg?.code) {
-        setGeneratedCode(lastModelMsg.code);
+      const lastModelMsg = [...conv.messages].reverse().find(m => m.role === 'model' && (m.code || m.files));
+      
+      let codeToSet = lastModelMsg?.code || '';
+      if (!codeToSet && lastModelMsg?.files) {
+         const html: any = lastModelMsg.files.find((f: any) => f.path === 'index.html' || f.path.endsWith('.html'));
+         if (html) codeToSet = html.content || html.code || html.html || '';
+      }
+      
+      setGeneratedCode(codeToSet);
+      if (codeToSet || (lastModelMsg?.files && lastModelMsg.files.length > 0)) {
         setViewMode('preview');
-      } else {
-        setGeneratedCode('');
       }
     }
   };
@@ -1142,7 +1147,14 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
         ? "🧪 [Testeur QA] Verification qu'aucun bouton inutile ne subsiste dans le code..." 
         : "🧪 [QA Tester] Auditing buttons and attaching interactive click handlers...");
 
-      const rawCode = result.preview_code || result.code || "";
+      let rawCode = result.preview_code || result.code || "";
+      if (!rawCode && result.files && Array.isArray(result.files)) {
+        const htmlFile = result.files.find((f: any) => f.path === 'index.html' || f.path === 'src/index.html' || f.path.endsWith('.html'));
+        if (htmlFile) {
+           rawCode = htmlFile.content || htmlFile.code || htmlFile.html || "";
+        }
+      }
+
       const audit = auditAndFixButtons(rawCode);
       const finalCode = audit.auditedCode || rawCode;
       result.preview_code = finalCode;
@@ -1150,7 +1162,7 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
 
       if (result.files && Array.isArray(result.files) && result.files.length > 0) {
         result.files = result.files.map((f: any) => {
-          if (f.path === 'index.html' || f.path === 'src/index.html' || f.path.endsWith('.html')) {
+          if ((f.path === 'index.html' || f.path === 'src/index.html' || f.path.endsWith('.html')) && finalCode) {
             return { ...f, content: finalCode };
           }
           return f;
@@ -1474,8 +1486,8 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
       return (
         <div className="fixed inset-0 bg-[#0A0A0A] flex flex-col items-center justify-center font-sans text-center px-4">
           <div className="relative flex items-center justify-center mb-6">
-            <div className="absolute inset-0 w-24 h-24 bg-orange-primary/20 blur-xl rounded-full animate-pulse" />
-            <Loader2 className="w-12 h-12 text-orange-primary animate-spin z-10" />
+            <div className="absolute inset-0 w-24 h-24 bg-slate-900 dark:bg-white dark:text-[var(--color-ink)]/20 blur-xl rounded-full animate-pulse" />
+            <Loader2 className="w-12 h-12 text-[var(--color-primary)] animate-spin z-10" />
           </div>
           <h2 className="text-xl font-bold text-white mb-2 tracking-tight">Chargement du site Cook IA...</h2>
           <p className="text-zinc-500 text-xs font-mono max-w-sm">Dépêche en cours depuis notre CDN Sandbox...</p>
@@ -1491,7 +1503,7 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
           </div>
           <h2 className="text-xl font-bold text-white mb-2">Impossible de charger le site</h2>
           <div className="text-zinc-400 text-sm max-w-sm mb-6 font-mono leading-relaxed p-4 bg-white/[0.02] border border-white/5 rounded-xl">
-             Le site <span className="text-orange-primary font-bold">"{window.location.pathname.substring(1)}"</span> n'a pas encore été publié ou a expiré.
+             Le site <span className="text-[var(--color-primary)] font-bold">"{window.location.pathname.substring(1)}"</span> n'a pas encore été publié ou a expiré.
           </div>
           <button
             onClick={() => {
@@ -1531,7 +1543,7 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
     // Default loading fallback
     return (
       <div className="fixed inset-0 bg-[#0A0A0A] flex flex-col items-center justify-center font-sans text-center px-4">
-        <Loader2 className="w-12 h-12 text-orange-primary animate-spin mb-4" />
+        <Loader2 className="w-12 h-12 text-[var(--color-primary)] animate-spin mb-4" />
         <h2 className="text-xl font-bold text-white mb-2">Initialisation de la vue...</h2>
       </div>
     );
@@ -1595,7 +1607,7 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
-          className={`flex flex-col h-screen ${isDark ? 'bg-abyssal-deep text-white' : 'bg-[#F8F9FA] text-slate-900'} overflow-hidden font-sans transition-colors duration-500`}
+          className={`flex flex-col h-screen ${isDark ? 'bg-[var(--color-bg-light)] text-[var(--color-ink)]' : 'bg-[var(--color-bg-light)] text-[var(--color-ink)]'} overflow-hidden font-sans transition-colors duration-500`}
         >
           {announcement && announcement.active && (
             <div className={`bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 text-black px-4 py-2 flex items-center justify-between text-xs font-bold shrink-0 z-[60] shadow-md`}>
@@ -1656,16 +1668,16 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
         <div className="flex items-center gap-2 sm:gap-3">
           <button 
             onClick={() => setIsHistoryOpen(!isHistoryOpen)}
-            className={`p-1.5 sm:p-2 rounded-xl transition-all ${isDark ? 'text-white/60 hover:bg-white/[0.06] hover:text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}
+            className={`p-1.5 sm:p-2 rounded-xl transition-all ${isDark ? 'text-white/60 hover:bg-white/[0.06] hover:text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-[var(--color-ink)]'}`}
             title="Toggle Sidebar"
           >
             <Menu size={18} />
           </button>
           <div className="flex items-center gap-2 cursor-pointer" onClick={handleNewChat}>
-            <div className="w-7 h-7 bg-gradient-to-tr from-orange-primary to-amber-500 rounded-xl flex items-center justify-center shadow-md shadow-orange-primary/20 border border-white/20">
-              <Zap size={14} className="text-white fill-white" />
+            <div className="w-8 h-8 rounded-lg bg-[var(--color-primary)] flex items-center justify-center text-white font-black transition-transform duration-300">
+              <Code2 size={16} />
             </div>
-            <span className={`font-extrabold text-sm tracking-tight ${isDark ? 'text-white' : 'text-slate-900'} hidden min-[360px]:inline`}>
+            <span className={`font-extrabold text-sm tracking-tight ${isDark ? 'text-white' : 'text-[var(--color-ink)]'} hidden min-[360px]:inline`}>
               Cook IA
             </span>
           </div>
@@ -1677,8 +1689,8 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
             onClick={() => setViewMode('chat')}
             className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all ${
               viewMode === 'chat' 
-                ? (isDark ? 'bg-orange-primary text-white shadow-md shadow-orange-primary/25' : 'bg-white text-slate-900 shadow-sm') 
-                : (isDark ? 'text-white/50 hover:text-white' : 'text-slate-500 hover:text-slate-900')
+                ? (isDark ? 'bg-slate-900 dark:bg-white dark:text-[var(--color-ink)] text-white shadow-md shadow-slate-900/20' : 'bg-white text-[var(--color-ink)] shadow-sm') 
+                : (isDark ? 'text-white/50 hover:text-white' : 'text-slate-500 hover:text-[var(--color-ink)]')
             }`}
           >
             <MessageSquare size={13} />
@@ -1688,8 +1700,8 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
             onClick={() => setViewMode('code')}
             className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all ${
               viewMode === 'code' 
-                ? (isDark ? 'bg-orange-primary text-white shadow-md shadow-orange-primary/25' : 'bg-white text-slate-900 shadow-sm') 
-                : (isDark ? 'text-white/50 hover:text-white' : 'text-slate-500 hover:text-slate-900')
+                ? (isDark ? 'bg-slate-900 dark:bg-white dark:text-[var(--color-ink)] text-white shadow-md shadow-slate-900/20' : 'bg-white text-[var(--color-ink)] shadow-sm') 
+                : (isDark ? 'text-white/50 hover:text-white' : 'text-slate-500 hover:text-[var(--color-ink)]')
             }`}
           >
             <Code size={13} />
@@ -1699,8 +1711,8 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
             onClick={() => setViewMode('preview')}
             className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all ${
               viewMode === 'preview' 
-                ? (isDark ? 'bg-orange-primary text-white shadow-md shadow-orange-primary/25' : 'bg-white text-slate-900 shadow-sm') 
-                : (isDark ? 'text-white/50 hover:text-white' : 'text-slate-500 hover:text-slate-900')
+                ? (isDark ? 'bg-slate-900 dark:bg-white dark:text-[var(--color-ink)] text-white shadow-md shadow-slate-900/20' : 'bg-white text-[var(--color-ink)] shadow-sm') 
+                : (isDark ? 'text-white/50 hover:text-white' : 'text-slate-500 hover:text-[var(--color-ink)]')
             }`}
           >
             <Eye size={13} />
@@ -1712,7 +1724,7 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
           {generatedCode && (
             <button
               onClick={openPublishModal}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-orange-primary to-amber-500 hover:from-orange-hover hover:to-amber-600 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-orange-primary/25 hover:scale-[1.02] active:scale-[0.98] shrink-0"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-orange-primary to-amber-500 hover:from-orange-hover hover:to-amber-600 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-slate-900/20 hover:scale-[1.02] active:scale-[0.98] shrink-0"
               title="Déployez votre site web et mobile en direct"
               id="header-deploy-button"
             >
@@ -1725,7 +1737,7 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
           <button
             onClick={() => setLang(lang === 'fr' ? 'en' : 'fr')}
             className={`px-2 py-1 rounded-lg text-xs font-bold font-mono transition-colors ${
-              isDark ? 'text-white/60 hover:bg-white/[0.06] hover:text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+              isDark ? 'text-white/60 hover:bg-white/[0.06] hover:text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-[var(--color-ink)]'
             }`}
             title="Langue / Language"
           >
@@ -1743,7 +1755,7 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
 
           <button 
             onClick={() => setTheme(isDark ? 'light' : 'dark')}
-            className={`p-1.5 sm:p-2 rounded-xl transition-colors ${isDark ? 'text-white/60 hover:bg-white/[0.06] hover:text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}
+            className={`p-1.5 sm:p-2 rounded-xl transition-colors ${isDark ? 'text-white/60 hover:bg-white/[0.06] hover:text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-[var(--color-ink)]'}`}
             title="Thème clair / sombre"
           >
             {isDark ? <Sun size={17} /> : <Moon size={17} />}
@@ -1763,12 +1775,12 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
             className={`flex items-center gap-1.5 p-1 sm:px-2 sm:py-1 rounded-xl transition-all border ${
               isDark 
                 ? 'border-white/10 hover:border-amber-500/50 hover:bg-white/[0.06] text-white' 
-                : 'border-slate-200 hover:border-amber-500/50 hover:bg-slate-100 text-slate-900'
+                : 'border-slate-200 hover:border-amber-500/50 hover:bg-slate-100 text-[var(--color-ink)]'
             }`}
             title={lang === 'fr' ? "Mon Profil & Instructions IA" : "My Profile & AI Instructions"}
             id="header-profile-button"
           >
-            <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-gradient-to-tr from-amber-400 to-orange-500 flex items-center justify-center font-bold text-xs text-white overflow-hidden shadow-sm ring-1 ring-orange-500/30">
+            <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-[var(--color-primary)] flex items-center justify-center font-bold text-xs text-white overflow-hidden shadow-sm ring-1 ring-orange-500/30">
               {userProfile?.avatarUrl ? (
                 <img src={userProfile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
               ) : user?.user_metadata?.avatar_url ? (
@@ -1839,7 +1851,7 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
         {/* Content Area */}
         <main className="flex-1 flex flex-col min-w-0 relative">
           {viewMode === 'your-apps' ? (
-            <div className={`flex-1 flex flex-col items-center justify-center p-8 ${isDark ? 'bg-[#0A0A0A] text-white' : 'bg-white text-slate-900'}`}>
+            <div className={`flex-1 flex flex-col items-center justify-center p-8 ${isDark ? 'bg-[#0A0A0A] text-white' : 'bg-white text-[var(--color-ink)]'}`}>
               <h2 className="text-3xl font-bold mb-4">Your Apps</h2>
               <p className="text-slate-500 mb-8 text-center max-w-md">Toutes les applications que vous avez conçues avec Cook IA.</p>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-6xl">
@@ -1859,7 +1871,7 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
               </div>
             </div>
           ) : viewMode === 'faq' ? (
-            <div className={`flex-1 flex flex-col items-center p-8 overflow-y-auto ${isDark ? 'bg-[#0A0A0A] text-white' : 'bg-white text-slate-900'}`}>
+            <div className={`flex-1 flex flex-col items-center p-8 overflow-y-auto ${isDark ? 'bg-[#0A0A0A] text-white' : 'bg-white text-[var(--color-ink)]'}`}>
               <div className="max-w-3xl w-full">
                 <h2 className="text-3xl font-bold mb-8 text-center">FAQ & Informations</h2>
                 
@@ -1871,7 +1883,7 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className={`w-full pl-12 pr-4 py-4 rounded-2xl border text-lg focus:outline-none focus:border-blue-500 transition-all ${
-                      isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
+                      isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-slate-200 text-[var(--color-ink)]'
                     }`}
                   />
                 </div>
@@ -1944,7 +1956,16 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
             <Preview 
               viewMode={viewMode}
               generatedCode={generatedCode}
-              files={[...messages].reverse().find(m => m.role === 'model' && m.files)?.files || (generatedCode ? [{ path: 'index.html', content: generatedCode }] : [])}
+              files={(() => {
+                const lastModelWithContent = [...messages].reverse().find(m => m.role === 'model' && ((m.files && m.files.length > 0) || m.code));
+                if (lastModelWithContent?.files && lastModelWithContent.files.length > 0) {
+                  return lastModelWithContent.files;
+                }
+                if (generatedCode) {
+                  return [{ path: 'index.html', content: generatedCode }];
+                }
+                return [];
+              })()}
               iframeRef={iframeRef}
               onRefresh={handleRefresh}
               onExpand={handleExpand}
@@ -1976,7 +1997,7 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
                 onClick={() => setViewMode('chat')}
                 className={`flex flex-col items-center gap-1 p-2 rounded-lg text-[10px] font-bold transition-all ${
                   viewMode === 'chat' 
-                    ? (isDark ? 'text-white' : 'text-slate-900') 
+                    ? (isDark ? 'text-white' : 'text-[var(--color-ink)]') 
                     : (isDark ? 'text-white/40' : 'text-slate-400')
                 }`}
               >
@@ -1987,7 +2008,7 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
                 onClick={() => setViewMode('code')}
                 className={`flex flex-col items-center gap-1 p-2 rounded-lg text-[10px] font-bold transition-all ${
                   viewMode === 'code' 
-                    ? (isDark ? 'text-white' : 'text-slate-900') 
+                    ? (isDark ? 'text-white' : 'text-[var(--color-ink)]') 
                     : (isDark ? 'text-white/40' : 'text-slate-400')
                 }`}
               >
@@ -1998,7 +2019,7 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
                 onClick={() => setViewMode('preview')}
                 className={`flex flex-col items-center gap-1 p-2 rounded-lg text-[10px] font-bold transition-all ${
                   viewMode === 'preview' 
-                    ? (isDark ? 'text-white' : 'text-slate-900') 
+                    ? (isDark ? 'text-white' : 'text-[var(--color-ink)]') 
                     : (isDark ? 'text-white/40' : 'text-slate-400')
                 }`}
               >
@@ -2186,13 +2207,13 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
             >
               {/* Top ambient status glow */}
               <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-orange-primary via-amber-500 to-cyan-400" />
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-48 bg-orange-primary/10 rounded-full blur-[60px] pointer-events-none" />
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-48 bg-slate-900 dark:bg-white dark:text-[var(--color-ink)]/10 rounded-full blur-[60px] pointer-events-none" />
 
               <div className="flex flex-col">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-2.5">
-                    <div className="p-2 sm:p-2.5 bg-orange-primary/10 rounded-xl">
-                      <Rocket className="text-orange-primary animate-pulse" size={20} />
+                    <div className="p-2 sm:p-2.5 bg-slate-900 dark:bg-white dark:text-[var(--color-ink)]/10 rounded-xl">
+                      <Rocket className="text-[var(--color-primary)] animate-pulse" size={20} />
                     </div>
                     <div>
                       <h2 className="text-lg sm:text-xl font-display font-black uppercase tracking-wider text-white">Console de Déploiement Cook IA</h2>
@@ -2220,11 +2241,11 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
                   <div className="space-y-6">
                     <div className="p-4 sm:p-5 bg-white/[0.01] border border-white/5 rounded-2xl relative overflow-hidden group hover:border-white/10 transition-colors">
                       <div className="absolute top-0 right-0 p-3 text-[10px] font-mono text-zinc-600 uppercase font-black tracking-widest">Configuration active</div>
-                      <h3 className="text-xs font-mono font-black uppercase tracking-widest text-orange-primary mb-1">Chemin de partage personnalisé</h3>
+                      <h3 className="text-xs font-mono font-black uppercase tracking-widest text-[var(--color-primary)] mb-1">Chemin de partage personnalisé</h3>
                       <p className="text-xs text-zinc-500 mb-4 leading-relaxed">Définissez l'identifiant unique de votre site internet. Nous créerons automatiquement un lien de partage direct.</p>
 
                       <div className="space-y-2">
-                        <div className="relative flex items-center bg-black/80 border border-white/10 rounded-xl focus-within:border-orange-primary/50 transition-all shadow-inner overflow-hidden">
+                        <div className="relative flex items-center bg-black/80 border border-white/10 rounded-xl focus-within:border-[var(--color-primary)]/50 transition-all shadow-inner overflow-hidden">
                           <span className="p-4 pr-0 text-zinc-500 font-mono text-xs sm:text-sm select-none">cook-ia.indevs.in/</span>
                           <input 
                             type="text"
@@ -2242,8 +2263,8 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
                       <span className="text-[10px] font-mono uppercase tracking-widest text-zinc-500 font-bold block">Architecture de déploiement</span>
                       
                       <div className="p-4 rounded-xl border border-white/5 bg-white/[0.01] space-y-2.5 font-mono text-[10px]">
-                        <div className="flex items-center gap-1.5 text-orange-primary">
-                          <span className="w-1.5 h-1.5 rounded-full bg-orange-primary animate-ping" />
+                        <div className="flex items-center gap-1.5 text-[var(--color-primary)]">
+                          <span className="w-1.5 h-1.5 rounded-full bg-slate-900 dark:bg-white dark:text-[var(--color-ink)] animate-ping" />
                           <span className="font-bold">LIEN DE PARTAGE DIRECT & UNIQUE</span>
                         </div>
                         <div className="space-y-1.5 text-zinc-500 leading-relaxed text-[9px]">
@@ -2252,7 +2273,7 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
                           <div>2. Cook IA réserve la route unique <span className="text-zinc-400">"/{siteName || 'monsite'}"</span></div>
                           <div className="text-zinc-600">↓ Enregistrement base de données</div>
                           <div>3. Votre route de partage universelle est activée et sécurisée</div>
-                          <div className="text-orange-primary font-bold mt-1">➔ cook-ia.indevs.in/{siteName || 'monsite'}</div>
+                          <div className="text-[var(--color-primary)] font-bold mt-1">➔ cook-ia.indevs.in/{siteName || 'monsite'}</div>
                         </div>
                       </div>
                     </div>
@@ -2293,7 +2314,7 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
                   // --- DEPLOYING IN PROGRESS: STEP-BY-STEP TERMINAL ANIMATION ---
                   <div className="space-y-6 py-4">
                     <div className="flex flex-col items-center justify-center space-y-2 mb-2">
-                      <Loader2 className="animate-spin text-orange-primary" size={28} />
+                      <Loader2 className="animate-spin text-[var(--color-primary)]" size={28} />
                       <span className="text-xs font-mono text-zinc-500 uppercase tracking-widest">Construction du pipeline en cours...</span>
                     </div>
 
@@ -2314,7 +2335,7 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
                             key={item.step} 
                             className={`flex items-start gap-3.5 p-3 rounded-xl border transition-all duration-300 ${
                               isActive 
-                                ? 'bg-orange-primary/10 border-orange-primary/25 shadow-sm scale-[1.01]' 
+                                ? 'bg-slate-900 dark:bg-white dark:text-[var(--color-ink)]/10 border-[var(--color-primary)]/25 shadow-sm scale-[1.01]' 
                                 : isDone 
                                 ? 'bg-white/[0.01] border-white/5 opacity-80' 
                                 : 'opacity-40 border-transparent'
@@ -2326,8 +2347,8 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
                                   <Check size={11} strokeWidth={3} />
                                 </div>
                               ) : isActive ? (
-                                <div className="w-5 h-5 rounded-full bg-orange-primary/20 text-orange-primary flex items-center justify-center animate-pulse">
-                                  <span className="w-2 h-2 rounded-full bg-orange-primary animate-ping" />
+                                <div className="w-5 h-5 rounded-full bg-slate-900 dark:bg-white dark:text-[var(--color-ink)]/20 text-[var(--color-primary)] flex items-center justify-center animate-pulse">
+                                  <span className="w-2 h-2 rounded-full bg-slate-900 dark:bg-white dark:text-[var(--color-ink)] animate-ping" />
                                 </div>
                               ) : (
                                 <div className="w-5 h-5 rounded-full border border-zinc-800 text-zinc-700 flex items-center justify-center text-[10px] font-mono">
@@ -2337,7 +2358,7 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
                             </div>
 
                             <div className="text-left">
-                              <h4 className={`text-xs font-bold leading-tight font-mono ${isActive ? 'text-orange-primary font-black' : isDone ? 'text-zinc-300' : 'text-zinc-600'}`}>
+                              <h4 className={`text-xs font-bold leading-tight font-mono ${isActive ? 'text-[var(--color-primary)] font-black' : isDone ? 'text-zinc-300' : 'text-zinc-600'}`}>
                                 {item.label}
                               </h4>
                               <p className="text-[10px] text-zinc-500 mt-0.5 font-mono">{item.desc}</p>
@@ -2360,10 +2381,10 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
 
                     <div className="max-w-md mx-auto">
                       {/* CARD A: COOK-IA DOMAIN */}
-                      <div className="p-5 sm:p-6 rounded-2xl bg-white/[0.01] border border-white/5 flex flex-col justify-between hover:border-orange-primary/20 transition-all duration-300 shadow-xl">
+                      <div className="p-5 sm:p-6 rounded-2xl bg-white/[0.01] border border-white/5 flex flex-col justify-between hover:border-[var(--color-primary)]/20 transition-all duration-300 shadow-xl">
                         <div>
-                          <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-orange-primary font-bold mb-3">
-                            <span className="w-1.5 h-1.5 rounded-full bg-orange-primary animate-ping" />
+                          <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-[var(--color-primary)] font-bold mb-3">
+                            <span className="w-1.5 h-1.5 rounded-full bg-slate-900 dark:bg-white dark:text-[var(--color-ink)] animate-ping" />
                             <span>Votre lien de partage Cook IA</span>
                           </div>
                           <h4 className="text-sm sm:text-base font-mono font-black text-white mb-2 break-all select-all">
@@ -2447,6 +2468,7 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
         onClose={() => setIsUrlModalOpen(false)}
         onSubmit={handleUrlSubmit}
         type={urlModalType}
+        isDark={isDark}
       />
 
       <AuthModal 
