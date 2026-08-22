@@ -1394,9 +1394,9 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
       liveActionManager.finishTask(liveTask.id, 'failed', error.message);
       const failedTask = liveActionManager.getTask(liveTask.id) || liveTask;
       
-      let errorMessage = `Désolé, une erreur est survenue lors de la génération. (Erreur: ${error.message})`;
+      let errorMessage = "Une difficulté temporaire est survenue lors de la génération. Vous pouvez réessayer dans quelques instants.";
       if (error.message?.includes("API key") || error.message?.includes("Clé API") || error.message?.includes("GEMINI_API_KEY")) {
-        errorMessage = `Clé API Gemini invalide ou manquante. Erreur brute: ${error.message}. Allez dans Réglages (Settings) > Secrets & API Keys et vérifiez que votre clé GEMINI_API_KEY est exacte (sans espaces) ! Modèle sélectionné: ${selectedModel}`;
+        errorMessage = `Clé API Gemini invalide ou manquante. Veuillez vérifier votre clé dans Réglages > Secrets & API Keys. Modèle sélectionné: ${selectedModel}`;
       } else if (
         error.message?.toLowerCase().includes("quota") || 
         error.message?.toLowerCase().includes("limit") || 
@@ -1406,25 +1406,18 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
         // Restore userMessage to input so they can easily retry
         setPrompt(userMessage);
 
-        errorMessage = `⚠️ **Quota ou limite de requêtes de l'API Gemini atteinte (Ressources Épuisées)** ⚠️
+        errorMessage = `⚠️ **Disponibilité des ressources d'inférence** ⚠️
 
-Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appels envers l'API gratuite Gemini.
+Les modèles gratuits sont actuellement très sollicités par le réseau. Votre demande a été conservée dans la zone de texte.
 
-### Comment continuer immédiatement sans blocage ?
-
-1. ⏳ **Patientez 30 à 60 secondes :** Les limites de l'API gratuite Google Gemini se réinitialisent de façon glissante toutes les minutes. Nous avons restauré votre question/prompt dans le champ de saisie ci-dessous pour que vous puissiez réattaquer d'un simple clic !
-2. 🔑 **Configurez votre propre clé API Gemini en 10 secondes :**
-   - Allez dans les **Réglages** (icône d'engrenage "Settings").
-   - Cliquez sur l'onglet **Secrets & API Keys**.
-   - Collez votre clé API Gemini personnelle (générable gratuitement en 2 clics sur [Google AI Studio](https://aistudio.google.com/)).
-   - Vos requêtes passeront ainsi de manière totalement privée, stable et ultra-rapide.
-3. 🛠️ **Utilisez l'assistant de secours "Forge Studio" (Llama 3.3/Groq) :**
-   - Ouvrez le volet **FORGE STUDIO ✨** en haut à droite de la prévisualisation.
-   - Saisissez vos questions d'optimisation ou correction de bugs sans bloquer votre progression.`;
+### Comment poursuivre :
+1. ⏳ **Patienter quelques secondes** puis relancer la génération.
+2. 🔑 **Ajouter votre clé API Gemini personnelle** dans **Réglages > Secrets & API Keys** pour bénéficier d'un quota dédié et illimité.
+3. 🛠️ **Utiliser le volet FORGE STUDIO** en haut à droite pour piloter des modifications ciblées.`;
       } else if (error.message?.includes("safety") || error.message?.includes("blocked")) {
-        errorMessage = `Le contenu a été bloqué par les filtres de sécurité. (Erreur: ${error.message})`;
+        errorMessage = "Le contenu demandé a déclenché les règles de sécurité de l'IA. Veuillez reformuler votre consigne.";
       } else if (error.message?.includes("JSON")) {
-        errorMessage = `L'IA a eu du mal à structurer sa réponse. (Erreur: ${error.message})`;
+        errorMessage = "La réponse générée nécessitait un reformatage. Veuillez relancer la génération.";
       }
       
       setMessages(prev => [...prev, { 

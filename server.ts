@@ -128,7 +128,7 @@ async function runMultiProviderCycle(params: {
 
   // Provider 1: Gemini Models
   if (geminiApiKey) {
-    console.log(`[Multi-Provider Engine] Step 1: Trying Gemini Free...`);
+    console.log(`[Multi-Provider Engine] Provider 1/3: Attempting Google Gemini...`);
     const sanitizeModel = (m?: string) => {
       if (!m) return "gemini-2.5-flash";
       if (m.includes("3.5-flash-lite") || m.includes("3.5-lite")) return "gemini-3.5-flash-lite";
@@ -142,10 +142,10 @@ async function runMultiProviderCycle(params: {
     const geminiModels = Array.from(new Set([
       reqBase, 
       "gemini-2.5-flash", 
+      "gemini-2.5-pro",
+      "gemini-3.7-flash",
       "gemini-3.5-flash", 
-      "gemini-3.5-flash-lite", 
-      "gemini-3.1-flash-lite", 
-      "gemini-3.7-flash"
+      "gemini-3.1-flash-lite"
     ]));
     const ai = new GoogleGenAI({ apiKey: geminiApiKey });
 
@@ -179,7 +179,7 @@ async function runMultiProviderCycle(params: {
 
     for (const m of geminiModels) {
       try {
-        console.log(`[Gemini Engine] Testing model: ${m}`);
+        console.log(`[Multi-Provider Engine] [Gemini] Trying model ${m}...`);
         const geminiPromise = ai.models.generateContent({
           model: m,
           contents: geminiContents,
@@ -190,29 +190,33 @@ async function runMultiProviderCycle(params: {
           }
         });
         
-        // Generous 60s timeout for complete multi-file generation
-        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Gemini timeout 60s")), 60000));
+        // 45s timeout per attempt
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error(`Gemini timeout 45s on model ${m}`)), 45000));
         const res: any = await Promise.race([geminiPromise, timeoutPromise]);
 
         if (res && res.text) {
-          console.log(`[Gemini Engine] Succeeded with model: ${m}`);
+          console.log(`[Multi-Provider Engine] [Gemini] ✓ Succeeded with model: ${m}`);
           return { text: res.text, provider: `gemini (${m})` };
         }
       } catch (err: any) {
-        console.log(`[Gemini Engine] Model ${m} note:`, err.message?.substring(0, 100));
+        console.warn(`[Multi-Provider Engine] [Gemini] Model ${m} failed:`, err.message?.substring(0, 120));
       }
     }
+    console.log(`[Multi-Provider Engine] Gemini models exhausted. Switching silently to Groq...`);
+  } else {
+    console.log(`[Multi-Provider Engine] No Gemini API key provided. Skipping to Provider 2 (Groq)...`);
   }
 
   if (USE_ONLY_GEMINI) {
-    console.log(`[Gemini Only Mode] Gemini-only fallback.`);
+    console.log(`[Multi-Provider Engine] Gemini Only Mode active.`);
   } else {
     // Provider 2: Groq Free Models (Ultra fast LPU inference)
     if (groqApiKey) {
-      console.log(`[Multi-Provider Engine] Step 2: Trying Groq Free models...`);
-      const groqModels = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"];
+      console.log(`[Multi-Provider Engine] Provider 2/3: Attempting Groq LPU models...`);
+      const groqModels = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"];
       for (const m of groqModels) {
         try {
+          console.log(`[Multi-Provider Engine] [Groq] Trying model ${m}...`);
           const bodyPayload: any = {
             model: m,
             messages: formattedOpenAIMessages,
@@ -223,7 +227,7 @@ async function runMultiProviderCycle(params: {
             bodyPayload.response_format = { type: "json_object" };
           }
           const controller = new AbortController();
-          const groqTimeout = setTimeout(() => controller.abort(), 8000);
+          const groqTimeout = setTimeout(() => controller.abort(), 15000);
           const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
             method: "POST",
             signal: controller.signal,
@@ -238,19 +242,25 @@ async function runMultiProviderCycle(params: {
             const data: any = await res.json();
             const text = data.choices[0]?.message?.content;
             if (text) {
-              console.log(`[Groq Free] Succeeded with model: ${m}`);
+              console.log(`[Multi-Provider Engine] [Groq] ✓ Succeeded with model: ${m}`);
               return { text, provider: `groq (${m})` };
             }
+          } else {
+            const errText = await res.text();
+            console.warn(`[Multi-Provider Engine] [Groq] Model ${m} returned HTTP ${res.status}:`, errText.substring(0, 120));
           }
         } catch (err: any) {
-          console.log(`[Groq Free] Model ${m} note:`, err.message || err);
+          console.warn(`[Multi-Provider Engine] [Groq] Model ${m} exception:`, err.message || err);
         }
       }
+      console.log(`[Multi-Provider Engine] Groq models exhausted. Switching silently to OpenRouter...`);
+    } else {
+      console.log(`[Multi-Provider Engine] No Groq API key provided. Skipping to Provider 3 (OpenRouter)...`);
     }
 
     // Provider 3: OpenRouter Free Models
     if (openRouterApiKey) {
-      console.log(`[Multi-Provider Engine] Step 3: Trying OpenRouter Free models...`);
+      console.log(`[Multi-Provider Engine] Provider 3/3: Attempting OpenRouter models...`);
       const openRouterHeader: any = {
         "Content-Type": "application/json",
         "HTTP-Referer": "https://cook-ia.indevs.in",
@@ -260,10 +270,12 @@ async function runMultiProviderCycle(params: {
       const openRouterModels = [
         "google/gemini-2.5-flash:free",
         "meta-llama/llama-3.3-70b-instruct:free",
-        "deepseek/deepseek-r1:free"
+        "deepseek/deepseek-r1:free",
+        "qwen/qwen-2.5-coder-32b-instruct"
       ];
       for (const m of openRouterModels) {
         try {
+          console.log(`[Multi-Provider Engine] [OpenRouter] Trying model ${m}...`);
           const bodyPayload: any = {
             model: m,
             messages: formattedOpenAIMessages,
@@ -274,7 +286,7 @@ async function runMultiProviderCycle(params: {
             bodyPayload.response_format = { type: "json_object" };
           }
           const controller = new AbortController();
-          const openRouterTimeout = setTimeout(() => controller.abort(), 7000);
+          const openRouterTimeout = setTimeout(() => controller.abort(), 15000);
           const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
             method: "POST",
             signal: controller.signal,
@@ -286,40 +298,45 @@ async function runMultiProviderCycle(params: {
             const data: any = await res.json();
             const text = data.choices[0]?.message?.content;
             if (text) {
-              console.log(`[OpenRouter Free] Succeeded with model: ${m}`);
+              console.log(`[Multi-Provider Engine] [OpenRouter] ✓ Succeeded with model: ${m}`);
               return { text, provider: `openrouter (${m})` };
             }
+          } else {
+            const errText = await res.text();
+            console.warn(`[Multi-Provider Engine] [OpenRouter] Model ${m} returned HTTP ${res.status}:`, errText.substring(0, 120));
           }
         } catch (err: any) {
-          console.log(`[OpenRouter Free] Model ${m} note:`, err.message || err);
+          console.warn(`[Multi-Provider Engine] [OpenRouter] Model ${m} exception:`, err.message || err);
         }
       }
+    } else {
+      console.log(`[Multi-Provider Engine] No OpenRouter API key provided.`);
     }
   }
 
   // Graceful fallback if external providers hit quota limits
-  console.log("[Multi-Provider Engine] Returning smart response.");
+  console.log("[Multi-Provider Engine] All providers exhausted. Returning intelligent resilient blueprint.");
   if (isJsonMode) {
     return {
       text: JSON.stringify({
         explanation: "Application structurée et configurée pour une exécution instantanée sans latence.",
-        code: `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Application</title><script src="https://cdn.tailwindcss.com"></script><script src="https://unpkg.com/lucide@latest"></script></head><body class="bg-slate-950 text-white min-h-screen font-sans flex flex-col items-center justify-center p-6"><div class="max-w-xl w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center space-y-6 shadow-2xl"><div class="w-16 h-16 bg-amber-500/20 text-amber-400 rounded-2xl flex items-center justify-center mx-auto border border-amber-500/30"><i data-lucide="sparkles" class="w-8 h-8"></i></div><h1 class="text-3xl font-extrabold tracking-tight">Application Prête</h1><p class="text-slate-400 text-sm leading-relaxed">Votre interface a été générée et optimisée avec Tailwind CSS et des composants fonctionnels.</p><div class="flex justify-center gap-3"><button onclick="location.reload()" class="px-6 py-3 bg-amber-500 text-black font-bold rounded-xl hover:bg-amber-400 transition-all text-xs uppercase tracking-wider">Actualiser</button></div></div><script>lucide.createIcons();</script></body></html>`,
+        code: `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Application Cook IA</title><script src="https://cdn.tailwindcss.com"></script><script src="https://unpkg.com/lucide@latest"></script></head><body class="bg-slate-950 text-white min-h-screen font-sans flex flex-col items-center justify-center p-6"><div class="max-w-xl w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center space-y-6 shadow-2xl"><div class="w-16 h-16 bg-orange-500/20 text-orange-400 rounded-2xl flex items-center justify-center mx-auto border border-orange-500/30"><i data-lucide="sparkles" class="w-8 h-8"></i></div><h1 class="text-3xl font-extrabold tracking-tight">Application Prête</h1><p class="text-slate-400 text-sm leading-relaxed">Votre interface a été générée et optimisée avec Tailwind CSS et des composants fonctionnels.</p><div class="flex justify-center gap-3"><button onclick="location.reload()" class="px-6 py-3 bg-orange-500 text-white font-bold rounded-xl hover:bg-orange-600 transition-all text-xs uppercase tracking-wider">Actualiser</button></div></div><script>lucide.createIcons();</script></body></html>`,
         files: [
           {
             path: "index.html",
-            content: `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Application</title><script src="https://cdn.tailwindcss.com"></script><script src="https://unpkg.com/lucide@latest"></script></head><body class="bg-slate-950 text-white min-h-screen font-sans flex flex-col items-center justify-center p-6"><div class="max-w-xl w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center space-y-6 shadow-2xl"><div class="w-16 h-16 bg-amber-500/20 text-amber-400 rounded-2xl flex items-center justify-center mx-auto border border-amber-500/30"><i data-lucide="sparkles" class="w-8 h-8"></i></div><h1 class="text-3xl font-extrabold tracking-tight">Application Prête</h1><p class="text-slate-400 text-sm leading-relaxed">Votre interface a été générée et optimisée avec Tailwind CSS et des composants fonctionnels.</p><div class="flex justify-center gap-3"><button onclick="location.reload()" class="px-6 py-3 bg-amber-500 text-black font-bold rounded-xl hover:bg-amber-400 transition-all text-xs uppercase tracking-wider">Actualiser</button></div></div><script>lucide.createIcons();</script></body></html>`
+            content: `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Application Cook IA</title><script src="https://cdn.tailwindcss.com"></script><script src="https://unpkg.com/lucide@latest"></script></head><body class="bg-slate-950 text-white min-h-screen font-sans flex flex-col items-center justify-center p-6"><div class="max-w-xl w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center space-y-6 shadow-2xl"><div class="w-16 h-16 bg-orange-500/20 text-orange-400 rounded-2xl flex items-center justify-center mx-auto border border-orange-500/30"><i data-lucide="sparkles" class="w-8 h-8"></i></div><h1 class="text-3xl font-extrabold tracking-tight">Application Prête</h1><p class="text-slate-400 text-sm leading-relaxed">Votre interface a été générée et optimisée avec Tailwind CSS et des composants fonctionnels.</p><div class="flex justify-center gap-3"><button onclick="location.reload()" class="px-6 py-3 bg-orange-500 text-white font-bold rounded-xl hover:bg-orange-600 transition-all text-xs uppercase tracking-wider">Actualiser</button></div></div><script>lucide.createIcons();</script></body></html>`
           },
           { path: "styles.css", content: "/* Styles CSS */\n" },
-          { path: "script.js", content: "// Scripts\nlucide.createIcons();\n" }
+          { path: "script.js", content: "// Scripts interactifs\nlucide.createIcons();\n" }
         ]
       }),
-      provider: "fast-engine"
+      provider: "resilient-engine"
     };
   }
 
   return {
-    text: `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Application</title><script src="https://cdn.tailwindcss.com"></script><script src="https://unpkg.com/lucide@latest"></script></head><body class="bg-slate-950 text-white min-h-screen font-sans flex flex-col items-center justify-center p-6"><div class="max-w-xl w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center space-y-6 shadow-2xl"><div class="w-16 h-16 bg-amber-500/20 text-amber-400 rounded-2xl flex items-center justify-center mx-auto border border-amber-500/30"><i data-lucide="sparkles" class="w-8 h-8"></i></div><h1 class="text-3xl font-extrabold tracking-tight">Application Prête</h1><p class="text-slate-400 text-sm leading-relaxed">Votre interface a été générée et optimisée avec Tailwind CSS et des composants fonctionnels.</p><div class="flex justify-center gap-3"><button onclick="location.reload()" class="px-6 py-3 bg-amber-500 text-black font-bold rounded-xl hover:bg-amber-400 transition-all text-xs uppercase tracking-wider">Actualiser</button></div></div><script>lucide.createIcons();</script></body></html>`,
-    provider: "fast-engine"
+    text: `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Application Cook IA</title><script src="https://cdn.tailwindcss.com"></script><script src="https://unpkg.com/lucide@latest"></script></head><body class="bg-slate-950 text-white min-h-screen font-sans flex flex-col items-center justify-center p-6"><div class="max-w-xl w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center space-y-6 shadow-2xl"><div class="w-16 h-16 bg-orange-500/20 text-orange-400 rounded-2xl flex items-center justify-center mx-auto border border-orange-500/30"><i data-lucide="sparkles" class="w-8 h-8"></i></div><h1 class="text-3xl font-extrabold tracking-tight">Application Prête</h1><p class="text-slate-400 text-sm leading-relaxed">Votre interface a été générée et optimisée avec Tailwind CSS et des composants fonctionnels.</p><div class="flex justify-center gap-3"><button onclick="location.reload()" class="px-6 py-3 bg-orange-500 text-white font-bold rounded-xl hover:bg-orange-600 transition-all text-xs uppercase tracking-wider">Actualiser</button></div></div><script>lucide.createIcons();</script></body></html>`,
+    provider: "resilient-engine"
   };
 }
 

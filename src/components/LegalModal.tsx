@@ -94,7 +94,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
   }> = {
     tos: {
       title: "Conditions Générales d'Utilisation",
-      subtitle: "Règles d'accès, utilisation du générateur IA et propriété intellectuelle",
+      subtitle: "Règles d'accès, utilisation du générateur d'applications et propriété intellectuelle",
       icon: <FileText className="text-orange-primary" size={20} />,
       lastUpdated: "Dernière mise à jour : 2026",
       sections: [
@@ -103,8 +103,8 @@ export const LegalModal: React.FC<LegalModalProps> = ({
           title: "1. Objet et acceptation des conditions",
           badge: "Fondamental",
           content: [
-            "Les présentes Conditions Générales d'Utilisation régissent l'accès et l'utilisation de la plateforme COOK IA (ci-après 'le Service').",
-            "En accédant au site, en créant un compte ou en générant du code ou des applications web, vous acceptez sans réserve l'intégralité des présentes conditions. Si vous n'acceptez pas ces termes, vous devez cesser immédiatement d'utiliser le Service."
+            "Les présentes Conditions Générales d'Utilisation régissent l'accès et l'utilisation de la plateforme COOK IA, conçue par Benit Madimba.",
+            "En accédant au service, en créant un compte ou en générant du code, vous acceptez sans réserve les présentes conditions. Si vous n'acceptez pas ces termes, veuillez cesser l'utilisation de la plateforme."
           ]
         },
         {
@@ -112,193 +112,192 @@ export const LegalModal: React.FC<LegalModalProps> = ({
           title: "2. Propriété Intellectuelle & Droits sur le Code Généré",
           badge: "100% Votre Propriété",
           content: [
-            "Tous les fichiers sources, architectures logicielles, pages web HTML/CSS/JS, composants React, scripts et assets générés par COOK IA en réponse à vos demandes vous appartiennent intégralement.",
-            "Vous disposez d'un droit de propriété exclusif, perpétuel et mondial sur l'ensemble du code généré. Vous êtes libre de l'exporter, le modifier, le déployer, l'héberger et le commercialiser sans aucune redevance.",
-            "COOK IA et ses créateurs conservent la propriété exclusive de l'interface, des algorithmes d'orchestration multi-agents, de la marque, du logo et des technologies sous-jacentes de la plateforme."
+            "Tous les fichiers de code source, architectures logicielles, pages web HTML/CSS/JS, composants React, scripts et assets générés par COOK IA en réponse à vos demandes vous appartiennent intégralement et exclusivement.",
+            "Vous disposez d'un droit de propriété mondial et illimité sur le code produit. Vous êtes libre de l'exporter en archive ZIP, le modifier, l'héberger et le commercialiser sans aucune redevance.",
+            "COOK IA et son créateur conservent la propriété intellectuelle exclusive de l'interface du générateur, des algorithmes d'orchestration multi-providers, de la marque et du logo."
           ],
           bullets: [
-            "Le code généré est libre de droits pour un usage personnel ou commercial.",
-            "Aucune redevance ou royalties n'est exigée sur les sites créés avec COOK IA.",
-            "Vous êtes libre d'exporter vos projets en un clic au format ZIP ou de les déployer."
+            "Le code généré est libre de droits pour tout usage personnel ou commercial.",
+            "Aucune redevance ou royalties n'est prélevée sur vos créations.",
+            "Export complet des projets en un clic au format ZIP."
           ]
         },
         {
           id: 'tos-3',
           title: "3. Utilisation Acceptable & Règles de Conduite",
-          badge: "Sécurité & Éthique",
+          badge: "Éthique & Sécurité",
           content: [
-            "L'utilisateur s'engage à utiliser le Service dans le respect des lois et règlements en vigueur.",
-            "Sont formellement interdits :"
+            "L'utilisateur s'engage à utiliser COOK IA dans le respect strict des lois en vigueur.",
+            "Sont expressément interdits :"
           ],
           bullets: [
-            "La génération de contenus illégaux, haineux, diffamatoires, discriminatoires ou violents.",
-            "La création de logiciels malveillants (malwares, ransomwares, scripts de phishing ou d'exploitation de vulnérabilités).",
-            "Toute tentative de saturation ou d'attaque par déni de service (DDoS) sur l'infrastructure de COOK IA.",
-            "Le contournement des mécanismes d'authentification ou des quotas d'utilisation des modèles d'IA."
+            "La génération de contenus illicites, haineux, diffamatoires ou discriminatoires.",
+            "La conception de logiciels malveillants, scripts de phishing ou vecteurs d'attaque.",
+            "Les tentatives de surcharge ou déni de service (DDoS) contre l'infrastructure.",
+            "Le contournement non autorisé des mécanismes d'authentification ou des quotas d'inférence."
           ]
         },
         {
           id: 'tos-4',
-          title: "4. Comptes, Authentification & Code de Vérification (OTP)",
+          title: "4. Comptes, Authentification & Sécurité",
           badge: "Authentification",
           content: [
-            "Pour accéder à certaines fonctionnalités (sauvegarde dans le cloud, synchronisation des projets, déploiement), l'utilisateur peut se connecter via Google, GitHub, Magic Link ou par e-mail avec un mot de passe sécurisé et un code de vérification à usage unique (OTP).",
-            "L'utilisateur est seul responsable de la confidentialité de ses identifiants et de son adresse e-mail. COOK IA ne vous demandera jamais votre mot de passe par message direct."
+            "Pour enregistrer et synchroniser vos projets, vous pouvez vous connecter via Google OAuth, GitHub, Magic Link ou par email avec mot de passe et code OTP à usage unique via Supabase.",
+            "L'utilisateur est responsable de la préservation de ses identifiants. COOK IA ne sollicitera jamais vos mots de passe par message direct."
           ]
         },
         {
           id: 'tos-5',
-          title: "5. Disponibilité du Service & Modèles d'IA",
-          badge: "Infrastructure",
+          title: "5. Disponibilité du Service & Fournisseurs d'IA",
+          badge: "Multi-Providers",
           content: [
-            "COOK IA met en œuvre tous les moyens raisonnables pour assurer une disponibilité maximale du Service 24h/24 et 7j/7.",
-            "Le Service utilise des modèles d'intelligence artificielle avancés. Bien que le moteur multi-agents effectue des tests et vérifications automatiques, le code généré est fourni 'en l'état'. L'utilisateur est invité à relire et tester ses applications avant toute mise en production critique."
+            "COOK IA s'appuie sur une architecture multi-providers à haute disponibilité combinant Google Gemini (Google Cloud), Groq Inc. et OpenRouter pour orchestrer les tâches d'ingénierie.",
+            "Bien que notre moteur effectue des vérifications syntaxiques et structurelles, le code généré est délivré tel quel. L'utilisateur est invité à relire et tester ses applications avant tout déploiement en production critique."
           ]
         },
         {
           id: 'tos-6',
           title: "6. Limitation de Responsabilité & Droit Applicable",
           content: [
-            "Dans la mesure permise par la loi, COOK IA ne saurait être tenu responsable des pertes de données, interruptions d'activité ou dommages indirects résultant de l'utilisation du Service.",
-            "Les présentes conditions sont soumises au droit français et aux réglementations européennes en vigueur. Tout litige sera soumis aux tribunaux compétents."
+            "COOK IA met tout en œuvre pour assurer la continuité de service. Dans la limite autorisée par la loi, COOK IA ne saurait être tenu responsable d'éventuelles pertes d'exploitation résultant d'interruptions techniques tierces.",
+            "Les présentes conditions sont régies par le droit français et les réglementations européennes. Tout différend sera soumis aux juridictions compétentes."
           ]
         }
       ]
     },
     privacy: {
       title: "Politique de Confidentialité",
-      subtitle: "Traitement des données personnelles, sécurité du cloud et conformité RGPD",
+      subtitle: "Traitement des données, prestataires d'IA et conformité RGPD",
       icon: <ShieldCheck className="text-emerald-500" size={20} />,
       lastUpdated: "Dernière mise à jour : 2026",
       sections: [
         {
           id: 'priv-1',
-          title: "1. Engagement de Confidentialité & Conformité RGPD",
+          title: "1. Engagement de Confidentialité & Respect du RGPD",
           badge: "RGPD / GDPR",
           content: [
-            "COOK IA attache une importance capitale à la protection de votre vie privée et de vos données personnelles.",
-            "Nous appliquons les principes de minimisation des données : seules les données strictement nécessaires au bon fonctionnement de l'application et à la génération de vos projets sont traitées."
+            "COOK IA respecte scrupuleusement la vie privée de ses utilisateurs.",
+            "Nous appliquons le principe de minimisation des données : seules les informations indispensables au fonctionnement de l'application et à la génération de code sont traitées."
           ]
         },
         {
           id: 'priv-2',
-          title: "2. Données Personnelles Collectées",
+          title: "2. Données Collectées",
           badge: "Transparence",
           content: [
-            "Nous pouvons collecter et traiter les catégories de données suivantes :"
+            "Nous collectons et traitons uniquement les catégories suivantes :"
           ],
           bullets: [
             "Données de compte : adresse e-mail, pseudonyme ou nom d'utilisateur, avatar lors d'une connexion OAuth (Google ou GitHub).",
-            "Données de création : prompts textuels, instructions de design, fichiers de code source créés dans l'éditeur.",
-            "Données techniques : type de navigateur, résolution d'écran (pour adapter le canvas de prévisualisation), adresse IP de session anonymisée, jeton de session JWT Supabase chiffré.",
-            "Préférences locales : thème d'affichage (sombre/clair), langue sélectionnée (français/anglais), modèle d'IA sélectionné."
+            "Données de génération : prompts textuels, instructions de design et fichiers de code source générés dans l'espace de travail.",
+            "Données techniques : type de navigateur, résolution d'affichage (pour le rendu réactif), jeton de session JWT Supabase chiffré.",
+            "Préférences locales : thème (sombre/clair), langue (FR/EN) et modèle d'inférence sélectionné."
           ]
         },
         {
           id: 'priv-3',
           title: "3. Finalités du Traitement",
           content: [
-            "Vos données sont exclusivement utilisées pour :"
+            "Vos données sont exclusivement mobilisées pour :"
           ],
           bullets: [
-            "Fournir le service de génération de sites web et d'applications assisté par IA.",
-            "Sauvegarder et restaurer vos projets, historiques de messages et paramètres personnalisés.",
-            "Sécuriser votre compte via des protocoles d'authentification modernes (Magic Link, OTP chiffré, JWT).",
-            "Optimiser la réactivité et la compatibilité de l'interface avec vos différents appareils (ordinateurs, tablettes, smartphones)."
+            "Générer et éditer vos applications web interactives.",
+            "Sauvegarder et restaurer vos projets et historiques de discussion.",
+            "Sécuriser les sessions utilisateur via Supabase Auth (Magic Link, OTP, JWT).",
+            "Adapter l'interface de travail aux dimensions de votre écran."
           ]
         },
         {
           id: 'priv-4',
           title: "4. Hébergement Sécurisé & Protection des Clés API",
-          badge: "Chiffrement AES-256",
+          badge: "Chiffrement HTTPS/TLS & RLS",
           content: [
             "L'infrastructure de base de données est opérée via Supabase avec activation des règles de sécurité de niveau ligne (Row Level Security - RLS). Chaque utilisateur dispose d'un espace hermétique et isolé.",
-            "Toutes les communications entre votre navigateur et nos serveurs sont protégées par le protocole HTTPS / SSL avec chiffrement de bout en bout.",
-            "Vos requêtes vers les modèles d'intelligence artificielle transitent exclusivement par des serveurs proxy sécurisés côté backend : aucune clé API secrète n'est exposée sur votre navigateur."
+            "Toutes les communications entre votre navigateur et nos serveurs sont protégées par le protocole HTTPS / TLS chiffré en transit.",
+            "Vos requêtes vers les modèles d'intelligence artificielle transitent exclusivement par des serveurs proxy sécurisés côté backend : aucune clé API secrète de serveur n'est exposée sur votre navigateur."
           ]
         },
         {
           id: 'priv-5',
-          title: "5. Non-Revente & Partage Limité des Données",
+          title: "5. Prestataires Tiers & Sous-Traitants d'Inférence IA",
           badge: "Zéro Revente",
           content: [
-            "COOK IA ne vend, ne loue et ne commercialise AUCUNE de vos données personnelles ou de vos codes sources à des tiers.",
-            "Les seuls sous-traitants techniques intervenant sont les fournisseurs d'infrastructure essentiels (Supabase pour l'authentification et la base de données, Google Cloud pour l'inférence des modèles de langage), tous soumis à des accords stricts de protection des données."
+            "COOK IA ne vend, ne loue et ne commercialise AUCUNE de vos données personnelles ou de vos codes sources à des régies publicitaires.",
+            "Les sous-traitants techniques intervenant pour l'inférence des modèles et l'infrastructure sont :"
+          ],
+          bullets: [
+            "Google Cloud / Google Gemini : inférence des modèles de langage Gemini.",
+            "Groq Inc. : inférence accélérée LPU (Llama 3.3 / Mixtral).",
+            "OpenRouter Inc. : routage et passerelle multi-modèles de secours.",
+            "Supabase Inc. : hébergement sécurisé PostgreSQL et authentification des comptes."
           ]
         },
         {
           id: 'priv-6',
-          title: "6. Vos Droits & Suppression des Données (Droit à l'Oubli)",
+          title: "6. Vos Droits & Suppression des Données",
           badge: "Vos Droits",
           content: [
-            "Conformément au Règlement Général sur la Protection des Données (RGPD), vous bénéficiez des droits suivants :"
+            "Conformément au RGPD, vous disposez d'un contrôle total sur vos données :"
           ],
           bullets: [
-            "Droit d'accès et d'information sur vos données stockées.",
-            "Droit de rectification de vos données et de votre nom d'utilisateur.",
-            "Droit à l'effacement définitif (droit à l'oubli) : vous pouvez supprimer votre compte et tous vos projets associés à tout moment depuis les paramètres de votre compte.",
-            "Droit à la portabilité : vous pouvez exporter l'intégralité de vos projets et codes sources au format ZIP."
+            "Droit d'accès et d'export de vos projets au format ZIP.",
+            "Droit de rectification de votre profil et de votre pseudonyme.",
+            "Droit à l'effacement définitif : suppression intégrale de votre compte et de vos données associées à tout moment depuis les paramètres de votre compte."
           ]
         }
       ]
     },
     cookies: {
-      title: "Politique des Cookies & Traceurs",
+      title: "Politique des Cookies & Stockage Local",
       subtitle: "Fonctionnement du stockage local, cookies essentiels et gestion de vos préférences",
       icon: <Cookie className="text-amber-500" size={20} />,
       lastUpdated: "Dernière mise à jour : 2026",
       sections: [
         {
           id: 'cook-1',
-          title: "1. Qu'est-ce qu'un cookie et pourquoi COOK IA les utilise ?",
-          badge: "Information",
+          title: "1. Pourquoi COOK IA utilise le stockage local ?",
+          badge: "Technique",
           content: [
-            "Un cookie ou élément de stockage local est un petit fichier texte déposé sur votre navigateur lors de votre visite.",
-            "COOK IA utilise des cookies et le stockage local (LocalStorage / SessionStorage) dans un but purement technique : maintenir votre connexion, sauvegarder vos créations en cours, mémoriser vos préférences et adapter dynamiquement l'interface à votre écran."
+            "COOK IA utilise des cookies de session et le stockage local de votre navigateur (LocalStorage) exclusivement pour assurer le bon fonctionnement de l'application : maintenir votre authentification, mémoriser vos préférences d'affichage et conserver vos projets en cours."
           ]
         },
         {
           id: 'cook-2',
-          title: "2. Types de Cookies & Stockage utilisés sur COOK IA",
+          title: "2. Types de Données Stockées Localement",
           badge: "Catégories",
           content: [
-            "Voici le détail transparent des mécanismes de stockage mis en œuvre :"
+            "Détail transparent des éléments stockés sur votre appareil :"
           ],
           bullets: [
-            "Cookies strictement nécessaires (Obligatoires) : Gestion des jetons de session d'authentification chiffrés (Supabase JWT), sécurisation contre les requêtes contrefaites (CSRF) et persistance du statut de connexion.",
-            "Stockage Local de Préférences (LocalStorage) : Mémorisation du thème sombre ou clair, de la langue choisie (FR/EN) et du modèle d'IA sélectionné (ex: Gemini 2.5 Flash).",
-            "Cache de Génération IA : Conservation temporaire des messages et composants récents pour éviter les temps de chargement inutiles et permettre un travail fluide.",
-            "Métriques de Résolution d'Affichage : Détection de la largeur d'écran et du ratio de pixels (DPR) pour adapter le canvas de prévisualisation en temps réel."
+            "Session d'authentification (Obligatoire) : Jeton JWT Supabase pour maintenir votre connexion de manière chiffrée.",
+            "Préférences d'interface (LocalStorage) : Thème actif (sombre ou clair), langue sélectionnée (FR/EN), modèle d'inférence par défaut.",
+            "Cache de projet en cours : Sauvegarde instantanée de votre code pour éviter toute perte lors des rafraîchissements.",
+            "Configuration d'affichage : Ratio d'échelle et paramètres du canvas de prévisualisation."
           ]
         },
         {
           id: 'cook-3',
-          title: "3. Aucun Cookie Publicitaire ou Traçage Tiers Invasif",
+          title: "3. Absence Totale de Traceurs Publicitaires",
           badge: "Zéro Pub",
           content: [
             "COOK IA n'utilise AUCUN cookie publicitaire, aucun traceur de reciblage commercial (retargeting) et aucun pixel d'analyse comportementale tierce non anonymisé.",
-            "Vos interactions avec le générateur de code ne sont jamais partagées avec des régies publicitaires."
+            "Vos interactions avec le générateur restent strictement confidentielles."
           ]
         },
         {
           id: 'cook-4',
-          title: "4. Durée de Conservation des Cookies",
+          title: "4. Durée de Conservation",
           content: [
-            "Les cookies de session expirent à la fermeture de votre navigateur ou après une période d'inactivité de 30 jours pour les sessions connectées.",
-            "Les préférences de stockage local (thème, langue) restent conservées sur votre appareil jusqu'à ce que vous décidiez de les effacer manuellement."
+            "Les jetons de session expirent à la déconnexion ou après une période d'inactivité.",
+            "Les préférences de stockage local (thème, langue) restent conservées sur votre navigateur jusqu'à leur effacement manuel ou réinitialisation."
           ]
         },
         {
           id: 'cook-5',
-          title: "5. Comment Contrôler & Modifier vos Préférences de Cookies ?",
-          badge: "Contrôle Total",
+          title: "5. Contrôle de vos Préférences",
+          badge: "Contrôle",
           content: [
-            "Vous disposez d'un contrôle total et immédiat sur les cookies et données stockées. Vous pouvez à tout moment :"
-          ],
-          bullets: [
-            "Ouvrir le configurateur interactif de cookies de COOK IA pour activer ou désactiver les catégories secondaires.",
-            "Effacer les cookies et le stockage local directement depuis les paramètres de votre navigateur (Chrome, Firefox, Safari, Edge).",
-            "Naviguer en mode privé si vous ne souhaitez conserver aucune donnée après votre session."
+            "Vous gardez à tout moment le contrôle total de vos données stockées localement : vous pouvez vider le cache et le LocalStorage directement depuis les réglages de COOK IA ou via les paramètres de votre navigateur."
           ]
         }
       ]

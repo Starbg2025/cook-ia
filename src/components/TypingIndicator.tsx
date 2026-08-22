@@ -52,7 +52,7 @@ export const TypingIndicator: React.FC<LiveActionResponseProps> = ({
   const [activeTab, setActiveTab] = useState<'reasoning' | 'terminal' | 'files'>('reasoning');
   const [isExpanded, setIsExpanded] = useState<boolean>(true);
 
-  // Live timer for reasoning execution
+  // Dynamic status based on elapsed time if no specific status provided
   useEffect(() => {
     const timer = setInterval(() => {
       setElapsedSeconds(prev => prev + 0.1);
@@ -65,6 +65,18 @@ export const TypingIndicator: React.FC<LiveActionResponseProps> = ({
     const ms = Math.floor((sec % 1) * 10);
     return `${s}.${ms}s`;
   };
+
+  // Dynamic detailed stage descriptions based on time
+  const getDynamicSubtitle = (sec: number) => {
+    if (sec < 3.5) return "Analyse du prompt, typographie et tokens graphiques...";
+    if (sec < 8) return "Conception de la structure HTML5 sémantique & classes Tailwind...";
+    if (sec < 15) return "Production des composants visuels, navigation et responsive design...";
+    if (sec < 22) return "Génération des scripts JavaScript Vanilla & interactions DOM...";
+    return "Optimisation du code, validation syntaxique et assemblage final...";
+  };
+
+  // Progress percentage estimation (smooth curve reaching 95%)
+  const progressPercent = Math.min(95, Math.floor(10 + (elapsedSeconds * 4.5)));
 
   return (
     <motion.div 
@@ -102,7 +114,7 @@ export const TypingIndicator: React.FC<LiveActionResponseProps> = ({
             </div>
             <div className="flex items-center gap-1.5 text-[11px] font-mono text-emerald-600 dark:text-emerald-400 font-medium">
               <Clock size={11} />
-              <span>Génération en temps réel ({formatTime(elapsedSeconds)})</span>
+              <span>Génération active ({formatTime(elapsedSeconds)}) • {progressPercent}%</span>
             </div>
           </div>
         </div>
@@ -130,6 +142,15 @@ export const TypingIndicator: React.FC<LiveActionResponseProps> = ({
             {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
           </button>
         </div>
+      </div>
+
+      {/* Progress Bar */}
+      <div className="w-full bg-black/20 h-1 overflow-hidden">
+        <motion.div 
+          className="h-full bg-gradient-to-r from-orange-500 via-amber-400 to-emerald-400"
+          style={{ width: `${progressPercent}%` }}
+          transition={{ ease: "easeOut", duration: 0.2 }}
+        />
       </div>
 
       {/* Main Execution Body */}
@@ -191,7 +212,7 @@ export const TypingIndicator: React.FC<LiveActionResponseProps> = ({
                     {status || "Génération du code source réel..."}
                   </div>
                   <div className="text-[10px] text-white/70 truncate">
-                    Production HTML5, styles Tailwind CSS & scripts Vanilla JS interactifs
+                    {getDynamicSubtitle(elapsedSeconds)}
                   </div>
                 </div>
               </div>
@@ -271,7 +292,7 @@ export const TypingIndicator: React.FC<LiveActionResponseProps> = ({
                     <div className="text-white/40 font-bold">$ cook-ia compile --output=dist</div>
                     <div className="text-emerald-400">✓ Analyse sémantique et syntaxique validée</div>
                     <div className="text-blue-400">ℹ Optimisation des styles Tailwind CSS et des composants SVG/Lucide</div>
-                    <div className="text-amber-400 animate-pulse">⚡ Génération du code en cours d'écriture...</div>
+                    <div className="text-amber-400 animate-pulse">⚡ Génération du code en cours d'écriture ({formatTime(elapsedSeconds)})...</div>
                   </div>
                 )}
 

@@ -494,13 +494,33 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                         </div>
 
                         {onSelectView && (
-                          <button
-                            onClick={() => onSelectView('preview')}
-                            className={`inline-flex items-center gap-1 text-xs font-semibold ${isDark ? 'text-orange-primary hover:text-orange-400' : 'text-orange-600 hover:text-orange-700'} transition-colors`}
-                          >
-                            <Eye size={13} />
-                            <span>{lang === 'fr' ? "Voir dans l'éditeur" : "Open Preview"}</span>
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => onSelectView('code')}
+                              className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-lg transition-colors ${
+                                isDark 
+                                  ? 'text-white/70 hover:text-white hover:bg-white/[0.06]' 
+                                  : 'text-slate-600 hover:text-slate-950 hover:bg-slate-100'
+                              }`}
+                              title={lang === 'fr' ? "Inspecter les fichiers sources" : "Inspect source files"}
+                            >
+                              <Code2 size={13} />
+                              <span>{lang === 'fr' ? "Inspecter le code" : "Inspect Code"}</span>
+                            </button>
+
+                            <button
+                              onClick={() => onSelectView('preview')}
+                              className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-lg transition-all ${
+                                isDark 
+                                  ? 'bg-orange-primary/20 text-orange-primary hover:bg-orange-primary hover:text-white' 
+                                  : 'bg-orange-50 text-orange-600 hover:bg-orange-600 hover:text-white shadow-xs'
+                              }`}
+                              title={lang === 'fr' ? "Voir le rendu interactif" : "Open live preview"}
+                            >
+                              <Eye size={13} />
+                              <span>{lang === 'fr' ? "Aperçu Direct" : "Live Preview"}</span>
+                            </button>
+                          </div>
                         )}
                       </div>
                     )}
