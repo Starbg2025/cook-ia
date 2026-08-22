@@ -2237,6 +2237,7 @@ Les modèles gratuits sont actuellement très sollicités par le réseau. Votre 
               loadingStatus={loadingStatus}
               currentAgentStage={currentAgentStage}
               actions={currentActions}
+              onSwitchToChat={() => setViewMode('chat')}
             />
           )}
 

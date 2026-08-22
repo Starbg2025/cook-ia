@@ -1,6 +1,32 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Zap, RotateCcw, ExternalLink, Pencil, FileCode, Folder, Download, ChevronRight, ChevronDown, MousePointer2, FileSearch, History, X, Sparkles, Smartphone, Tablet, Monitor, Loader2, Eye, Minimize2, Maximize2 } from 'lucide-react';
+import { 
+  Zap, 
+  RotateCcw, 
+  ExternalLink, 
+  Pencil, 
+  FileCode, 
+  Folder, 
+  Download, 
+  MousePointer2, 
+  FileSearch, 
+  History, 
+  X, 
+  Sparkles, 
+  Smartphone, 
+  Tablet, 
+  Monitor, 
+  Loader2, 
+  Eye, 
+  Minimize2, 
+  Maximize2,
+  Copy,
+  Check,
+  WrapText,
+  Code2,
+  BookOpen,
+  Plus
+} from 'lucide-react';
 import { ViewMode, ProjectFile, StyleConfig, SectionEditState, ActionHistory } from '../types';
 import { ForgeStudio } from './ForgeStudio';
 import { cleanAndUnescapeCode, bundleProjectFiles } from '../services/geminiService';
@@ -24,6 +50,7 @@ interface PreviewProps {
   loadingStatus?: string;
   currentAgentStage?: string;
   actions?: ActionHistory[];
+  onSwitchToChat?: () => void;
 }
 
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -47,7 +74,8 @@ export const Preview: React.FC<PreviewProps> = ({
   isLoading,
   loadingStatus,
   currentAgentStage,
-  actions
+  actions,
+  onSwitchToChat
 }) => {
   const [isVisualEditing, setIsVisualEditing] = React.useState(false);
   const [isSectionSelectionMode, setIsSectionSelectionMode] = React.useState(false);
@@ -61,6 +89,8 @@ export const Preview: React.FC<PreviewProps> = ({
   const [isEditingCode, setIsEditingCode] = React.useState(false);
   const [editableCode, setEditableCode] = React.useState('');
   const [isCopied, setIsCopied] = React.useState(false);
+  const [isWrapLines, setIsWrapLines] = React.useState(true);
+  const [fontSize, setFontSize] = React.useState<'sm' | 'base'>('sm');
 
   const effectiveFiles = React.useMemo(() => {
     let result: ProjectFile[] = [];
@@ -312,141 +342,110 @@ export const Preview: React.FC<PreviewProps> = ({
 
   return (
     <section className={`flex-1 ${isDark ? 'bg-[#141414] border-white/5' : 'bg-white border-slate-200'} md:rounded-3xl md:border overflow-hidden flex flex-col md:shadow-2xl`}>
-      {/* Browser-like Header */}
-      <div className={`h-12 ${isDark ? 'bg-[#1A1A1A] border-white/5' : 'bg-slate-50 border-slate-200'} border-b flex items-center px-6 justify-between`}>
-        <div className="flex gap-2 w-20">
-          <div className="w-3 h-3 rounded-full bg-[#FF5F57] shadow-inner" />
-          <div className="w-3 h-3 rounded-full bg-[#FFBD2E] shadow-inner" />
-          <div className="w-3 h-3 rounded-full bg-[#28C840] shadow-inner" />
+      {/* Top Header */}
+      <div className={`h-11 sm:h-12 ${isDark ? 'bg-[#1A1A1A] border-white/5' : 'bg-slate-50 border-slate-200'} border-b flex items-center px-3 sm:px-6 justify-between gap-2`}>
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-[#FF5F57] shadow-inner" />
+          <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-[#FFBD2E] shadow-inner" />
+          <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-[#28C840] shadow-inner" />
         </div>
         
-        <div className={`flex-1 max-w-2xl ${isDark ? 'bg-[#0A0A0A] border-white/5' : 'bg-white border-slate-300 shadow-xs'} px-4 py-1.5 rounded-xl border flex items-center justify-between gap-2 mx-4`}>
-          <span className={`text-[11px] font-mono ${isDark ? 'text-white/40' : 'text-slate-600 font-medium'} select-none hidden sm:inline`}>localhost:3000/preview</span>
-          
-          {/* Responsive Device Viewport Switcher */}
-          <div className={`flex items-center gap-1 p-0.5 rounded-lg border ${isDark ? 'bg-[#141414] border-white/10' : 'bg-slate-100 border-slate-300'}`}>
-            <button
-              onClick={() => setDeviceViewport('desktop')}
-              className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold uppercase transition-all ${
-                deviceViewport === 'desktop'
-                  ? 'bg-[var(--color-primary)] text-white shadow-sm'
-                  : isDark ? 'text-white/40 hover:text-white' : 'text-slate-700 hover:text-slate-950 font-bold'
-              }`}
-              title="Aperçu PC / Bureau"
-            >
-              <Monitor size={13} />
-              <span className="hidden md:inline">PC</span>
-            </button>
-            <button
-              onClick={() => setDeviceViewport('tablet')}
-              className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold uppercase transition-all ${
-                deviceViewport === 'tablet'
-                  ? 'bg-[var(--color-primary)] text-white shadow-sm'
-                  : isDark ? 'text-white/40 hover:text-white' : 'text-slate-700 hover:text-slate-950 font-bold'
-              }`}
-              title="Aperçu Tablette (768px)"
-            >
-              <Tablet size={13} />
-              <span className="hidden md:inline">Tablette</span>
-            </button>
-            <button
-              onClick={() => setDeviceViewport('mobile')}
-              className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold uppercase transition-all ${
-                deviceViewport === 'mobile'
-                  ? 'bg-[var(--color-primary)] text-white shadow-sm'
-                  : isDark ? 'text-white/40 hover:text-white' : 'text-slate-700 hover:text-slate-950 font-bold'
-              }`}
-              title="Aperçu Mobile (375px)"
-            >
-              <Smartphone size={13} />
-              <span className="hidden md:inline">Mobile</span>
-            </button>
+        {viewMode === 'preview' ? (
+          <div className={`flex-1 max-w-xl ${isDark ? 'bg-[#0A0A0A] border-white/5' : 'bg-white border-slate-300 shadow-xs'} px-3 py-1 rounded-xl border flex items-center justify-between gap-2 mx-1 sm:mx-4`}>
+            <span className={`text-[10px] sm:text-[11px] font-mono ${isDark ? 'text-white/40' : 'text-slate-600 font-medium'} select-none truncate`}>
+              localhost:3000/preview
+            </span>
+            
+            {/* Responsive Device Viewport Switcher */}
+            <div className={`flex items-center gap-0.5 p-0.5 rounded-lg border ${isDark ? 'bg-[#141414] border-white/10' : 'bg-slate-100 border-slate-300'}`}>
+              <button
+                onClick={() => setDeviceViewport('desktop')}
+                className={`flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[10px] font-bold uppercase transition-all ${
+                  deviceViewport === 'desktop'
+                    ? 'bg-[var(--color-primary)] text-white shadow-sm'
+                    : isDark ? 'text-white/40 hover:text-white' : 'text-slate-700 hover:text-slate-950'
+                }`}
+                title="Aperçu PC"
+              >
+                <Monitor size={12} />
+                <span className="hidden md:inline">PC</span>
+              </button>
+              <button
+                onClick={() => setDeviceViewport('tablet')}
+                className={`flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[10px] font-bold uppercase transition-all ${
+                  deviceViewport === 'tablet'
+                    ? 'bg-[var(--color-primary)] text-white shadow-sm'
+                    : isDark ? 'text-white/40 hover:text-white' : 'text-slate-700 hover:text-slate-950'
+                }`}
+                title="Aperçu Tablette"
+              >
+                <Tablet size={12} />
+                <span className="hidden md:inline">Tab</span>
+              </button>
+              <button
+                onClick={() => setDeviceViewport('mobile')}
+                className={`flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[10px] font-bold uppercase transition-all ${
+                  deviceViewport === 'mobile'
+                    ? 'bg-[var(--color-primary)] text-white shadow-sm'
+                    : isDark ? 'text-white/40 hover:text-white' : 'text-slate-700 hover:text-slate-950'
+                }`}
+                title="Aperçu Mobile"
+              >
+                <Smartphone size={12} />
+                <span className="hidden md:inline">Mob</span>
+              </button>
+            </div>
           </div>
+        ) : (
+          <div className="flex-1 flex items-center justify-between px-2 min-w-0">
+            <div className="flex items-center gap-1.5 text-[11px] font-mono text-white/60 truncate">
+              <Code2 size={13} className="text-orange-500 shrink-0" />
+              <span className="text-white/90 font-bold truncate">{selectedFilePath || 'index.html'}</span>
+            </div>
+          </div>
+        )}
 
-          {isVisualEditing && (
-            <span className="text-[9px] bg-[var(--color-primary)]/20 text-[var(--color-primary)] px-2 py-0.5 rounded-full font-bold uppercase tracking-widest animate-pulse">
-              Visual Edit Mode
-            </span>
-          )}
-          {isSectionSelectionMode && (
-            <span className="text-[9px] bg-blue-500/20 text-blue-500 px-2 py-0.5 rounded-full font-bold uppercase tracking-widest animate-pulse">
-              Select Section
-            </span>
-          )}
-        </div>
-
-        <div className={`flex items-center gap-4 ${isDark ? 'text-white/60' : 'text-slate-700'} w-auto justify-end`}>
-          <button 
-            onClick={() => setShowActionHistory(!showActionHistory)}
-            className={`transition-all p-1 hover:scale-110 active:scale-95 ${showActionHistory ? 'text-blue-500' : isDark ? 'hover:text-white' : 'hover:text-slate-950 text-slate-700'}`}
-            title="View Action History"
-          >
-            <History size={15} />
-          </button>
-          <button 
-            className={`${isDark ? 'text-white/60 hover:text-blue-400' : 'text-slate-700 hover:text-blue-600'} transition-all p-1 hover:scale-110 active:scale-95 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest`}
-            title="Read File"
-          >
-            <FileSearch size={14} />
-            <span className="hidden sm:inline">Read File</span>
-          </button>
+        <div className={`flex items-center gap-1.5 sm:gap-3 ${isDark ? 'text-white/60' : 'text-slate-700'} shrink-0`}>
           {files.length > 0 && (
             <button 
               onClick={onDownloadZip}
-              className={`${isDark ? 'text-white/60 hover:text-orange-400' : 'text-slate-700 hover:text-orange-600'} transition-all p-1 hover:scale-110 active:scale-95 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest`}
-              title="Download Project ZIP"
+              className={`${isDark ? 'text-white/60 hover:text-orange-400' : 'text-slate-700 hover:text-orange-600'} transition-all p-1 hover:scale-110 active:scale-95 flex items-center gap-1 text-[10px] font-bold uppercase`}
+              title="Télécharger l'archive ZIP"
             >
-              <Download size={14} />
-              <span className="hidden sm:inline">Export ZIP</span>
+              <Download size={13} />
+              <span className="hidden sm:inline">ZIP</span>
             </button>
           )}
-          <button 
-            onClick={() => setIsElementSelectionMode(!isElementSelectionMode)}
-            className={`transition-all p-1 hover:scale-110 active:scale-95 ${isElementSelectionMode ? 'text-blue-500' : isDark ? 'hover:text-white' : 'hover:text-slate-950 text-slate-700'}`}
-            title="Visual Inspector (Element Edit)"
-          >
-            <MousePointer2 size={15} />
-          </button>
-          <button 
-            onClick={() => setIsSectionSelectionMode(!isSectionSelectionMode)}
-            className={`transition-all p-1 hover:scale-110 active:scale-95 ${isSectionSelectionMode ? 'text-blue-500' : isDark ? 'hover:text-white' : 'hover:text-slate-950 text-slate-700'}`}
-            title="Targeted Section Edit"
-          >
-            <MousePointer2 size={15} />
-          </button>
-          <button 
-            onClick={() => setIsVisualEditing(!isVisualEditing)}
-            className={`transition-all p-1 hover:scale-110 active:scale-95 ${isVisualEditing ? 'text-orange-500' : isDark ? 'hover:text-white' : 'hover:text-slate-950 text-slate-700'}`}
-            title={isVisualEditing ? "Disable Visual Edit" : "Enable Visual Edit"}
-          >
-            <Pencil size={15} />
-          </button>
+
           <button 
             onClick={() => setShowForgeStudio(!showForgeStudio)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all ${
+            className={`flex items-center gap-1 px-2 py-1 rounded-lg border transition-all ${
               showForgeStudio 
-                ? 'bg-orange-500/25 border-orange-500/40 text-orange-600 font-black shadow-[0_0_15px_rgba(255,107,0,0.25)]' 
-                : 'border-orange-200 bg-gradient-to-r from-orange-500/10 to-amber-500/10 hover:from-orange-500/20 hover:to-amber-500/20 text-orange-600 font-black'
-            } text-[10px] uppercase tracking-wider`}
-            title="Open Forge Developer Studio"
+                ? 'bg-orange-500/25 border-orange-500/40 text-orange-600 font-black' 
+                : 'border-orange-500/20 bg-orange-500/10 text-orange-500 font-bold hover:bg-orange-500/20'
+            } text-[9px] sm:text-[10px] uppercase tracking-wider`}
+            title="Assistant Forge Studio"
           >
-            <Sparkles size={13} />
-            <span className="hidden sm:inline">FORGE STUDIO ✨</span>
+            <Sparkles size={11} />
+            <span className="hidden sm:inline">FORGE</span>
           </button>
-          <button 
-            onClick={onRefresh}
-            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg border transition-all ${isDark ? 'border-white/10 bg-white/5 hover:bg-white/10 text-white font-bold' : 'border-slate-300 bg-white hover:bg-slate-100 text-slate-800 font-bold shadow-xs'} text-[10px] uppercase tracking-wider`}
-            title="Reset to Original"
-          >
-            <RotateCcw size={14} className="group-hover:rotate-[-180deg] transition-transform duration-500" />
-            RESET
-          </button>
+
+          {viewMode === 'preview' && (
+            <button 
+              onClick={onRefresh}
+              className={`p-1.5 rounded-lg border transition-all ${isDark ? 'border-white/10 bg-white/5 hover:bg-white/10 text-white' : 'border-slate-300 bg-white hover:bg-slate-100 text-slate-800'}`}
+              title="Actualiser"
+            >
+              <RotateCcw size={12} />
+            </button>
+          )}
+
           <button 
             onClick={onExpand}
-            className={`transition-all p-1 hover:scale-110 active:scale-95 ${isDark ? 'hover:text-white' : 'hover:text-slate-950 text-slate-700'}`}
-            title="Open in New Tab"
+            className={`p-1.5 rounded-lg transition-all ${isDark ? 'hover:bg-white/10 text-white/70' : 'hover:bg-slate-200 text-slate-700'}`}
+            title="Plein écran / Nouvel onglet"
           >
-            <ExternalLink size={15} />
+            <ExternalLink size={13} />
           </button>
         </div>
       </div>
@@ -461,7 +460,7 @@ export const Preview: React.FC<PreviewProps> = ({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className={`w-full h-full flex justify-center items-center transition-all duration-300 relative ${
-                deviceViewport === 'desktop' ? '' : isDark ? 'bg-black/60 p-4' : 'bg-slate-200/80 p-4'
+                deviceViewport === 'desktop' ? '' : isDark ? 'bg-black/60 p-2 sm:p-4' : 'bg-slate-200/80 p-2 sm:p-4'
               }`}
             >
               {isLoading && (
@@ -553,26 +552,28 @@ export const Preview: React.FC<PreviewProps> = ({
                   />
                 </div>
               ) : (
-                <div className={`w-full h-full flex flex-col items-center justify-center ${isDark ? 'bg-[#0A0A0A]' : 'bg-slate-50'} relative overflow-hidden`}>
+                <div className={`w-full h-full flex flex-col items-center justify-center ${isDark ? 'bg-[#0A0A0A]' : 'bg-slate-50'} relative overflow-hidden p-6 text-center`}>
                   <motion.div
-                    initial={{ opacity: 0, scale: 0.8 }}
+                    initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 1, ease: "easeOut" }}
-                    className="relative z-10 flex flex-col items-center"
+                    transition={{ duration: 0.5 }}
+                    className="relative z-10 flex flex-col items-center max-w-sm"
                   >
-                    <div className="relative mb-8">
-                      <Zap size={80} className="text-[var(--color-primary)] opacity-20 animate-pulse" />
-                      <motion.div 
-                        animate={{ 
-                          scale: [1, 1.2, 1],
-                          opacity: [0.1, 0.3, 0.1]
-                        }}
-                        transition={{ duration: 4, repeat: Infinity }}
-                        className="absolute inset-0 bg-[var(--color-primary)] rounded-full blur-2xl"
-                      />
+                    <div className="w-16 h-16 rounded-2xl bg-orange-500/15 border border-orange-500/30 flex items-center justify-center mb-5 text-orange-500 shadow-lg shadow-orange-500/10">
+                      <Zap size={32} />
                     </div>
-                    <h3 className={`text-xl font-black uppercase tracking-[0.3em] ${isDark ? 'text-white/40' : 'text-slate-300'} mb-2`}>COOK IA</h3>
-                    <p className={`text-[10px] font-bold uppercase tracking-[0.5em] ${isDark ? 'text-white/10' : 'text-slate-200'}`}>Ready to architect your vision</p>
+                    <h3 className="text-xl font-bold text-white mb-2 tracking-tight">Prêt pour votre application</h3>
+                    <p className="text-xs text-white/50 mb-6 leading-relaxed">
+                      Décrivez votre projet dans le chat ou utilisez les raccourcis pour générer une interface instantanément.
+                    </p>
+                    {onSwitchToChat && (
+                      <button
+                        onClick={onSwitchToChat}
+                        className="px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold rounded-xl transition-all shadow-md uppercase tracking-wider"
+                      >
+                        Aller au Chat
+                      </button>
+                    )}
                   </motion.div>
                 </div>
               )}
@@ -583,26 +584,51 @@ export const Preview: React.FC<PreviewProps> = ({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className={`w-full h-full ${isDark ? 'bg-[#0D0D0D]' : 'bg-white'} flex overflow-hidden`}
+              className={`w-full h-full ${isDark ? 'bg-[#0D0D0D]' : 'bg-white'} flex flex-col md:flex-row overflow-hidden`}
             >
-              {/* File Tree Sidebar */}
-              <div className={`w-64 border-r ${isDark ? 'bg-[#0A0A0A] border-white/5' : 'bg-slate-50 border-slate-200'} flex flex-col`}>
-                <div className={`p-4 border-b ${isDark ? 'border-white/5 text-white/40' : 'border-slate-200 text-slate-700'} text-[10px] font-bold uppercase tracking-widest flex items-center gap-2`}>
-                  <Folder size={14} />
-                  Project Files
+              {/* Mobile Horizontal File Switcher (< md) */}
+              <div className={`md:hidden border-b ${isDark ? 'bg-[#121212] border-white/10' : 'bg-slate-100 border-slate-200'} p-2 flex items-center gap-1.5 overflow-x-auto scrollbar-hide shrink-0`}>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-white/40 px-1 shrink-0 flex items-center gap-1">
+                  <Folder size={11} /> Fichiers:
+                </span>
+                {effectiveFiles.length > 0 ? (
+                  effectiveFiles.map((file) => (
+                    <button
+                      key={file.path}
+                      onClick={() => setSelectedFilePath(file.path)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono transition-all shrink-0 ${
+                        selectedFilePath === file.path
+                          ? 'bg-orange-500 text-white font-bold shadow-xs'
+                          : isDark ? 'bg-white/5 text-white/70 hover:bg-white/10' : 'bg-white text-slate-700 border border-slate-200 shadow-xs'
+                      }`}
+                    >
+                      <FileCode size={12} />
+                      <span>{file.path}</span>
+                    </button>
+                  ))
+                ) : (
+                  <span className="text-xs text-white/40 italic px-2">Aucun fichier</span>
+                )}
+              </div>
+
+              {/* Desktop File Tree Sidebar (>= md) */}
+              <div className={`hidden md:flex w-56 lg:w-64 border-r ${isDark ? 'bg-[#0A0A0A] border-white/5' : 'bg-slate-50 border-slate-200'} flex-col shrink-0`}>
+                <div className={`p-3.5 border-b ${isDark ? 'border-white/5 text-white/40' : 'border-slate-200 text-slate-700'} text-[10px] font-bold uppercase tracking-widest flex items-center gap-2`}>
+                  <Folder size={14} className="text-orange-500" />
+                  Structure du Projet
                 </div>
                 <div className="flex-1 overflow-y-auto p-2 space-y-1 scrollbar-hide">
                   {effectiveFiles.map((file) => (
                     <button
                       key={file.path}
                       onClick={() => setSelectedFilePath(file.path)}
-                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs transition-all ${
+                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs transition-all font-mono ${
                         selectedFilePath === file.path 
-                          ? 'bg-[var(--color-primary)]/15 text-[var(--color-primary)] font-bold' 
-                          : isDark ? 'text-white/50 hover:bg-white/5 hover:text-white' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-950 font-medium'
+                          ? 'bg-orange-500/15 text-orange-500 font-bold border border-orange-500/20' 
+                          : isDark ? 'text-white/60 hover:bg-white/5 hover:text-white' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-950 font-medium'
                       }`}
                     >
-                      <FileCode size={14} className={selectedFilePath === file.path ? 'text-[var(--color-primary)]' : ''} />
+                      <FileCode size={14} className={selectedFilePath === file.path ? 'text-orange-500' : 'text-white/40'} />
                       <span className="truncate">{file.path}</span>
                     </button>
                   ))}
@@ -610,37 +636,34 @@ export const Preview: React.FC<PreviewProps> = ({
               </div>
 
               {/* Code Editor/Viewer */}
-              <div className="flex-1 flex flex-col overflow-hidden relative">
-                <AnimatePresence>
-                  {showActionHistory && (
-                    <motion.div 
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
-                      className={`absolute right-4 top-14 bottom-4 w-80 ${isDark ? 'bg-[#1A1A1A] border-white/10' : 'bg-white border-slate-300'} border rounded-2xl shadow-2xl z-10 flex flex-col overflow-hidden`}
-                    >
-                      <div className="p-4 border-b border-slate-200 flex items-center justify-between">
-                        <span className="text-xs font-bold uppercase tracking-widest text-slate-700">Action History</span>
-                        <button onClick={() => setShowActionHistory(false)} className="text-slate-500 hover:text-slate-800">
-                          <X size={14} />
-                        </button>
-                      </div>
-                      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                        <div className="flex flex-col items-center justify-center py-12 text-slate-500">
-                          <History size={32} className="mb-4 opacity-30" />
-                          <p className="text-xs font-medium">No history recorded yet.</p>
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                <div className={`h-10 ${isDark ? 'bg-[#141414] border-white/5' : 'bg-slate-100 border-slate-200'} border-b flex items-center px-4 justify-between shrink-0`}>
-                  <div className="flex items-center gap-2">
-                    <span className={`text-[10px] font-mono font-bold ${isDark ? 'text-white/60' : 'text-slate-800'}`}>{selectedFilePath || 'index.html'}</span>
-                    <span className="text-[10px] px-2 py-0.5 rounded bg-[var(--color-primary)]/10 text-[var(--color-primary)] font-bold uppercase">{selectedFilePath?.split('.').pop() || 'html'}</span>
+              <div className="flex-1 flex flex-col overflow-hidden relative min-w-0">
+                {/* Editor Sub-Header Bar */}
+                <div className={`h-10 ${isDark ? 'bg-[#141414] border-white/5' : 'bg-slate-100 border-slate-200'} border-b flex items-center px-3 sm:px-4 justify-between gap-2 shrink-0`}>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className={`text-[11px] font-mono font-bold truncate ${isDark ? 'text-white/80' : 'text-slate-800'}`}>
+                      {selectedFilePath || 'index.html'}
+                    </span>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-orange-500/15 text-orange-400 font-bold uppercase">
+                      {selectedFilePath?.split('.').pop() || 'html'}
+                    </span>
                   </div>
-                  <div className="flex items-center gap-2">
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {/* Wrap Lines Toggle */}
+                    <button
+                      onClick={() => setIsWrapLines(!isWrapLines)}
+                      className={`p-1.5 rounded-lg text-xs font-medium flex items-center gap-1 transition-all ${
+                        isWrapLines 
+                          ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' 
+                          : isDark ? 'text-white/50 hover:bg-white/5 hover:text-white' : 'text-slate-600 hover:bg-slate-200'
+                      }`}
+                      title={isWrapLines ? "Désactiver le retour à la ligne automatique" : "Activer le retour à la ligne automatique"}
+                    >
+                      <WrapText size={13} />
+                      <span className="hidden sm:inline text-[10px]">{isWrapLines ? "Wrap On" : "Wrap Off"}</span>
+                    </button>
+
+                    {/* Copy Button */}
                     <button
                       onClick={() => {
                         const codeToCopy = selectedFile?.content || (selectedFilePath === 'index.html' ? generatedCode : '') || generatedCode || '';
@@ -648,27 +671,33 @@ export const Preview: React.FC<PreviewProps> = ({
                         setIsCopied(true);
                         setTimeout(() => setIsCopied(false), 2000);
                       }}
-                      className={`px-2.5 py-1 rounded text-[10px] font-bold flex items-center gap-1 transition-all ${
+                      className={`px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all ${
                         isCopied 
-                          ? 'bg-emerald-500/20 text-emerald-600 border border-emerald-500/30' 
-                          : isDark ? 'bg-white/5 hover:bg-white/10 text-white/70' : 'bg-slate-200 hover:bg-slate-300 text-slate-800'
+                          ? 'bg-emerald-500 text-white shadow-xs' 
+                          : isDark ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-slate-200 hover:bg-slate-300 text-slate-800'
                       }`}
                     >
-                      {isCopied ? 'Copié !' : 'Copier'}
+                      {isCopied ? <Check size={11} /> : <Copy size={11} />}
+                      <span>{isCopied ? 'Copié' : 'Copier'}</span>
                     </button>
+
+                    {/* Edit Mode Toggle */}
                     <button
                       onClick={() => setIsEditingCode(!isEditingCode)}
-                      className={`px-2.5 py-1 rounded text-[10px] font-bold flex items-center gap-1 transition-all ${
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all ${
                         isEditingCode 
-                          ? 'bg-[var(--color-primary)] text-white shadow' 
+                          ? 'bg-orange-500 text-white shadow-xs' 
                           : isDark ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold'
                       }`}
                     >
-                      {isEditingCode ? 'Mode Lecture' : 'Éditer Code'}
+                      {isEditingCode ? <BookOpen size={11} /> : <Pencil size={11} />}
+                      <span>{isEditingCode ? 'Lecture' : 'Éditer'}</span>
                     </button>
                   </div>
                 </div>
-                <div className="flex-1 overflow-auto scrollbar-hide relative flex flex-col">
+
+                {/* Editor Content Area */}
+                <div className="flex-1 overflow-auto scrollbar-hide relative flex flex-col bg-[#0D0D0D]">
                   {isEditingCode ? (
                     <textarea
                       value={editableCode}
@@ -683,31 +712,55 @@ export const Preview: React.FC<PreviewProps> = ({
                           onCodeChange(newBundle);
                         }
                       }}
-                      className={`w-full h-full flex-1 p-6 font-mono text-xs leading-relaxed resize-none focus:outline-none ${
-                        isDark ? 'bg-[#0D0D0D] text-emerald-400 selection:bg-[var(--color-primary)]/30' : 'bg-slate-900 text-emerald-300 selection:bg-[var(--color-primary)]/30'
-                      }`}
+                      className="w-full h-full flex-1 p-4 sm:p-6 font-mono text-xs leading-relaxed resize-none focus:outline-none bg-[#0D0D0D] text-emerald-400 selection:bg-orange-500/30"
                       placeholder="Saisissez ou collez votre code ici..."
                       spellCheck={false}
+                      autoCapitalize="off"
+                      autoCorrect="off"
                     />
                   ) : (
-                    <SyntaxHighlighter
-                      language={selectedFilePath?.split('.').pop() || 'html'}
-                      style={isDark ? tomorrow : oneLight}
-                      customStyle={{
-                        margin: 0,
-                        padding: '24px',
-                        fontSize: '13px',
-                        lineHeight: '1.6',
-                        background: 'transparent',
-                      }}
-                      codeTagProps={{
-                        style: {
-                          fontFamily: 'JetBrains Mono, monospace',
-                        }
-                      }}
-                    >
-                      {selectedFile?.content || generatedCode || "<!-- Aucun code disponible pour le moment -->"}
-                    </SyntaxHighlighter>
+                    <div className="w-full h-full flex-1 min-w-0">
+                      {selectedFile?.content || generatedCode ? (
+                        <SyntaxHighlighter
+                          language={selectedFilePath?.split('.').pop() || 'html'}
+                          style={tomorrow}
+                          wrapLongLines={isWrapLines}
+                          customStyle={{
+                            margin: 0,
+                            padding: '16px',
+                            fontSize: '12px',
+                            lineHeight: '1.6',
+                            background: '#0D0D0D',
+                            minHeight: '100%',
+                            width: '100%',
+                            boxSizing: 'border-box'
+                          }}
+                          codeTagProps={{
+                            style: {
+                              fontFamily: 'JetBrains Mono, Menlo, monospace',
+                            }
+                          }}
+                        >
+                          {selectedFile?.content || generatedCode || ""}
+                        </SyntaxHighlighter>
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center text-white/50">
+                          <Code2 size={40} className="text-white/20 mb-3" />
+                          <h4 className="text-sm font-bold text-white/80 mb-1">Aucun code généré pour le moment</h4>
+                          <p className="text-xs text-white/40 max-w-xs mb-4">
+                            Générez une application depuis le Chat pour inspecter et modifier ses fichiers en temps réel.
+                          </p>
+                          {onSwitchToChat && (
+                            <button
+                              onClick={onSwitchToChat}
+                              className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl text-xs transition-all shadow-sm"
+                            >
+                              Générer dans le Chat
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
@@ -740,3 +793,4 @@ export const Preview: React.FC<PreviewProps> = ({
     </section>
   );
 };
+
