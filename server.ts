@@ -420,6 +420,26 @@ async function processTask(id: string) {
 export const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 
+// URL normalization middleware for Vercel / Netlify / Cloud Run
+app.use((req, res, next) => {
+  // If Vercel/Netlify strips /api prefix from the rewritten path, restore it
+  if (!req.url.startsWith('/api') && (
+    req.url.startsWith('/ai/') || 
+    req.url.startsWith('/deploy') || 
+    req.url.startsWith('/watchdog/') || 
+    req.url.startsWith('/supabase/') || 
+    req.url.startsWith('/admin/') ||
+    req.url.startsWith('/auth/') ||
+    req.url.startsWith('/github/') ||
+    req.url.startsWith('/unsplash/') ||
+    req.url.startsWith('/announcement') ||
+    req.url.startsWith('/check-user-ban')
+  )) {
+    req.url = '/api' + req.url;
+  }
+  next();
+});
+
 // Trust proxy for Cloud Run / reverse proxies
 app.set('trust proxy', 1);
 
@@ -1493,8 +1513,9 @@ Return the response EXCLUSIVELY in JSON format with three fields (do not include
 
 // Vite middleware for development
 async function startViteServer() {
-  const isServerless = process.env.NETLIFY || process.env.VERCEL || process.env.VERCEL_ENV || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.LAMBDA_TASK_ROOT;
+  const isServerless = !!(process.env.NETLIFY || process.env.VERCEL || process.env.VERCEL_ENV || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.LAMBDA_TASK_ROOT);
   if (isServerless) {
+    console.log("[Server] Running in Serverless mode (Vercel/Netlify). Port listener skipped.");
     return;
   }
 
@@ -1520,7 +1541,7 @@ async function startViteServer() {
   }
 
   // Only listen if not running in a serverless environment (like Netlify/Vercel functions)
-  if (process.env.NODE_ENV !== "test") {
+  if (!isServerless && process.env.NODE_ENV !== "test") {
     app.listen(PORT, "0.0.0.0", () => {
       console.log(`Server running on http://localhost:${PORT}`);
     });

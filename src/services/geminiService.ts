@@ -737,6 +737,43 @@ const generateWithAIFallback = async (
     } catch (e) {
       errMsg = responseText || response.statusText || `HTTP Status ${response.status}`;
     }
+
+    // Direct browser fallback if backend serverless error occurs
+    try {
+      const headers = getCustomHeaders();
+      const directOpenRouterKey = headers['x-openrouter-key'] || (import.meta as any).env?.VITE_OPENROUTER_API_KEY;
+      if (directOpenRouterKey) {
+        console.log("[Client Fallback] Server failed, trying direct OpenRouter call from browser...");
+        const openRouterRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${directOpenRouterKey}`,
+            "Content-Type": "application/json",
+            "HTTP-Referer": window.location.origin,
+            "X-Title": "COOK IA"
+          },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-flash:free",
+            messages: [
+              { role: "system", content: systemInstruction },
+              { role: "user", content: prompt }
+            ],
+            response_format: { type: "json_object" }
+          })
+        });
+
+        if (openRouterRes.ok) {
+          const data = await openRouterRes.json();
+          const content = data.choices?.[0]?.message?.content;
+          if (content) {
+            return cleanAndParseJSON(content);
+          }
+        }
+      }
+    } catch (directErr) {
+      console.warn("[Client Direct Fallback] Error:", directErr);
+    }
+
     throw new Error(`AI Fallback Error: ${errMsg}`);
   }
 
