@@ -19,9 +19,12 @@ import {
   Sliders,
   ExternalLink,
   ChevronRight,
-  UserCircle
+  UserCircle,
+  FileText,
+  Cookie
 } from 'lucide-react';
 import { translations, Language } from '../translations';
+import { LegalModal, LegalTabType } from './LegalModal';
 
 interface LandingPageProps {
   onEnter: (prompt?: string) => void;
@@ -45,6 +48,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnter, lang, setLang
   
   const [activeDemo, setActiveDemo] = useState<DemoTab>('saas');
   const [displayedLineCount, setDisplayedLineCount] = useState<number>(100);
+  const [legalModalOpen, setLegalModalOpen] = useState(false);
+  const [legalModalTab, setLegalModalTab] = useState<LegalTabType>('privacy');
+
+  const openLegal = (tab: LegalTabType) => {
+    setLegalModalTab(tab);
+    setLegalModalOpen(true);
+  };
 
   const demoTemplates: Record<DemoTab, CodeSnippet> = useMemo(() => ({
     saas: {
@@ -495,13 +505,39 @@ export default function Portfolio() {
       </section>
 
       {/* FOOTER */}
-      <footer className="py-8 text-center text-slate-500 text-xs font-mono border-t border-[var(--color-border-light)] relative z-10">
-        <p>© {new Date().getFullYear()} Cook IA par Benit Madimba. Tous droits réservés.</p>
-        <div className="flex items-center justify-center gap-4 mt-4">
-          <a href="#" className="hover:text-[var(--color-primary)] transition-colors">Politique de confidentialité</a>
-          <a href="#" className="hover:text-[var(--color-primary)] transition-colors">Conditions d'utilisation</a>
+      <footer className="py-8 text-center text-slate-500 text-xs font-mono border-t border-[var(--color-border-light)] relative z-10 px-4">
+        <p className="leading-relaxed">© {new Date().getFullYear()} Cook IA par Benit Madimba. Tous droits réservés.</p>
+        <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-6 mt-4">
+          <button 
+            onClick={() => openLegal('privacy')}
+            className="hover:text-[var(--color-primary)] transition-colors underline-offset-4 hover:underline cursor-pointer"
+          >
+            Politique de confidentialité
+          </button>
+          <span className="text-slate-300 select-none">•</span>
+          <button 
+            onClick={() => openLegal('tos')}
+            className="hover:text-[var(--color-primary)] transition-colors underline-offset-4 hover:underline cursor-pointer"
+          >
+            Conditions d'utilisation
+          </button>
+          <span className="text-slate-300 select-none">•</span>
+          <button 
+            onClick={() => openLegal('cookies')}
+            className="hover:text-[var(--color-primary)] transition-colors underline-offset-4 hover:underline cursor-pointer"
+          >
+            Politique des cookies
+          </button>
         </div>
       </footer>
+
+      {/* COMPREHENSIVE LEGAL & PRIVACY MODAL */}
+      <LegalModal
+        isOpen={legalModalOpen}
+        initialTab={legalModalTab}
+        onClose={() => setLegalModalOpen(false)}
+        isDark={false}
+      />
     </div>
   );
 };
