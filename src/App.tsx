@@ -1124,7 +1124,50 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
         enrichedUserMessage += "\n\nReference Images (URLs):\n" + urls.join('\n');
       }
 
-      // If existing code is present, pass it as baseline for modification and emit read event
+      // CHECK IF IN CHAT MODE (NO CODE) OR USER IS ASKING AN INFORMATIONAL QUESTION
+      const isChatMode = aiMode === 'chat' || isInformationalQuestion(userMessage, !!generatedCode);
+
+      if (isChatMode) {
+        liveActionManager.completeEvent(liveTask.id, evtAnalysisId);
+        setCurrentAgentStage('architect');
+        setLoadingStatus(lang === 'fr' 
+          ? (aiMode === 'chat' ? "💬 [Mode Conversation] Rédaction de la réponse..." : "💬 [Assistant COOK IA] Rédaction de la réponse détaillée...") 
+          : (aiMode === 'chat' ? "💬 [Chat Mode] Writing response..." : "💬 [COOK IA Assistant] Processing question..."));
+
+        let chatContextMessage = userMessage;
+        if (profilePromptContext) {
+          chatContextMessage += profilePromptContext;
+        }
+        if (urls.length > 0) {
+          chatContextMessage += "\n\nReference Images:\n" + urls.join('\n');
+        }
+        if (generatedCode && generatedCode.trim().length > 100) {
+          chatContextMessage += `\n\n[CONTEXTE DU SITE WEB ACTUEL DE L'UTILISATEUR (POUR DISCUSSION ET CONSEIL SEULEMENT - NE PAS GÉNÉRER DE NOUVEAU CODE)] :\nVoici l'extrait du code du site actuel de l'utilisateur pour analyser son interface et répondre précisément à ses questions :\n\`\`\`html\n${generatedCode.substring(0, 14000)}\n\`\`\``;
+        }
+
+        const aQa = addAction('thought', lang === 'fr' 
+          ? "💬 [Mode Conversation Actif] Réponse textuelle détaillée sans modification du code..." 
+          : "💬 [Chat Mode Active] Detailed text response without modifying code...");
+
+        const textResponse = await answerQuestion(chatContextMessage, history.slice(0, -1), selectedModel);
+        completeAction(aQa);
+        
+        liveActionManager.finishTask(liveTask.id, 'completed');
+
+        const updatedMessages: Message[] = [...newMessages, { 
+          role: 'model', 
+          content: textResponse,
+          code: generatedCode, // PRESERVE EXISTING GENERATED CODE UNTOUCHED
+          modelName: selectedModel
+        }];
+        setMessages(updatedMessages);
+        await saveConversation(updatedMessages);
+        setIsLoading(false);
+        setCurrentAgentStage('complete');
+        return;
+      }
+
+      // If existing code is present for CODE MODIFICATION, pass it as baseline for modification and emit read event
       if (generatedCode && generatedCode.trim().length > 100) {
         const evtReadCodeId = liveActionManager.startEvent(liveTask.id, {
           type: 'file_operation',
@@ -1138,45 +1181,6 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
       }
 
       liveActionManager.completeEvent(liveTask.id, evtAnalysisId);
-
-      // CHECK IF IN CHAT MODE (NO CODE) OR USER IS ASKING AN INFORMATIONAL QUESTION
-      if (aiMode === 'chat' || isInformationalQuestion(userMessage, !!generatedCode)) {
-        setCurrentAgentStage('architect');
-        setLoadingStatus(lang === 'fr' 
-          ? (aiMode === 'chat' ? "💬 [Mode Conversation] Réponse directe (sans code)..." : "💬 [Assistant COOK IA] Traitement de votre question...") 
-          : (aiMode === 'chat' ? "💬 [Chat Mode] Answering (No Code)..." : "💬 [COOK IA Assistant] Processing question..."));
-        
-        const evtChatId = liveActionManager.startEvent(liveTask.id, {
-          type: 'analysis',
-          group: 'analysis',
-          tool: 'chat_response',
-          title: lang === 'fr' ? 'Génération de la réponse conversationnelle' : 'Generating conversational response'
-        });
-
-        const aQa = addAction('thought', lang === 'fr' 
-          ? (aiMode === 'chat' ? "💬 [Mode Conversation Actif] Réponse textuelle conversationnelle sans génération de code..." : "💬 [Assistant IA] Réponse directe à votre question sans modification du site web...") 
-          : (aiMode === 'chat' ? "💬 [Chat Mode Active] Text response without generating code..." : "💬 [AI Assistant] Answering question directly without modifying website..."));
-
-        const textResponse = await answerQuestion(enrichedUserMessage, history.slice(0, -1), selectedModel);
-        completeAction(aQa);
-        liveActionManager.completeEvent(liveTask.id, evtChatId);
-        liveActionManager.finishTask(liveTask.id, 'completed');
-        const finalChatTask = liveActionManager.getTask(liveTask.id) || liveTask;
-
-        const updatedMessages: Message[] = [...newMessages, { 
-          role: 'model', 
-          content: textResponse,
-          code: generatedCode, // PRESERVE EXISTING GENERATED CODE UNTOUCHED
-          liveTask: { ...finalChatTask, events: [...finalChatTask.events] },
-          liveEvents: [...finalChatTask.events],
-          actionHistory: currentActions
-        }];
-        setMessages(updatedMessages);
-        await saveConversation(updatedMessages);
-        setIsLoading(false);
-        setCurrentAgentStage('complete');
-        return;
-      }
 
       // STAGE 1: PROMPT ARCHITECT
       setCurrentAgentStage('architect');

@@ -43,6 +43,7 @@ import { UnderwaterWelcome } from './UnderwaterWelcome';
 import { MessageActionOverlay } from './MessageActionOverlay';
 import { TypingIndicator } from './TypingIndicator';
 import { LiveActionsPanel } from './LiveActionsPanel';
+import { MarkdownRenderer } from './MarkdownRenderer';
 import { translations, Language } from '../translations';
 
 interface ChatInterfaceProps {
@@ -421,15 +422,10 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                         {msg.content}
                       </div>
                     ) : (
-                      <div 
-                        className={`prose prose-sm max-w-none break-words ${
-                          isUser
-                            ? 'text-white prose-invert prose-p:text-white prose-headings:text-white prose-strong:text-white prose-code:text-amber-300 font-medium'
-                            : (isDark 
-                                ? 'prose-invert text-slate-100 prose-p:text-slate-100 prose-strong:text-white font-normal' 
-                                : 'text-slate-900 prose-p:text-slate-800 prose-headings:text-slate-950 prose-strong:text-slate-950 font-normal')
-                        }`}
-                        dangerouslySetInnerHTML={{ __html: (msg.content || '').replace(/\n/g, '<br />') }} 
+                      <MarkdownRenderer 
+                        content={msg.content || ''} 
+                        isDark={isDark} 
+                        isUser={isUser} 
                       />
                     )}
 
@@ -493,7 +489,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                           </button>
                         </div>
 
-                        {onSelectView && (
+                        {onSelectView && (msg.files && msg.files.length > 0) ? (
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => onSelectView('code')}
@@ -521,7 +517,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                               <span>{lang === 'fr' ? "Aperçu Direct" : "Live Preview"}</span>
                             </button>
                           </div>
-                        )}
+                        ) : null}
                       </div>
                     )}
                   </div>

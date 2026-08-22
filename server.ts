@@ -335,7 +335,11 @@ async function runMultiProviderCycle(params: {
   }
 
   return {
-    text: `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Application Cook IA</title><script src="https://cdn.tailwindcss.com"></script><script src="https://unpkg.com/lucide@latest"></script></head><body class="bg-slate-950 text-white min-h-screen font-sans flex flex-col items-center justify-center p-6"><div class="max-w-xl w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center space-y-6 shadow-2xl"><div class="w-16 h-16 bg-orange-500/20 text-orange-400 rounded-2xl flex items-center justify-center mx-auto border border-orange-500/30"><i data-lucide="sparkles" class="w-8 h-8"></i></div><h1 class="text-3xl font-extrabold tracking-tight">Application Prête</h1><p class="text-slate-400 text-sm leading-relaxed">Votre interface a été générée et optimisée avec Tailwind CSS et des composants fonctionnels.</p><div class="flex justify-center gap-3"><button onclick="location.reload()" class="px-6 py-3 bg-orange-500 text-white font-bold rounded-xl hover:bg-orange-600 transition-all text-xs uppercase tracking-wider">Actualiser</button></div></div><script>lucide.createIcons();</script></body></html>`,
+    text: `Bonjour ! Je suis **Cook IA**, votre architecte et assistant de développement web.
+
+Je suis à votre entière disposition pour répondre à toutes vos questions, analyser le code de votre projet, vous conseiller sur l'ergonomie (desktop et mobile), ou discuter de nouvelles idées d'interface.
+
+Que souhaitez-vous savoir ou explorer en détail ?`,
     provider: "resilient-engine"
   };
 }

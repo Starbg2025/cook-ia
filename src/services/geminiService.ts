@@ -1074,35 +1074,70 @@ export const answerQuestion = async (
 ) => {
   const customContext = getUserProfilePromptContext();
 
-  const qaInstruction = customInstructionOverride || `Tu es COOK IA, un assistant conversationnel et d'ingénierie web de classe mondiale créé par Benit Madimba. L'utilisateur échange avec toi dans un mode d'assistance directe (style ChatGPT / Claude). Réponds-lui de manière claire, concise, chaleureuse, structurée et précise en français avec du formatage Markdown si utile. Ne génère PAS de site web HTML complet ni de blocs de code complexes non sollicités, réponds de façon textuelle naturelle et intelligente.${customContext}`;
+  const qaInstruction = customInstructionOverride || `Tu es COOK IA, un assistant conversationnel et architecte web expert créé par Benit Madimba.
+L'utilisateur échange avec toi en direct (mode conversation / assistance style ChatGPT & Claude).
+
+RÈGLES DE RÉPONSE CONVERSATIONNELLE :
+1. Réponds de façon naturelle, précise, chaleureuse, pédagogique et bien détaillée en français.
+2. Structure tes explications avec un formatage Markdown élégant (titres ###, listes à puces, texte en **gras**, extraits de code courts si nécessaire).
+3. Si l'utilisateur pose une question ou fait une remarque sur son site actuel (ex: rendu mobile, ergonomie, design, fonctionnalités), analyse le contexte fourni et donne-lui des conseils concrets et actionnables.
+4. Ne génère PAS de fichier JSON, ne génère pas de balises JSON. Réponds directement en texte conversationnel pur comme ChatGPT.
+${customContext}`;
   
   const hasUserKey = !!getCustomHeaders()['x-gemini-key'];
-  const isHealthy = shadowWatchdog.isHealthy();
-  const isGemini = model.startsWith("gemini-") || model.startsWith("google/");
-
   const fullPrompt = customContext ? `${prompt}\n\n${customContext}` : prompt;
-
-  if ((!isHealthy || !isGemini) && !hasUserKey) {
-    try {
-      const res = await generateWithAIFallback(fullPrompt, history, undefined, model);
-      return typeof res === 'string' ? res : (res.explanation || (res as any).text || JSON.stringify(res));
-    } catch (e: any) {
-      return "Je suis à votre disposition pour répondre à toutes vos questions.";
-    }
-  }
 
   try {
     const text = await callGeminiProxy(fullPrompt, history, qaInstruction, model);
-    return text;
+    if (text && typeof text === 'string' && text.trim().length > 0) {
+      return text;
+    }
   } catch (error: any) {
     if (isInvalidUserKeyError(error.message, hasUserKey)) throw error;
-    try {
-      const res = await generateWithAIFallback(fullPrompt, history, undefined, model);
-      return typeof res === 'string' ? res : (res.explanation || (res as any).text || JSON.stringify(res));
-    } catch (e) {
-      return "Je suis à votre disposition pour répondre à toutes vos questions.";
-    }
+    console.debug("[answerQuestion] Primary call note, trying direct OpenRouter / Groq text fallback...", error);
   }
+
+  // Multi-provider conversational text fallback
+  try {
+    const headers = getCustomHeaders();
+    const directOpenRouterKey = headers['x-openrouter-key'] || (import.meta as any).env?.VITE_OPENROUTER_API_KEY;
+    if (directOpenRouterKey) {
+      const openRouterRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${directOpenRouterKey}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": window.location.origin,
+          "X-Title": "COOK IA"
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash:free",
+          messages: [
+            { role: "system", content: qaInstruction },
+            ...(history || []).map((h: any) => ({
+              role: h.role === "model" || h.role === "assistant" ? "assistant" : "user",
+              content: typeof h.parts === 'string' ? h.parts : (Array.isArray(h.parts) ? h.parts.map((p: any) => p.text || '').join('\n') : String(h.content || ''))
+            })),
+            { role: "user", content: fullPrompt }
+          ]
+        })
+      });
+
+      if (openRouterRes.ok) {
+        const data = await openRouterRes.json();
+        const content = data.choices?.[0]?.message?.content;
+        if (content && typeof content === 'string') {
+          return content;
+        }
+      }
+    }
+  } catch (fallbackErr) {
+    console.warn("[answerQuestion] Direct fallback note:", fallbackErr);
+  }
+
+  return `Bonjour ! Je suis **Cook IA**, votre architecte et assistant de développement web.
+
+Je suis à votre disposition pour vous répondre en détail et vous conseiller sur votre projet. Pourriez-vous préciser votre question ou ce que vous aimeriez améliorer ?`;
 };
 
 export const generateTitle = async (prompt: string) => {
