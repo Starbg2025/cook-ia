@@ -1493,7 +1493,7 @@ Return the response EXCLUSIVELY in JSON format with three fields (do not include
 
 // Vite middleware for development
 async function startViteServer() {
-  const isServerless = process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.LAMBDA_TASK_ROOT;
+  const isServerless = process.env.NETLIFY || process.env.VERCEL || process.env.VERCEL_ENV || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.LAMBDA_TASK_ROOT;
   if (isServerless) {
     return;
   }
@@ -1519,7 +1519,7 @@ async function startViteServer() {
     });
   }
 
-  // Only listen if not running in a serverless environment (like Netlify functions)
+  // Only listen if not running in a serverless environment (like Netlify/Vercel functions)
   if (process.env.NODE_ENV !== "test") {
     app.listen(PORT, "0.0.0.0", () => {
       console.log(`Server running on http://localhost:${PORT}`);
@@ -1528,3 +1528,5 @@ async function startViteServer() {
 }
 
 startViteServer();
+
+export default app;
