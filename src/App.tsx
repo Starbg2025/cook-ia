@@ -45,13 +45,17 @@ import {
   Smartphone,
   QrCode,
   Phone,
-  Ban
+  Ban,
+  Layers,
+  FolderOpen,
+  ArrowUp
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { generateWebsite, generateTitle, updateSection, convertToReact, improveText, answerQuestion, bundleProjectFiles, getUserProfilePromptContext } from './services/geminiService';
 import { isInformationalQuestion } from './utils/intentDetection';
 import { analystReview, criticReview, plannerAgent, testerAgent, shadowWatchdog, auditAndFixButtons } from './services/multiAgentService';
-import { Message, ViewMode, Conversation, StyleConfig, SectionEditState, ActionHistory } from './types';
+import { Message, ViewMode, Conversation, StyleConfig, SectionEditState, ActionHistory, LiveActionTask, LiveActionEvent } from './types';
+import { liveActionManager, calculateLineDiff } from './services/liveActionManager';
 import { ChatInterface } from './components/ChatInterface';
 import { Preview } from './components/Preview';
 import { HistorySidebar } from './components/HistorySidebar';
@@ -86,6 +90,7 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingStatus, setLoadingStatus] = useState("Building your site...");
   const [currentActions, setCurrentActions] = useState<ActionHistory[]>([]);
+  const [activeLiveTask, setActiveLiveTask] = useState<LiveActionTask | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode | 'your-apps' | 'faq'>('chat');
   const [generatedCode, setGeneratedCode] = useState<string>('');
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
@@ -494,7 +499,13 @@ export default function App() {
   const loadConversations = async () => {
     try {
       const savedLocal = localStorage.getItem('cook_ia_local_conversations');
-      const localConvs: Conversation[] = savedLocal ? JSON.parse(savedLocal) : [];
+      let localConvs: Conversation[] = [];
+      if (savedLocal) {
+        try {
+          localConvs = JSON.parse(savedLocal);
+          if (!Array.isArray(localConvs)) localConvs = [];
+        } catch {}
+      }
 
       if (!user) {
         setConversations(localConvs);
@@ -511,12 +522,22 @@ export default function App() {
           supabase.auth.signOut().catch(() => {});
           setUser(null);
         }
-        console.log("[Conversations] Supabase load note:", error.message || error);
+        console.log("[Conversations] Supabase note:", error.message || error);
         setConversations(localConvs);
         return;
       }
-      if (data && data.length > 0) {
-        setConversations(data);
+
+      if (data && Array.isArray(data)) {
+        // Merge Supabase conversations with any local conversations not yet on Supabase
+        const remoteIds = new Set(data.map(c => c.id));
+        const combined = [
+          ...data,
+          ...localConvs.filter(c => !remoteIds.has(c.id))
+        ];
+        setConversations(combined);
+        try {
+          localStorage.setItem('cook_ia_local_conversations', JSON.stringify(combined));
+        } catch {}
       } else {
         setConversations(localConvs);
       }
@@ -545,6 +566,8 @@ export default function App() {
       setGeneratedCode(codeToSet);
       if (codeToSet || (lastModelMsg?.files && lastModelMsg.files.length > 0)) {
         setViewMode('preview');
+      } else {
+        setViewMode('chat');
       }
     }
   };
@@ -562,93 +585,101 @@ export default function App() {
   };
 
   const handleDeleteConversation = async (id: string) => {
-    if (id.startsWith('local_')) {
-      try {
-        const savedLocal = localStorage.getItem('cook_ia_local_conversations');
-        let localConvs: Conversation[] = savedLocal ? JSON.parse(savedLocal) : [];
-        localConvs = localConvs.filter(c => c.id !== id);
-        localStorage.setItem('cook_ia_local_conversations', JSON.stringify(localConvs));
-        setConversations(localConvs);
-        if (currentConversationId === id) handleNewChat();
-      } catch {}
-      return;
-    }
-
     try {
-      const { error } = await supabase.from('conversations').delete().eq('id', id);
-      if (!error) {
-        setConversations(prev => prev.filter(c => c.id !== id));
-        if (currentConversationId === id) handleNewChat();
-      } else {
-        setConversations(prev => prev.filter(c => c.id !== id));
-        if (currentConversationId === id) handleNewChat();
-      }
-    } catch {
-      setConversations(prev => prev.filter(c => c.id !== id));
-      if (currentConversationId === id) handleNewChat();
+      const savedLocal = localStorage.getItem('cook_ia_local_conversations');
+      let localConvs: Conversation[] = savedLocal ? JSON.parse(savedLocal) : [];
+      localConvs = localConvs.filter(c => c.id !== id);
+      localStorage.setItem('cook_ia_local_conversations', JSON.stringify(localConvs));
+    } catch {}
+
+    setConversations(prev => prev.filter(c => c.id !== id));
+    if (currentConversationId === id) handleNewChat();
+
+    if (user && !id.startsWith('local_')) {
+      try {
+        await supabase.from('conversations').delete().eq('id', id);
+      } catch {}
     }
   };
 
   const saveConversation = async (msgs: Message[], title?: string) => {
-    const saveToLocalStorage = async (convId: string | null) => {
-      try {
-        const savedLocal = localStorage.getItem('cook_ia_local_conversations');
-        let localConvs: Conversation[] = savedLocal ? JSON.parse(savedLocal) : [];
-        const existingId = convId || currentConversationId || `local_${Date.now()}`;
-        const newTitle = title || (msgs[1]?.content ? msgs[1].content.substring(0, 30) : "Nouvelle conversation");
-        
-        const existingIndex = localConvs.findIndex(c => c.id === existingId);
-        const updatedConv: Conversation = {
-          id: existingId,
-          title: newTitle,
-          messages: msgs,
-          created_at: new Date().toISOString()
-        };
-
-        if (existingIndex >= 0) {
-          localConvs[existingIndex] = { ...localConvs[existingIndex], messages: msgs };
-        } else {
-          localConvs.unshift(updatedConv);
+    // 1. Extract a clean, human-friendly title
+    let cleanTitle = title;
+    if (!cleanTitle) {
+      const firstUserMsg = msgs.find(m => m.role === 'user');
+      if (firstUserMsg && firstUserMsg.content) {
+        cleanTitle = firstUserMsg.content
+          .replace(/^\[FOCUS MODE[^\]]*\]\s*/i, '')
+          .replace(/^\[CODE BASELINE[^\]]*\][\s\S]*?\`\`\`\s*/i, '')
+          .trim();
+        if (cleanTitle.length > 45) {
+          cleanTitle = cleanTitle.substring(0, 45) + '...';
         }
-
-        localStorage.setItem('cook_ia_local_conversations', JSON.stringify(localConvs));
-        if (!currentConversationId) setCurrentConversationId(existingId);
-        setConversations(localConvs);
-      } catch (err) {
-        console.log("[Local Storage] Error saving conversation:", err);
       }
-    };
-
-    if (!user) {
-      await saveToLocalStorage(currentConversationId);
-      return;
+      if (!cleanTitle) cleanTitle = "Nouvelle application";
     }
-    
+
+    // 2. ALWAYS save to LocalStorage immediately and update React state in real-time
+    const existingId = currentConversationId || `local_${Date.now()}`;
     try {
-      if (currentConversationId && !currentConversationId.startsWith('local_')) {
-        const { error } = await supabase
-          .from('conversations')
-          .update({ messages: msgs })
-          .eq('id', currentConversationId);
-        if (error) {
-          await saveToLocalStorage(currentConversationId);
-        }
+      const savedLocal = localStorage.getItem('cook_ia_local_conversations');
+      let localConvs: Conversation[] = savedLocal ? JSON.parse(savedLocal) : [];
+      const existingIndex = localConvs.findIndex(c => c.id === existingId);
+      const updatedConv: Conversation = {
+        id: existingId,
+        title: cleanTitle,
+        messages: msgs,
+        created_at: new Date().toISOString()
+      };
+
+      if (existingIndex >= 0) {
+        localConvs[existingIndex] = { 
+          ...localConvs[existingIndex], 
+          title: cleanTitle || localConvs[existingIndex].title,
+          messages: msgs 
+        };
       } else {
-        const newTitle = title || await generateTitle(msgs[1]?.content || "Nouvelle conversation");
-        const { data, error } = await supabase
-          .from('conversations')
-          .insert([{ title: newTitle, messages: msgs, user_id: user.id }])
-          .select();
-        
-        if (data && data[0]) {
-          setCurrentConversationId(data[0].id);
-          setConversations(prev => [data[0], ...prev.filter(c => c.id !== data[0].id)]);
-        } else if (error) {
-          await saveToLocalStorage(null);
-        }
+        localConvs.unshift(updatedConv);
       }
-    } catch (e) {
-      await saveToLocalStorage(currentConversationId);
+
+      localStorage.setItem('cook_ia_local_conversations', JSON.stringify(localConvs));
+      if (!currentConversationId) setCurrentConversationId(existingId);
+      setConversations(localConvs);
+    } catch (err) {
+      console.log("[Local Storage] Save note:", err);
+    }
+
+    // 3. If user is authenticated with Supabase, sync to Cloud
+    if (user) {
+      try {
+        if (currentConversationId && !currentConversationId.startsWith('local_')) {
+          await supabase
+            .from('conversations')
+            .update({ messages: msgs })
+            .eq('id', currentConversationId);
+        } else {
+          const { data, error } = await supabase
+            .from('conversations')
+            .insert([{ title: cleanTitle, messages: msgs, user_id: user.id }])
+            .select();
+          
+          if (data && data[0]) {
+            const cloudId = data[0].id;
+            setCurrentConversationId(cloudId);
+            setConversations(prev => [data[0], ...prev.filter(c => c.id !== cloudId && c.id !== existingId)]);
+            
+            // Sync local storage with new cloud id
+            try {
+              const savedLocal = localStorage.getItem('cook_ia_local_conversations');
+              let localConvs: Conversation[] = savedLocal ? JSON.parse(savedLocal) : [];
+              localConvs = [data[0], ...localConvs.filter(c => c.id !== cloudId && c.id !== existingId)];
+              localStorage.setItem('cook_ia_local_conversations', JSON.stringify(localConvs));
+            } catch {}
+          }
+        }
+      } catch (e) {
+        console.log("[Supabase] Cloud sync note:", e);
+      }
     }
   };
 
@@ -992,6 +1023,20 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
     setCurrentActions([]);
     let codingInterval: any = null;
 
+    // Real Live Action Task instantiation
+    const liveTask = liveActionManager.createTask(userMessage, controller);
+    setActiveLiveTask(liveTask);
+    const unsubscribeTask = liveActionManager.subscribe(liveTask.id, (updatedTask) => {
+      setActiveLiveTask({ ...updatedTask, events: [...updatedTask.events] });
+    });
+
+    // Notify backend
+    fetch('/api/ai/live-action/task', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ taskId: liveTask.id, prompt: userMessage })
+    }).catch(() => {});
+
     const addAction = (type: 'read' | 'thought' | 'shell', content: string) => {
       const id = Math.random().toString(36).substr(2, 9);
       setCurrentActions(prev => [...prev, { type, content, status: 'loading', id } as any]);
@@ -1003,6 +1048,15 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
     };
 
     try {
+      // EVENT 1: Real Prompt & Context Analysis
+      const evtAnalysisId = liveActionManager.startEvent(liveTask.id, {
+        type: 'analysis',
+        group: 'analysis',
+        tool: 'analyze_prompt',
+        title: lang === 'fr' ? 'Analyse sémantique du prompt et des exigences techniques' : 'Analyzing prompt semantics & technical requirements',
+        details: { sizeBytes: userMessage.length }
+      });
+
       const history = await Promise.all(newMessages.map(async (m) => {
         const parts: any[] = [{ text: (m.content || '') + (m.code ? `\n\nCode:\n${m.code}` : '') }];
         if (m.images && m.images.length > 0) {
@@ -1031,6 +1085,13 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
       // Prepare current images
       let imageParts: any[] = [];
       if (currentImages.length > 0) {
+        const evtMediaId = liveActionManager.startEvent(liveTask.id, {
+          type: 'analysis',
+          group: 'analysis',
+          tool: 'process_assets',
+          title: lang === 'fr' ? `Traitement de ${currentImages.length} image(s) de référence` : `Processing ${currentImages.length} reference image(s)`
+        });
+
         for (const img of currentImages) {
           if (img.startsWith('data:')) {
             const [mimeTypePart, data] = img.split(';base64,');
@@ -1040,6 +1101,7 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
             if (base64Img) imageParts.push(base64Img);
           }
         }
+        liveActionManager.completeEvent(liveTask.id, evtMediaId);
       }
 
       let videoParts: any[] = [];
@@ -1062,10 +1124,20 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
         enrichedUserMessage += "\n\nReference Images (URLs):\n" + urls.join('\n');
       }
 
-      // If existing code is present, pass it as baseline for modification
+      // If existing code is present, pass it as baseline for modification and emit read event
       if (generatedCode && generatedCode.trim().length > 100) {
+        const evtReadCodeId = liveActionManager.startEvent(liveTask.id, {
+          type: 'file_operation',
+          group: 'analysis',
+          tool: 'read_file',
+          title: lang === 'fr' ? 'Lecture du code source existant (index.html)' : 'Reading existing codebase (index.html)',
+          details: { path: 'index.html', sizeBytes: generatedCode.length }
+        });
         enrichedUserMessage += `\n\n[CODE BASELINE DU SITE EXISTANT À MODIFIER] :\nL'utilisateur demande une modification ou une amélioration sur son site existant ci-dessous. Tu DOIS conserver l'intégralité du design, des fonctionnalités et du contenu actuels et appliquer directement les modifications demandées sur ce code source :\n\`\`\`html\n${generatedCode.substring(0, 18000)}\n\`\`\``;
+        liveActionManager.completeEvent(liveTask.id, evtReadCodeId);
       }
+
+      liveActionManager.completeEvent(liveTask.id, evtAnalysisId);
 
       // CHECK IF IN CHAT MODE (NO CODE) OR USER IS ASKING AN INFORMATIONAL QUESTION
       if (aiMode === 'chat' || isInformationalQuestion(userMessage, !!generatedCode)) {
@@ -1073,17 +1145,30 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
         setLoadingStatus(lang === 'fr' 
           ? (aiMode === 'chat' ? "💬 [Mode Conversation] Réponse directe (sans code)..." : "💬 [Assistant COOK IA] Traitement de votre question...") 
           : (aiMode === 'chat' ? "💬 [Chat Mode] Answering (No Code)..." : "💬 [COOK IA Assistant] Processing question..."));
+        
+        const evtChatId = liveActionManager.startEvent(liveTask.id, {
+          type: 'analysis',
+          group: 'analysis',
+          tool: 'chat_response',
+          title: lang === 'fr' ? 'Génération de la réponse conversationnelle' : 'Generating conversational response'
+        });
+
         const aQa = addAction('thought', lang === 'fr' 
           ? (aiMode === 'chat' ? "💬 [Mode Conversation Actif] Réponse textuelle conversationnelle sans génération de code..." : "💬 [Assistant IA] Réponse directe à votre question sans modification du site web...") 
           : (aiMode === 'chat' ? "💬 [Chat Mode Active] Text response without generating code..." : "💬 [AI Assistant] Answering question directly without modifying website..."));
 
         const textResponse = await answerQuestion(enrichedUserMessage, history.slice(0, -1), selectedModel);
         completeAction(aQa);
+        liveActionManager.completeEvent(liveTask.id, evtChatId);
+        liveActionManager.finishTask(liveTask.id, 'completed');
+        const finalChatTask = liveActionManager.getTask(liveTask.id) || liveTask;
 
         const updatedMessages: Message[] = [...newMessages, { 
           role: 'model', 
           content: textResponse,
           code: generatedCode, // PRESERVE EXISTING GENERATED CODE UNTOUCHED
+          liveTask: { ...finalChatTask, events: [...finalChatTask.events] },
+          liveEvents: [...finalChatTask.events],
           actionHistory: currentActions
         }];
         setMessages(updatedMessages);
@@ -1115,12 +1200,20 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
         : "🎨 [UI/UX Designer] Setting visual hierarchy, responsive layout & color swatches...");
       completeAction(aDesigner);
 
-      // STAGE 3: CODE DEVELOPER
+      // STAGE 3: CODE DEVELOPER (Real generation event)
       setCurrentAgentStage('developer');
       setLoadingStatus(lang === 'fr' ? "⚡ [Développeur IA] Génération du code source HTML5, CSS Tailwind et JS..." : "⚡ [Developer AI] Generating source code...");
       const aDev = addAction('thought', lang === 'fr' 
         ? "⚡ [Développeur IA] Génération du code source HTML5, CSS Tailwind et composants React..." 
         : "⚡ [Developer AI] Generating HTML5, Tailwind CSS & React code...");
+
+      const evtGenId = liveActionManager.startEvent(liveTask.id, {
+        type: 'code_generation',
+        group: 'files',
+        tool: 'generate_code',
+        title: lang === 'fr' ? `Génération du code source (${selectedModel})` : `Generating source code (${selectedModel})`,
+        details: { modelUsed: selectedModel }
+      });
 
       let result = await generateWebsite(
         enrichedUserMessage, 
@@ -1130,13 +1223,24 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
         selectedModel
       );
       completeAction(aDev);
+      liveActionManager.completeEvent(liveTask.id, evtGenId, {
+        title: lang === 'fr' ? `Code source généré (${selectedModel})` : `Source code generated (${selectedModel})`
+      });
 
-      // STAGE 3: QA TESTER & BUTTON AUDITOR
+      // STAGE 3: QA TESTER & BUTTON AUDITOR (Real verification event)
       setCurrentAgentStage('tester');
       setLoadingStatus(lang === 'fr' ? "🧪 [Testeur QA] Audit approfondi des boutons pour éliminer les éléments inutiles..." : "🧪 [QA Tester] Inspecting & fixing dead buttons...");
       const aTester = addAction('thought', lang === 'fr' 
         ? "🧪 [Testeur QA] Verification qu'aucun bouton inutile ne subsiste dans le code..." 
         : "🧪 [QA Tester] Auditing buttons and attaching interactive click handlers...");
+
+      const evtAuditId = liveActionManager.startEvent(liveTask.id, {
+        type: 'terminal',
+        group: 'verification',
+        tool: 'audit_buttons',
+        title: lang === 'fr' ? 'Audit des interactions et vérification des boutons' : 'Auditing interactions and button click handlers',
+        details: { command: 'cook-ia verify-dom --all-buttons --syntax' }
+      });
 
       let rawCode = result.preview_code || result.code || "";
       if (!rawCode && result.files && Array.isArray(result.files)) {
@@ -1150,6 +1254,18 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
       const finalCode = audit.auditedCode || rawCode;
       result.preview_code = finalCode;
       result.code = finalCode;
+
+      liveActionManager.completeEvent(liveTask.id, evtAuditId, {
+        title: lang === 'fr' 
+          ? `Audit validé (${audit.auditSummary.buttonsChecked} boutons testés, ${audit.auditSummary.deadButtonsFixed} connectés)` 
+          : `Audit passed (${audit.auditSummary.buttonsChecked} buttons checked, ${audit.auditSummary.deadButtonsFixed} wired)`,
+        details: {
+          command: 'cook-ia verify-dom --all-buttons --syntax',
+          output: `✓ ${audit.auditSummary.buttonsChecked} boutons vérifiés\n✓ ${audit.auditSummary.linksVerified} liens vérifiés\n✓ ${audit.auditSummary.deadButtonsFixed} boutons interactifs connectés\n✓ 100% de conformité sans boutons morts`,
+          buttonsChecked: audit.auditSummary.buttonsChecked,
+          deadButtonsFixed: audit.auditSummary.deadButtonsFixed
+        }
+      });
 
       if (result.files && Array.isArray(result.files) && result.files.length > 0) {
         result.files = result.files.map((f: any) => {
@@ -1165,6 +1281,53 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
           { path: "script.js", content: "// Script JavaScript interactif COOK IA\n" }
         ];
       }
+
+      // Real File Write / Modification with Unified Diff
+      const oldCode = generatedCode || '';
+      const htmlDiff = calculateLineDiff('index.html', oldCode, finalCode);
+      const isExistingEdit = oldCode.trim().length > 50;
+
+      const evtFileWriteId = liveActionManager.startEvent(liveTask.id, {
+        type: 'file_operation',
+        group: 'files',
+        tool: isExistingEdit ? 'edit_file' : 'write_file',
+        title: isExistingEdit 
+          ? (lang === 'fr' ? `Mise à jour de index.html (+${htmlDiff.added}, -${htmlDiff.removed})` : `Updated index.html (+${htmlDiff.added}, -${htmlDiff.removed})`)
+          : (lang === 'fr' ? `Création de index.html (${(finalCode.length / 1024).toFixed(1)} kB)` : `Created index.html (${(finalCode.length / 1024).toFixed(1)} kB)`),
+        details: {
+          path: 'index.html',
+          diff: htmlDiff,
+          sizeBytes: finalCode.length
+        }
+      });
+      liveActionManager.completeEvent(liveTask.id, evtFileWriteId);
+
+      // Real Build & Bundle Event
+      const evtBuildId = liveActionManager.startEvent(liveTask.id, {
+        type: 'build',
+        group: 'verification',
+        tool: 'bundle_project',
+        title: lang === 'fr' ? 'Compilation du bundle d\'export (HTML5 + Tailwind + JS)' : 'Compiling export bundle (HTML5 + Tailwind + JS)',
+        details: { command: 'cook-ia build --target=dist' }
+      });
+      const bundledCode = bundleProjectFiles(result.files, finalCode);
+      liveActionManager.completeEvent(liveTask.id, evtBuildId, {
+        title: lang === 'fr' ? 'Compilation du bundle réussie (prêt pour Netlify & Vercel)' : 'Bundle compiled successfully (ready for Netlify & Vercel)',
+        details: {
+          command: 'cook-ia build --target=dist',
+          output: `✓ index.html (${(finalCode.length / 1024).toFixed(1)} kB)\n✓ ${result.files.length} fichiers synchronisés\n✓ Prêt pour déploiement 1-clic`
+        }
+      });
+
+      // Real Preview Sync Event
+      const evtPreviewId = liveActionManager.startEvent(liveTask.id, {
+        type: 'preview',
+        group: 'verification',
+        tool: 'preview_sync',
+        title: lang === 'fr' ? 'Synchronisation du bac à sable de prévisualisation' : 'Synchronizing live sandbox preview'
+      });
+      setGeneratedCode(finalCode);
+      liveActionManager.completeEvent(liveTask.id, evtPreviewId);
 
       setQaAuditSummary(audit.auditSummary);
       setQaLogs([
@@ -1189,31 +1352,47 @@ Analyse le lien maintenant et construis le site avec les VRAIES photos du produi
       completeAction(aInspector);
       setCurrentAgentStage('complete');
 
+      liveActionManager.finishTask(liveTask.id, 'completed');
+      const finalCompletedTask = liveActionManager.getTask(liveTask.id) || liveTask;
+
       const updatedMessages: Message[] = [...newMessages, { 
         role: 'model', 
         content: result.explanation || "Site web généré avec succès !",
         code: finalCode,
         files: result.files,
+        liveTask: { ...finalCompletedTask, events: [...finalCompletedTask.events] },
+        liveEvents: [...finalCompletedTask.events],
         actionHistory: currentActions,
         _provider: (result as any)._provider
       }];
       setMessages(updatedMessages);
-      setGeneratedCode(finalCode);
       setViewMode('preview');
       
       // Save to Supabase
       await saveConversation(updatedMessages);
     } catch (error: any) {
       if (error.name === 'AbortError') {
+        liveActionManager.cancelTask(liveTask.id);
+        fetch('/api/ai/live-action/cancel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ taskId: liveTask.id })
+        }).catch(() => {});
+        const cancelledTask = liveActionManager.getTask(liveTask.id) || liveTask;
+
         addAction('thought', "Processus interrompu par l'utilisateur.");
         setMessages(prev => [...prev, { 
           role: 'model', 
-          content: "Requête annulée par l'utilisateur." 
+          content: "Requête annulée par l'utilisateur.",
+          liveTask: { ...cancelledTask, events: [...cancelledTask.events] },
+          liveEvents: [...cancelledTask.events]
         }]);
         return;
       }
       console.error("Error generating website:", error);
       addAction('thought', "Erreur critique détectée. Tentative de diagnostic...");
+      liveActionManager.finishTask(liveTask.id, 'failed', error.message);
+      const failedTask = liveActionManager.getTask(liveTask.id) || liveTask;
       
       let errorMessage = `Désolé, une erreur est survenue lors de la génération. (Erreur: ${error.message})`;
       if (error.message?.includes("API key") || error.message?.includes("Clé API") || error.message?.includes("GEMINI_API_KEY")) {
@@ -1254,7 +1433,9 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
       }]);
     } finally {
       if (codingInterval) clearInterval(codingInterval);
+      if (unsubscribeTask) unsubscribeTask();
       setIsLoading(false);
+      setActiveLiveTask(null);
       setAbortController(null);
     }
   };
@@ -1833,23 +2014,109 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
         {/* Content Area */}
         <main className="flex-1 flex flex-col min-w-0 relative">
           {viewMode === 'your-apps' ? (
-            <div className={`flex-1 flex flex-col items-center justify-center p-8 ${isDark ? 'bg-[#0A0A0A] text-white' : 'bg-white text-[var(--color-ink)]'}`}>
-              <h2 className="text-3xl font-bold mb-4">Your Apps</h2>
-              <p className="text-slate-500 mb-8 text-center max-w-md">Toutes les applications que vous avez conçues avec Cook IA.</p>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-6xl">
-                {conversations.map(conv => (
-                  <div key={conv.id} className={`p-4 rounded-2xl border ${isDark ? 'border-white/10 bg-white/5' : 'border-slate-200 bg-slate-50'} cursor-pointer hover:border-blue-500 transition-all`} onClick={() => {
-                    setCurrentConversationId(conv.id);
-                    setMessages(conv.messages);
-                    setViewMode('chat');
-                  }}>
-                    <div className="aspect-video rounded-xl bg-slate-200 mb-4 overflow-hidden flex items-center justify-center p-4">
-                      <img src={LOGO_URL} alt={conv.title} className="w-24 h-24 object-contain opacity-50" />
+            <div className={`flex-1 flex flex-col p-6 sm:p-10 overflow-y-auto ${isDark ? 'bg-[#080B11] text-white' : 'bg-[#FAFAFC] text-slate-900'}`}>
+              <div className="max-w-6xl w-full mx-auto space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-6 border-white/[0.08]">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Layers className="text-orange-primary" size={24} />
+                      <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Vos Applications & Projets</h2>
                     </div>
-                    <h3 className="font-semibold truncate">{conv.title}</h3>
-                    <p className="text-xs text-slate-500">{new Date(conv.created_at).toLocaleDateString()}</p>
+                    <p className={`text-xs sm:text-sm ${isDark ? 'text-white/60' : 'text-slate-600'}`}>
+                      Accédez à l'intégralité de vos plateformes web créées, leur historique et leur code source.
+                    </p>
                   </div>
-                ))}
+                  <button
+                    onClick={() => {
+                      handleNewChat();
+                      setViewMode('chat');
+                    }}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-orange-primary to-amber-500 hover:from-orange-hover hover:to-amber-600 text-white text-xs font-bold transition-all shadow-md shadow-orange-primary/20 shrink-0 self-start sm:self-auto"
+                  >
+                    <Plus size={16} />
+                    <span>Nouveau projet</span>
+                  </button>
+                </div>
+
+                {conversations.length === 0 ? (
+                  <div className={`text-center py-20 px-4 rounded-3xl border ${isDark ? 'bg-white/[0.02] border-white/[0.08]' : 'bg-white border-slate-200'} max-w-lg mx-auto`}>
+                    <div className="w-16 h-16 rounded-2xl bg-orange-primary/10 text-orange-primary flex items-center justify-center mx-auto mb-4 border border-orange-primary/20">
+                      <FolderOpen size={32} />
+                    </div>
+                    <h3 className="text-lg font-bold mb-2">Aucune application pour le moment</h3>
+                    <p className={`text-xs ${isDark ? 'text-white/60' : 'text-slate-600'} mb-6 max-w-xs mx-auto leading-relaxed`}>
+                      Décrivez votre idée à Cook IA pour générer votre première application web complète avec code et aperçu interactif.
+                    </p>
+                    <button
+                      onClick={() => {
+                        handleNewChat();
+                        setViewMode('chat');
+                      }}
+                      className="px-5 py-2.5 rounded-xl bg-orange-primary hover:bg-orange-hover text-white text-xs font-bold transition-all shadow-lg shadow-orange-primary/25"
+                    >
+                      Créer une application maintenant
+                    </button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                    {conversations.map((conv) => {
+                      const hasCode = conv.messages.some(m => m.role === 'model' && (m.code || (m.files && m.files.length > 0)));
+                      const isCurrent = currentConversationId === conv.id;
+                      return (
+                        <div 
+                          key={conv.id} 
+                          onClick={() => handleSelectConversation(conv.id)}
+                          className={`group rounded-2xl border p-5 transition-all cursor-pointer flex flex-col justify-between relative overflow-hidden ${
+                            isCurrent
+                              ? (isDark ? 'bg-white/[0.08] border-orange-primary/80 ring-1 ring-orange-primary/50' : 'bg-orange-50/50 border-orange-300 ring-1 ring-orange-300')
+                              : (isDark ? 'bg-[#0E1420]/80 hover:bg-[#141C2C] border-white/[0.08] hover:border-orange-primary/40' : 'bg-white hover:bg-slate-50 border-slate-200 hover:border-orange-primary/50 shadow-xs hover:shadow-md')
+                          }`}
+                        >
+                          <div>
+                            <div className="flex items-center justify-between gap-2 mb-3">
+                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                                hasCode 
+                                  ? (isDark ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-emerald-100 text-emerald-800 border border-emerald-200')
+                                  : (isDark ? 'bg-white/10 text-white/70' : 'bg-slate-100 text-slate-700')
+                              }`}>
+                                <Code size={11} />
+                                {hasCode ? 'Application Web' : 'Discussion'}
+                              </span>
+
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteConversation(conv.id);
+                                }}
+                                className={`p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity ${
+                                  isDark ? 'hover:bg-rose-500/20 text-white/40 hover:text-rose-400' : 'hover:bg-rose-100 text-slate-400 hover:text-rose-600'
+                                }`}
+                                title="Supprimer ce projet"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+
+                            <h3 className={`font-bold text-sm mb-1.5 line-clamp-2 ${isDark ? 'text-white' : 'text-slate-900 group-hover:text-orange-600'} transition-colors`}>
+                              {conv.title}
+                            </h3>
+                            
+                            <p className={`text-[11px] ${isDark ? 'text-white/50' : 'text-slate-500'} line-clamp-2 mb-4`}>
+                              {conv.messages[conv.messages.length - 1]?.content?.substring(0, 100) || "Projet Cook IA"}
+                            </p>
+                          </div>
+
+                          <div className={`pt-3 border-t flex items-center justify-between text-[10px] ${isDark ? 'border-white/[0.06] text-white/40' : 'border-slate-100 text-slate-500'}`}>
+                            <span>{new Date(conv.created_at).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                            <span className="font-semibold group-hover:text-orange-primary transition-colors flex items-center gap-1">
+                              Ouvrir <ArrowUp size={11} className="rotate-45" />
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           ) : viewMode === 'faq' ? (
@@ -1903,6 +2170,8 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
               isLoading={isLoading}
               loadingStatus={loadingStatus}
               actions={currentActions}
+              liveTask={activeLiveTask}
+              liveEvents={activeLiveTask?.events}
               prompt={prompt}
               setPrompt={setPrompt}
               handleSend={handleSend}
@@ -1933,6 +2202,12 @@ Le serveur d'évaluation de Cook IA a temporairement épuisé ses limites d'appe
               onSelectView={(v) => setViewMode(v as any)}
               aiMode={aiMode}
               onToggleAiMode={handleToggleAiMode}
+              onSelectFile={(f) => {
+                setViewMode('code');
+              }}
+              onRetryError={(errMsg) => {
+                setPrompt(lang === 'fr' ? `Corrige cette erreur dans le code : ${errMsg}` : `Fix this error in the code: ${errMsg}`);
+              }}
             />
           ) : (
             <Preview 

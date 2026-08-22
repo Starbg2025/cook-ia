@@ -37,11 +37,12 @@ import {
   Check,
   MessageSquare
 } from 'lucide-react';
-import { Message, ActionHistory } from '../types';
+import { Message, ActionHistory, LiveActionTask, LiveActionEvent } from '../types';
 import { shadowWatchdog } from '../services/multiAgentService';
 import { UnderwaterWelcome } from './UnderwaterWelcome';
 import { MessageActionOverlay } from './MessageActionOverlay';
 import { TypingIndicator } from './TypingIndicator';
+import { LiveActionsPanel } from './LiveActionsPanel';
 import { translations, Language } from '../translations';
 
 interface ChatInterfaceProps {
@@ -53,6 +54,8 @@ interface ChatInterfaceProps {
   isLoading: boolean;
   loadingStatus?: string;
   actions?: ActionHistory[];
+  liveTask?: LiveActionTask | null;
+  liveEvents?: LiveActionEvent[];
   chatEndRef: React.RefObject<HTMLDivElement | null>;
   logoUrl: string;
   selectedImages: string[];
@@ -74,6 +77,8 @@ interface ChatInterfaceProps {
   onSelectView?: (view: string) => void;
   aiMode?: 'code' | 'chat';
   onToggleAiMode?: (mode?: 'code' | 'chat') => void;
+  onSelectFile?: (filePath: string) => void;
+  onRetryError?: (errorMessage: string) => void;
 }
 
 const ActionHistoryItem: React.FC<{ action: ActionHistory; isDark: boolean }> = ({ action, isDark }) => {
@@ -117,6 +122,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   isLoading,
   loadingStatus = "Building your site...",
   actions = [],
+  liveTask,
+  liveEvents,
   chatEndRef,
   logoUrl,
   selectedImages,
@@ -137,7 +144,9 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   qaLogs = [],
   onSelectView,
   aiMode = 'code',
-  onToggleAiMode
+  onToggleAiMode,
+  onSelectFile,
+  onRetryError
 }) => {
   const t = translations[lang];
   const [suggestion, setSuggestion] = React.useState<string>("");
@@ -351,103 +360,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       {/* Messages Scroll Area */}
       <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 custom-scrollbar relative flex flex-col">
         {messages.length <= 1 && !isLoading ? (
-          <div className="flex-1 flex flex-col items-center justify-center max-w-3xl mx-auto w-full py-8">
-            {/* Claude / ChatGPT Signature Greeting */}
-            <motion.div 
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, ease: "easeOut" }}
-              className="text-center mb-8 sm:mb-10"
-            >
-              <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-orange-primary to-amber-500 text-white shadow-xl shadow-orange-500/20 mb-5 border border-white/20">
-                <Code2 size={28} className="text-white" />
-              </div>
-              <h1 className={`text-2xl sm:text-4xl font-extrabold tracking-tight mb-3 ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                {lang === 'fr' ? "Que souhaitez-vous concevoir ?" : "What would you like to build?"}
-              </h1>
-              <p className={`text-sm sm:text-base max-w-lg mx-auto ${isDark ? 'text-white/60' : 'text-slate-700'} font-medium leading-relaxed`}>
-                {lang === 'fr' 
-                  ? "Cook IA orchestre des modèles d'élite pour concevoir, coder et déployer vos applications web en quelques secondes."
-                  : "Cook IA orchestrates elite AI models to architect, code, and deploy stunning full-stack web applications in seconds."}
-              </p>
-            </motion.div>
-
-            {/* Modern Starter Cards (ChatGPT / Claude 2x2 grid) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 w-full mb-8">
-              {starterCards.map((card, idx) => {
-                const IconComponent = card.icon;
-                return (
-                  <motion.button
-                    key={idx}
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.4, delay: idx * 0.08 }}
-                    onClick={() => {
-                      setPrompt(card.prompt);
-                    }}
-                    className={`text-left p-4 rounded-2xl border transition-all duration-200 group relative overflow-hidden ${
-                      isDark 
-                        ? 'bg-[#0E1420]/80 hover:bg-[#141C2C] border-white/[0.07] hover:border-orange-primary/40 shadow-sm' 
-                        : 'bg-white hover:bg-slate-50 border-slate-300 hover:border-orange-primary/50 shadow-sm hover:shadow-md'
-                    }`}
-                  >
-                    <div className="flex items-start gap-3.5">
-                      <div className={`p-2.5 rounded-xl shrink-0 transition-colors ${
-                        isDark 
-                          ? 'bg-white/[0.04] text-white group-hover:bg-orange-primary/10' 
-                          : 'bg-slate-100 text-slate-800 group-hover:bg-slate-200'
-                      }`}>
-                        <IconComponent size={18} />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center justify-between gap-1 mb-1">
-                          <h3 className={`text-sm font-bold truncate ${isDark ? 'text-white' : 'text-slate-900 group-hover:text-orange-600'} transition-colors`}>
-                            {card.title}
-                          </h3>
-                          <ArrowUp size={14} className={`rotate-45 opacity-0 group-hover:opacity-100 ${isDark ? 'text-white' : 'text-orange-600'} transition-opacity shrink-0`} />
-                        </div>
-                        <p className={`text-xs ${isDark ? 'text-white/60' : 'text-slate-600'} line-clamp-2 leading-relaxed font-normal`}>
-                          {card.desc}
-                        </p>
-                      </div>
-                    </div>
-                  </motion.button>
-                );
-              })}
-            </div>
-
-            {/* Quick Suggestion Pills */}
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              <span className={`text-xs font-bold ${isDark ? 'text-white/50' : 'text-slate-600'}`}>
-                {lang === 'fr' ? "Suggestions :" : "Quick start:"}
-              </span>
-              {[
-                { 
-                  label: lang === 'fr' ? "💎 Charte Studio (5 Piliers)" : "💎 Studio Charter (5 Pillars)", 
-                  action: () => setPrompt(
-                    lang === 'fr'
-                      ? "Crée un site web complet pour mon projet en respectant la Charte Studio :\n1. IDENTITÉ VISUELLE : Thème cohérent, variables CSS complètes, typographie avec du caractère (sans-serif + police éditoriale pour les titres), palette originale.\n2. CONTENU HONNÊTE : Aucune fausse statistique, zéro texte placeholder ou non résolu, rédaction concrète.\n3. FONCTIONNALITÉ AVANT TOUT : Tous les boutons, filtres, modales, paniers et formulaires doivent être 100% opérationnels en JS.\n4. COHÉRENCE TECHNIQUE : Architecture multi-fichiers (HTML5/CSS3/JS Vanilla), responsive mobile parfait, contraste WCAG AA.\n5. TRANSPARENCE : Code propre et directement prêt au déploiement."
-                      : "Create a complete website following the 5-Pillar Studio Charter:\n1. VISUAL IDENTITY: Cohesive theme, CSS variables, distinctive typography, bespoke palette.\n2. HONEST CONTENT: No fake stats or placeholders, user-focused copy.\n3. FUNCTIONALITY FIRST: 100% working JS interactions, modals, filters & forms.\n4. TECHNICAL COHESION: Clean multi-file structure (HTML5/CSS3/JS), mobile responsive, WCAG AA contrast.\n5. TRANSPARENCY: Deployment ready."
-                  ) 
-                },
-                { label: lang === 'fr' ? "🚀 Clone un site" : "🚀 Clone a website", action: onCloneSite },
-                { label: lang === 'fr' ? "🛍️ Produit E-commerce" : "🛍️ E-commerce Product", action: onEcommerceProduct },
-                { label: lang === 'fr' ? "📊 Audit SEO & Performance" : "📊 SEO & Performance Audit", action: () => setPrompt("Fais un audit SEO complet et optimise la vitesse du site web.") }
-              ].map((pill, i) => (
-                <button
-                  key={i}
-                  onClick={pill.action}
-                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
-                    isDark 
-                      ? 'bg-white/[0.03] border-white/[0.08] text-white/80 hover:text-white hover:border-white/20 hover:bg-white/[0.06]' 
-                      : 'bg-white border-slate-300 text-slate-800 hover:text-slate-950 hover:border-slate-400 hover:bg-slate-50 shadow-xs'
-                  }`}
-                >
-                  {pill.label}
-                </button>
-              ))}
-            </div>
-          </div>
+          <UnderwaterWelcome isDark={isDark} onSelectPrompt={(p) => setPrompt(p)} />
         ) : (
           <div className="max-w-3xl mx-auto w-full space-y-6">
             {messages.map((msg, idx) => {
@@ -520,14 +433,26 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                       />
                     )}
 
-                    {/* Action History logs */}
-                    {msg.actionHistory && msg.actionHistory.length > 0 && (
+                    {/* Live Actions or Legacy Action History */}
+                    {(msg.liveTask || (msg.liveEvents && msg.liveEvents.length > 0)) ? (
+                      <div className="pt-3 mt-3 border-t border-white/[0.06]">
+                        <LiveActionsPanel 
+                          task={msg.liveTask} 
+                          events={msg.liveEvents} 
+                          isDark={isDark} 
+                          defaultExpanded={false}
+                          onOpenPreview={onSelectView ? () => onSelectView('preview') : undefined}
+                          onSelectFile={onSelectFile}
+                          onRetryError={onRetryError}
+                        />
+                      </div>
+                    ) : (msg.actionHistory && msg.actionHistory.length > 0) ? (
                       <div className="flex flex-col gap-1 border-t border-white/[0.06] pt-3 mt-3">
                         {msg.actionHistory.map((action, i) => (
                           <ActionHistoryItem key={i} action={action} isDark={isDark} />
                         ))}
                       </div>
-                    )}
+                    ) : null}
 
                     {/* Assistant message action bar */}
                     {!isUser && (
@@ -594,19 +519,32 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 <Loader2 size={13} className="animate-spin" />
               </div>
               <span className={`text-xs font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                Cook IA Agent Engine
+                Cook IA Live Execution
               </span>
             </div>
             
             <div className="w-full">
-              <TypingIndicator 
-                status={loadingStatus} 
-                isDark={isDark} 
-                actions={actions}
-                currentAgentStage={currentAgentStage}
-                onAbort={onAbort}
-                onOpenLivePreview={onSelectView ? () => onSelectView('preview') : undefined}
-              />
+              {liveTask ? (
+                <LiveActionsPanel 
+                  task={liveTask} 
+                  events={liveEvents} 
+                  isDark={isDark} 
+                  defaultExpanded={true}
+                  onAbort={onAbort}
+                  onOpenPreview={onSelectView ? () => onSelectView('preview') : undefined}
+                  onSelectFile={onSelectFile}
+                  onRetryError={onRetryError}
+                />
+              ) : (
+                <TypingIndicator 
+                  status={loadingStatus} 
+                  isDark={isDark} 
+                  actions={actions}
+                  currentAgentStage={currentAgentStage}
+                  onAbort={onAbort}
+                  onOpenLivePreview={onSelectView ? () => onSelectView('preview') : undefined}
+                />
+              )}
             </div>
           </div>
         )}

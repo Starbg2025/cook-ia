@@ -583,6 +583,68 @@ app.use(express.urlencoded({ limit: '15mb', extended: true }));
     res.json({ taskId });
   });
 
+  // REAL LIVE ACTIONS STREAM & TASK API
+  interface ServerLiveActionTask {
+    id: string;
+    prompt: string;
+    createdAt: string;
+    status: 'running' | 'completed' | 'failed' | 'cancelled';
+    events: any[];
+    error?: string;
+  }
+  const liveActionTasksMap = new Map<string, ServerLiveActionTask>();
+
+  app.post("/api/ai/live-action/task", (req, res) => {
+    const { taskId, prompt } = req.body;
+    if (!taskId) return res.status(400).json({ error: "taskId is required" });
+    
+    const task: ServerLiveActionTask = {
+      id: taskId,
+      prompt: String(prompt || '').substring(0, 500),
+      createdAt: new Date().toISOString(),
+      status: 'running',
+      events: []
+    };
+    liveActionTasksMap.set(taskId, task);
+    res.json({ success: true, task });
+  });
+
+  app.post("/api/ai/live-action/event", (req, res) => {
+    const { taskId, event } = req.body;
+    if (!taskId || !event) return res.status(400).json({ error: "taskId and event are required" });
+
+    const task = liveActionTasksMap.get(taskId);
+    if (task) {
+      task.events.push({
+        ...event,
+        serverTimestamp: new Date().toISOString()
+      });
+      if (event.status === 'failed' && event.details?.error) {
+        task.error = event.details.error;
+      }
+    }
+    res.json({ success: true });
+  });
+
+  app.post("/api/ai/live-action/cancel", (req, res) => {
+    const { taskId } = req.body;
+    if (!taskId) return res.status(400).json({ error: "taskId is required" });
+
+    const task = liveActionTasksMap.get(taskId);
+    if (task) {
+      task.status = 'cancelled';
+    }
+    res.json({ success: true, status: 'cancelled' });
+  });
+
+  app.get("/api/ai/live-action/task/:id", (req, res) => {
+    const taskId = req.params.id;
+    const task = liveActionTasksMap.get(taskId);
+    if (!task) return res.status(404).json({ error: "Task not found" });
+    res.json({ success: true, task });
+  });
+
+
   // Agents Proxy
   app.post("/api/ai/agents", aiRateLimiter, async (req, res) => {
     const { agentType, prompt, history, code } = req.body;

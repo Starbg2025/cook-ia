@@ -1,3 +1,7 @@
+import { LiveActionEvent, LiveActionTask } from './types/liveAction';
+
+export * from './types/liveAction';
+
 export interface StyleConfig {
   primaryColor: string;
   fontFamily: string;
@@ -39,6 +43,8 @@ export interface Message {
   files?: ProjectFile[];
   _provider?: string;
   actionHistory?: ActionHistory[];
+  liveTask?: LiveActionTask;
+  liveEvents?: LiveActionEvent[];
   modelName?: string;
   runTime?: number;
   feedback?: 'like' | 'dislike';
